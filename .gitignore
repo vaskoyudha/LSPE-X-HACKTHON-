@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+data/raw/
+models/*.onnx
+models/*.ubj
+models/*.pkl
+
+.env
+.DS_Store
