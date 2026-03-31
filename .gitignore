@@ -9,5 +9,9 @@ models/*.onnx
 models/*.ubj
 models/*.pkl
 
+proposal/bab*.md
+proposal/proposal-final.*
+
 .env
 .DS_Store
+.agents/
