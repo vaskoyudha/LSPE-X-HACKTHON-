@@ -33,13 +33,17 @@ FEATURE_CATALOG: list[str] = []
 # ---------------------------------------------------------------------------
 
 
-def _to_numeric(series: pd.Series) -> pd.Series:
+def _to_numeric(series: pd.Series | None) -> pd.Series:
     """Convert to numeric, coercing errors to NaN."""
+    if series is None:
+        return pd.Series(dtype="float64")
     return pd.to_numeric(series, errors="coerce")
 
 
-def _safe_log1p(series: pd.Series) -> pd.Series:
-    """Log1p transform, handling NaN and negatives."""
+def _safe_log1p(series: pd.Series | None) -> pd.Series:
+    """Log1p transform, handling NaN, negatives, and None."""
+    if series is None:
+        return pd.Series(dtype="float64")
     vals = _to_numeric(series)
     return np.log1p(vals.clip(lower=0))
 
@@ -269,8 +273,17 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
         if b and m:
             buyer_methods.setdefault(b, []).append(m)
 
-    # 25. Supplier geographic spread (unique buyer regions)
-    feats_sorted_25 = _expanding_group_stat(supplier_sorted, pd.Series(1.0, index=range(n)), "count")
+    # 25. Supplier distinct buyer count (how many unique buyers this supplier has served)
+    feats_sorted_25 = pd.Series(np.nan, index=range(n))
+    supplier_buyer_sets: dict[str, set[str]] = {}
+    for i in range(n):
+        s = supplier_sorted.iloc[i]
+        b = buyer_sorted.iloc[i]
+        if s and s in supplier_buyer_sets and len(supplier_buyer_sets[s]) > 0:
+            feats_sorted_25.iloc[i] = len(supplier_buyer_sets[s])
+        # Add current buyer AFTER computing (past-only)
+        if s and b:
+            supplier_buyer_sets.setdefault(s, set()).add(b)
 
     # 26. Value growth rate for buyer (current / historical mean)
     feats_sorted_26 = pd.Series(np.nan, index=range(n))

@@ -39,6 +39,7 @@ FLAT_PARQUET = PROCESSED_DIR / "ocds_flat.parquet"
 REQUIRED_FIELDS = [
     "ocid",
     "tender_id",
+    "tender_datePublished",
     "tender_title",
     "tender_description",
     "tender_status",

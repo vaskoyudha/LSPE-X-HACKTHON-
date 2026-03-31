@@ -100,7 +100,7 @@ def flag_high_value(df: pd.DataFrame, percentile: float = 0.9) -> pd.Series:
     """
     val = pd.to_numeric(df.get("tender_value_amount"), errors="coerce")
     threshold = val.quantile(percentile)
-    return (val >= threshold).fillna(False)
+    return (val >= threshold).fillna(False).astype(bool)
 
 
 def flag_direct_procurement(df: pd.DataFrame) -> pd.Series:
@@ -232,13 +232,17 @@ def select_calibration_samples(
     Samples are drawn proportionally from each risk class to maintain
     label distribution representation.
     """
-    # Join labels with raw data for context
-    combined = labels.copy()
+    # Reset indices to ensure alignment (labels and raw_df may have
+    # different original indices after filtering/splitting)
+    labels_reset = labels.reset_index(drop=True)
+    raw_reset = raw_df.reset_index(drop=True)
+
+    combined = labels_reset.copy()
     # Add relevant raw columns for reviewer context
     context_cols = ["ocid", "tender_title", "tender_value_amount", "buyer_name", "supplier_name"]
     for col in context_cols:
-        if col in raw_df.columns:
-            combined[col] = raw_df[col].values[:len(combined)]
+        if col in raw_reset.columns and len(raw_reset) >= len(combined):
+            combined[col] = raw_reset[col].iloc[:len(combined)].values
 
     # Stratified sampling
     samples = combined.groupby("risk_label", group_keys=False).apply(
