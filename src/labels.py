@@ -229,22 +229,41 @@ def select_calibration_samples(
 ) -> pd.DataFrame:
     """Select a stratified sample from val_calibration for human review.
 
-    Samples are drawn proportionally from each risk class to maintain
-    label distribution representation.
+    Produces a human-readable table with:
+      - Procurement context (OCID, title, values, buyer, supplier)
+      - All 7 red-flag indicators and total flag count
+      - Heuristic risk_label (the label being verified)
+      - Empty review columns (verified_label, confidence, notes)
+
+    Samples are drawn proportionally from each risk class.
+
+    IMPORTANT: This function must only receive val_calibration data,
+    never test_data.
     """
-    # Reset indices to ensure alignment (labels and raw_df may have
-    # different original indices after filtering/splitting)
+    # Reset indices for safe alignment
     labels_reset = labels.reset_index(drop=True)
     raw_reset = raw_df.reset_index(drop=True)
 
+    # Build combined table with reviewer context
     combined = labels_reset.copy()
-    # Add relevant raw columns for reviewer context
-    context_cols = ["ocid", "tender_title", "tender_value_amount", "buyer_name", "supplier_name"]
+
+    # Context columns from raw data
+    context_cols = [
+        "ocid",
+        "tender_title",
+        "tender_datePublished",
+        "tender_procurementMethod",
+        "tender_numberOfTenderers",
+        "tender_value_amount",
+        "award_value_amount",
+        "buyer_name",
+        "supplier_name",
+    ]
     for col in context_cols:
         if col in raw_reset.columns and len(raw_reset) >= len(combined):
-            combined[col] = raw_reset[col].iloc[:len(combined)].values
+            combined[col] = raw_reset[col].iloc[: len(combined)].values
 
-    # Stratified sampling
+    # Stratified sampling across risk classes
     samples = combined.groupby("risk_label", group_keys=False).apply(
         lambda x: x.sample(
             n=min(len(x), max(1, int(n_samples * len(x) / len(combined)))),
@@ -252,10 +271,36 @@ def select_calibration_samples(
         )
     )
 
-    # Add empty review columns
+    # Add empty review columns for human reviewer
     samples["verified_label"] = np.nan
     samples["confidence"] = ""
     samples["notes"] = ""
 
-    logger.info("Selected %d calibration samples", len(samples))
+    # Reorder columns for clarity: context → flags → heuristic label → review
+    flag_cols = [c for c in samples.columns if c.startswith("flag_")]
+    review_cols = ["verified_label", "confidence", "notes"]
+    meta_cols = ["risk_label"]
+    context_present = [c for c in context_cols if c in samples.columns]
+    ordered = context_present + flag_cols + meta_cols + review_cols
+    remaining = [c for c in samples.columns if c not in ordered]
+    samples = samples[ordered + remaining]
+
+    logger.info("Selected %d calibration samples (from %d total)", len(samples), len(combined))
     return samples
+
+
+def save_calibration_sheet(samples: pd.DataFrame, path: Path | None = None) -> Path:
+    """Save calibration sheet as CSV for human editing.
+
+    CSV format is chosen because:
+    - Humans can open and edit in Excel/Google Sheets
+    - Git can diff changes
+    - No special tooling required
+    """
+    from src.data import PROCESSED_DIR
+
+    path = path or (PROCESSED_DIR / "calibration_sheet_100.csv")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    samples.to_csv(path, index=False, encoding="utf-8-sig")
+    logger.info("Calibration sheet saved to %s (%d rows)", path, len(samples))
+    return path
