@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -35,8 +36,366 @@ from src.model import (
 
 logger = logging.getLogger(__name__)
 
+MODEL_PATH = Path("models/xgb_model.ubj")
+SHAP_SUMMARY_PATH = Path("proposal/figures/shap_summary.png")
 FIGURES_DIR = PROJECT_ROOT / "proposal" / "figures"
+LABEL_NAMES: Dict[int, str] = {0: "Rendah", 1: "Sedang", 2: "Tinggi"}
 
+# ---------------------------------------------------------------------------
+# Model / explainer loading
+# ---------------------------------------------------------------------------
+ 
+ 
+def load_model(model_path: Path = MODEL_PATH):
+    """Load the XGBoost model from its .ubj checkpoint."""
+    import xgboost as xgb
+ 
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"XGBoost model not found at {model_path}. "
+            "Complete Task 13 (training) first."
+        )
+    model = xgb.XGBClassifier()
+    model.load_model(str(model_path))
+    return model
+ 
+ 
+def get_explainer(model, model_path: Path = MODEL_PATH):
+    """Return a TreeExplainer for the given model."""
+    import shap
+ 
+    return shap.TreeExplainer(model)
+ 
+ 
+# ---------------------------------------------------------------------------
+# Core API: explain_single
+# ---------------------------------------------------------------------------
+ 
+ 
+def explain_single(
+    row: Union[Dict[str, float], np.ndarray],
+    feature_names: List[str],
+    model=None,
+    explainer=None,
+    top_k: int = 5,
+) -> Dict[str, Any]:
+    """
+    Produce a local explanation for a single procurement record.
+ 
+    Parameters
+    ----------
+    row           : dict {feature_name: value} or 1-D numpy array
+    feature_names : ordered list of feature names matching the model's input
+    model         : fitted XGBClassifier (loaded from MODEL_PATH if None)
+    explainer     : shap.TreeExplainer (created from model if None)
+    top_k         : number of top factors to include in output
+ 
+    Returns
+    -------
+    {
+        "predicted_class": int,        # 0 = Rendah, 1 = Sedang, 2 = Tinggi
+        "probability":     float,      # probability for predicted_class
+        "factors": [
+            {
+                "feature":       str,
+                "shap_value":    float,  # signed; positive = pushes toward class
+                "feature_value": float   # actual value of the feature
+            },
+            ...                         # sorted by |shap_value| descending
+        ]
+    }
+ 
+    Note: the legacy key "top_factors" is never returned.
+    """
+    import shap  # noqa: F401 – ensure shap is importable
+ 
+    if model is None:
+        model = load_model()
+    if explainer is None:
+        explainer = get_explainer(model)
+ 
+    # Materialise input as (1, n_features) float32 array
+    if isinstance(row, dict):
+        X = np.array([[row[f] for f in feature_names]], dtype=np.float32)
+    else:
+        arr = np.asarray(row, dtype=np.float32)
+        X = arr.reshape(1, -1) if arr.ndim == 1 else arr
+ 
+    # ---- Prediction --------------------------------------------------------
+    proba = model.predict_proba(X)[0]          # shape (n_classes,)
+    predicted_class = int(np.argmax(proba))
+    probability = float(proba[predicted_class])
+ 
+    # ---- SHAP values -------------------------------------------------------
+    # shap_values may be:
+    #   list of (1, n_features) arrays  – one per class (multi-class TreeExplainer)
+    #   (1, n_features, n_classes) ndarray
+    shap_values = explainer.shap_values(X)
+ 
+    if isinstance(shap_values, list):
+        # list[class_idx] → (1, n_features)
+        class_shap: np.ndarray = shap_values[predicted_class][0]
+    elif isinstance(shap_values, np.ndarray):
+        if shap_values.ndim == 3:
+            # (1, n_features, n_classes)
+            class_shap = shap_values[0, :, predicted_class]
+        elif shap_values.ndim == 2:
+            # (1, n_features) – binary case or single explanation
+            class_shap = shap_values[0]
+        else:
+            class_shap = shap_values
+    else:
+        class_shap = np.array(shap_values)
+ 
+    feature_values: np.ndarray = X[0]
+ 
+    # ---- Build factors list ------------------------------------------------
+    abs_shap = np.abs(class_shap)
+    sorted_indices = np.argsort(abs_shap)[::-1][:top_k]
+ 
+    factors: List[Dict[str, Any]] = [
+        {
+            "feature": feature_names[i],
+            "shap_value": float(class_shap[i]),
+            "feature_value": float(feature_values[i]),
+        }
+        for i in sorted_indices
+    ]
+ 
+    return {
+        "predicted_class": predicted_class,
+        "probability": probability,
+        "factors": factors,
+    }
+ 
+ 
+# ---------------------------------------------------------------------------
+# Batch explanation
+# ---------------------------------------------------------------------------
+ 
+ 
+def explain_batch(
+    X: np.ndarray,
+    feature_names: List[str],
+    model=None,
+    explainer=None,
+) -> np.ndarray:
+    """
+    Return raw SHAP values for a batch.
+ 
+    Shape of output follows shap.TreeExplainer convention:
+      list of (n_samples, n_features) – one per class, OR
+      (n_samples, n_features, n_classes) ndarray.
+    """
+    if model is None:
+        model = load_model()
+    if explainer is None:
+        explainer = get_explainer(model)
+ 
+    return explainer.shap_values(X.astype(np.float32))
+ 
+ 
+# ---------------------------------------------------------------------------
+# Global summary plot
+# ---------------------------------------------------------------------------
+ 
+ 
+def plot_shap_summary(
+    X: np.ndarray,
+    feature_names: List[str],
+    model=None,
+    explainer=None,
+    output_path: Path = SHAP_SUMMARY_PATH,
+    max_display: int = 20,
+) -> Path:
+    """
+    Generate the global SHAP bar summary plot and save it to output_path.
+ 
+    Saved figure is used by proposal/bab4.md and inference.ipynb.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import shap
+ 
+    if model is None:
+        model = load_model()
+    if explainer is None:
+        explainer = get_explainer(model)
+ 
+    X_f32 = X.astype(np.float32)
+    shap_values = explainer.shap_values(X_f32)
+ 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+ 
+    plt.figure(figsize=(10, 8))
+    shap.summary_plot(
+        shap_values,
+        X_f32,
+        feature_names=feature_names,
+        class_names=list(LABEL_NAMES.values()),
+        max_display=max_display,
+        show=False,
+        plot_type="bar",
+    )
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+ 
+    logger.info("SHAP summary plot saved → %s", output_path)
+    return output_path
+ 
+ 
+# ---------------------------------------------------------------------------
+# Counterfactual – SHAP-based fallback
+# ---------------------------------------------------------------------------
+ 
+ 
+def get_counterfactual_shap(
+    result: Dict[str, Any],
+    feature_names: Optional[List[str]] = None,
+    top_changes: int = 3,
+) -> Dict[str, Any]:
+    """
+    SHAP-based counterfactual: identify which features to change to lower
+    the predicted risk class.
+ 
+    This is the mandatory fallback path.  It is always available, even when
+    DiCE times out.
+ 
+    Returns
+    -------
+    {
+        "predicted_class":   int,
+        "suggested_changes": [
+            {
+                "feature":           str,
+                "current_value":     float,
+                "direction":         "decrease" | "increase",
+                "shap_contribution": float
+            },
+            ...
+        ]
+    }
+    """
+    predicted_class = result["predicted_class"]
+    factors = result["factors"]
+ 
+    changes: List[Dict[str, Any]] = []
+    for factor in factors:
+        sv = factor["shap_value"]
+        if sv > 0:
+            # Feature positively pushes toward (risky) predicted class
+            changes.append(
+                {
+                    "feature": factor["feature"],
+                    "current_value": factor["feature_value"],
+                    "direction": "decrease",
+                    "shap_contribution": float(sv),
+                }
+            )
+        # Negative SHAP already works in our favour; skip
+ 
+    # Sort by largest contribution first, take top_changes
+    changes.sort(key=lambda x: x["shap_contribution"], reverse=True)
+ 
+    return {
+        "predicted_class": predicted_class,
+        "suggested_changes": changes[:top_changes],
+    }
+ 
+ 
+def get_counterfactual_dice(
+    row: Union[Dict[str, float], np.ndarray],
+    feature_names: List[str],
+    train_df,
+    model,
+    timebox_seconds: float = 30.0,
+    fallback_result: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Timeboxed DiCE counterfactual attempt.
+ 
+    If DiCE is unavailable, times out, or raises any exception,
+    the SHAP-based fallback is returned instead.
+ 
+    Parameters
+    ----------
+    fallback_result : pre-computed explain_single() result to use for fallback.
+                      If None, returns a minimal error dict.
+    """
+    import signal
+    import contextlib
+ 
+    @contextlib.contextmanager
+    def _timeout(seconds: float):
+        def _handler(signum, frame):
+            raise TimeoutError(f"DiCE exceeded {seconds}s timebox")
+        old = signal.signal(signal.SIGALRM, _handler)
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+        try:
+            yield
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, old)
+ 
+    try:
+        with _timeout(timebox_seconds):
+            import dice_ml  # type: ignore
+ 
+            # Build DiCE data object
+            import pandas as pd
+            if isinstance(row, dict):
+                row_df = pd.DataFrame([row])
+            else:
+                row_df = pd.DataFrame([dict(zip(feature_names, row))])
+ 
+            d = dice_ml.Data(
+                dataframe=train_df,
+                continuous_features=feature_names,
+                outcome_name="heuristic_label",
+            )
+            m = dice_ml.Model(model=model, backend="sklearn")
+            exp = dice_ml.Dice(d, m, method="random")
+            cf = exp.generate_counterfactuals(row_df, total_CFs=3, desired_class="opposite")
+ 
+            # Extract suggestions from DiCE output
+            cf_df = cf.cf_examples_list[0].final_cfs_df
+            changes = []
+            for col in feature_names:
+                orig = float(row_df[col].iloc[0]) if col in row_df.columns else 0.0
+                new_val = float(cf_df[col].iloc[0]) if col in cf_df.columns else orig
+                if abs(new_val - orig) > 1e-6:
+                    changes.append(
+                        {
+                            "feature": col,
+                            "current_value": orig,
+                            "suggested_value": new_val,
+                            "direction": "decrease" if new_val < orig else "increase",
+                            "source": "dice",
+                        }
+                    )
+ 
+            return {
+                "predicted_class": fallback_result["predicted_class"] if fallback_result else None,
+                "suggested_changes": changes[:3],
+                "source": "dice",
+            }
+ 
+    except (ImportError, TimeoutError, Exception) as exc:
+        logger.warning(
+            "DiCE counterfactual failed (%s); using SHAP fallback.", type(exc).__name__
+        )
+        if fallback_result is not None:
+            result = get_counterfactual_shap(fallback_result)
+            result["source"] = "shap_fallback"
+            return result
+        return {
+            "predicted_class": None,
+            "suggested_changes": [],
+            "source": "shap_fallback",
+            "error": str(exc),
+        }
 
 # ---------------------------------------------------------------------------
 # SHAP explainer
