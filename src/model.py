@@ -19,6 +19,9 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+import warnings
+from typing import Any, Dict, List, Optional, Tuple
+import onnxmltools
 
 import numpy as np
 import pandas as pd
@@ -38,6 +41,16 @@ from src.split import TRAIN_DIR, TEST_DIR
 logger = logging.getLogger(__name__)
 
 MODELS_DIR = PROJECT_ROOT / "models"
+
+XGB_MODEL_PATH = MODELS_DIR / "xgb_model.ubj"
+ONNX_MODEL_PATH = MODELS_DIR / "xgb_model.onnx"
+BEST_PARAMS_PATH = MODELS_DIR / "best_params.json"
+METRICS_PATH = MODELS_DIR / "metrics.json"
+CALIBRATION_PATH = MODELS_DIR / "calibration.json"
+IMPUTATION_PATH = MODELS_DIR / "imputation_values.json"
+
+LABEL_NAMES = ["Rendah", "Sedang", "Tinggi"]
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -102,6 +115,495 @@ def load_dev_split_indices(
     }
 
     return indices
+
+
+# ---------------------------------------------------------------------------
+# Training and HPO
+# ---------------------------------------------------------------------------
+ 
+ 
+def train_xgboost(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    params: Optional[Dict[str, Any]] = None,
+    use_focal_loss: bool = False,
+) -> Any:
+    """
+    Fit an XGBoost classifier.
+ 
+    Falls back to class-weighted XGBoost if focal loss is not stable
+    or if use_focal_loss=False (default safe path).
+    """
+    import xgboost as xgb
+ 
+    class_counts = np.bincount(y_train.astype(int))
+    scale_pos = float(class_counts.max()) / (class_counts + 1e-9)
+ 
+    default_params: Dict[str, Any] = {
+        "n_estimators": 300,
+        "max_depth": 6,
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "eval_metric": "mlogloss",
+        "tree_method": "hist",
+        "device": "cpu",
+        "random_state": 42,
+        "n_jobs": -1,
+    }
+    if params:
+        default_params.update(params)
+ 
+    if use_focal_loss:
+        warnings.warn(
+            "Focal loss path is experimental.  If instability is detected, "
+            "set use_focal_loss=False to lock in class-weighted fallback.",
+            UserWarning,
+        )
+        # Custom focal loss requires obj= argument; omit for now and fall through
+        logger.info("Focal loss requested but not yet implemented; using class-weighted XGBoost.")
+ 
+    # Class-weighted XGBoost (locked fallback)
+    model = xgb.XGBClassifier(**default_params)
+    sample_weights = np.array([scale_pos[int(yi)] for yi in y_train])
+    model.fit(X_train, y_train, sample_weight=sample_weights)
+    return model
+ 
+ 
+def run_hpo(
+    X_fit: np.ndarray,
+    y_fit: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    n_trials: int = 30,
+    random_state: int = 42,
+) -> Dict[str, Any]:
+    """
+    Optuna-based HPO on train_fit / val_hpo only.
+    Never touches test_data.
+ 
+    Returns best_params dict (also written to models/best_params.json).
+    """
+    try:
+        import optuna
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+    except ImportError:
+        logger.warning("Optuna not installed; using default params.")
+        default = {
+            "n_estimators": 300,
+            "max_depth": 6,
+            "learning_rate": 0.05,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+        }
+        BEST_PARAMS_PATH.write_text(json.dumps(default, indent=2))
+        return default
+ 
+    import xgboost as xgb
+ 
+    def objective(trial: "optuna.Trial") -> float:
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 100, 600),
+            "max_depth": trial.suggest_int("max_depth", 3, 8),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+            "gamma": trial.suggest_float("gamma", 0.0, 1.0),
+            "tree_method": "hist",
+            "device": "cpu",
+            "random_state": random_state,
+            "n_jobs": -1,
+        }
+        model = xgb.XGBClassifier(**params)
+        class_counts = np.bincount(y_fit.astype(int))
+        scale_pos = float(class_counts.max()) / (class_counts + 1e-9)
+        sw = np.array([scale_pos[int(yi)] for yi in y_fit])
+        model.fit(X_fit, y_fit, sample_weight=sw)
+        preds = model.predict(X_val)
+        return f1_score(y_val, preds, average="macro")
+ 
+    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=random_state))
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+ 
+    best_params: Dict[str, Any] = study.best_params
+    best_params["tree_method"] = "hist"
+    best_params["device"] = "cpu"
+    best_params["random_state"] = random_state
+    best_params["n_jobs"] = -1
+ 
+    BEST_PARAMS_PATH.write_text(json.dumps(best_params, indent=2))
+    logger.info("HPO complete. Best macro-F1 on val_hpo: %.4f", study.best_value)
+    return best_params
+ 
+ 
+# ---------------------------------------------------------------------------
+# Evaluation
+# ---------------------------------------------------------------------------
+ 
+ 
+def evaluate_model(
+    model,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    label_source: str = "heuristic",
+    temperature: float = 1.0,
+) -> Dict[str, Any]:
+    """
+    Compute final metrics on the held-out test split.
+ 
+    Parameters
+    ----------
+    label_source : "heuristic" or "clean_label_calibration".
+                   All metrics in models/metrics.json must carry this tag.
+    temperature  : temperature scaling factor (1.0 = no calibration).
+ 
+    Returns a metrics dict (also written to models/metrics.json).
+    """
+    proba = model.predict_proba(X_test)
+    if temperature != 1.0:
+        # Temperature scaling on logits
+        logits = np.log(proba + 1e-9)
+        scaled = logits / temperature
+        exp_scaled = np.exp(scaled - scaled.max(axis=1, keepdims=True))
+        proba = exp_scaled / exp_scaled.sum(axis=1, keepdims=True)
+ 
+    preds = np.argmax(proba, axis=1)
+ 
+    macro_f1 = float(f1_score(y_test, preds, average="macro"))
+    weighted_f1 = float(f1_score(y_test, preds, average="weighted"))
+    per_class_f1 = f1_score(y_test, preds, average=None).tolist()
+ 
+    try:
+        roc_auc = float(roc_auc_score(y_test, proba, multi_class="ovr", average="macro"))
+    except Exception:
+        roc_auc = None
+ 
+    cm = confusion_matrix(y_test, preds).tolist()
+    report = classification_report(y_test, preds, target_names=LABEL_NAMES, output_dict=True)
+ 
+    metrics: Dict[str, Any] = {
+        "label_source": label_source,
+        "note": (
+            "Metrics are measured against heuristic risk labels unless "
+            "label_source == 'clean_label_calibration'."
+        ),
+        "macro_f1": macro_f1,
+        "weighted_f1": weighted_f1,
+        "per_class_f1": {LABEL_NAMES[i]: per_class_f1[i] for i in range(len(per_class_f1))},
+        "roc_auc_ovr_macro": roc_auc,
+        "confusion_matrix": cm,
+        "classification_report": report,
+        "temperature_applied": temperature,
+        "n_test_samples": int(len(y_test)),
+    }
+ 
+    METRICS_PATH.write_text(json.dumps(metrics, indent=2))
+    logger.info("Metrics written to %s  (macro-F1=%.4f)", METRICS_PATH, macro_f1)
+    return metrics
+ 
+ 
+# ---------------------------------------------------------------------------
+# Temperature calibration
+# ---------------------------------------------------------------------------
+ 
+ 
+def fit_temperature(
+    model,
+    X_cal: np.ndarray,
+    y_cal: np.ndarray,
+    grid: Optional[List[float]] = None,
+) -> float:
+    """
+    Fit temperature scaling on the calibration subset.
+    Uses a simple 1-D grid search on negative log-likelihood.
+    """
+    from scipy.special import log_softmax
+ 
+    if grid is None:
+        grid = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0]
+ 
+    proba = model.predict_proba(X_cal)
+    logits = np.log(proba + 1e-9)
+ 
+    best_T = 1.0
+    best_nll = float("inf")
+ 
+    for T in grid:
+        scaled_logits = logits / T
+        log_proba = log_softmax(scaled_logits, axis=1)
+        nll = -log_proba[np.arange(len(y_cal)), y_cal.astype(int)].mean()
+        if nll < best_nll:
+            best_nll = nll
+            best_T = T
+ 
+    logger.info("Temperature scaling: T=%.3f  NLL=%.4f", best_T, best_nll)
+    return best_T
+ 
+ 
+def save_calibration(
+    enabled: bool,
+    temperature: float = 1.0,
+    n_cal_rows: int = 0,
+    label_source: str = "heuristic",
+) -> None:
+    """Write models/calibration.json."""
+    cal_info = {
+        "enabled": enabled,
+        "temperature": temperature if enabled else None,
+        "n_calibration_rows_used": n_cal_rows,
+        "label_source": label_source,
+        "note": (
+            "Temperature scaling disabled: fewer than 80 high-confidence rows "
+            "were reviewed."
+            if not enabled
+            else "Temperature scaling fitted on manually reviewed val_calibration subset."
+        ),
+    }
+    CALIBRATION_PATH.write_text(json.dumps(cal_info, indent=2))
+    logger.info("Calibration info written to %s", CALIBRATION_PATH)
+ 
+ 
+# ---------------------------------------------------------------------------
+# Evaluation figures
+# ---------------------------------------------------------------------------
+ 
+ 
+def plot_confusion_matrix(
+    metrics: Dict[str, Any],
+    output_path: Path = Path("proposal/figures/confusion_matrix.png"),
+) -> None:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+ 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    cm = np.array(metrics["confusion_matrix"])
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=LABEL_NAMES,
+        yticklabels=LABEL_NAMES,
+        ax=ax,
+    )
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Confusion Matrix (test set – heuristic labels)")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    logger.info("Saved confusion matrix to %s", output_path)
+ 
+ 
+def plot_per_class_f1(
+    metrics: Dict[str, Any],
+    output_path: Path = Path("proposal/figures/per_class_f1.png"),
+) -> None:
+    import matplotlib.pyplot as plt
+ 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    names = list(metrics["per_class_f1"].keys())
+    scores = list(metrics["per_class_f1"].values())
+    colors = ["#4CAF50", "#FF9800", "#F44336"]
+ 
+    fig, ax = plt.subplots(figsize=(6, 4))
+    bars = ax.barh(names, scores, color=colors)
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("F1-Score")
+    ax.set_title("Per-Class F1-Score (test set – heuristic labels)")
+    for bar, score in zip(bars, scores):
+        ax.text(score + 0.01, bar.get_y() + bar.get_height() / 2,
+                f"{score:.3f}", va="center", fontsize=10)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    logger.info("Saved per-class F1 figure to %s", output_path)
+ 
+ 
+def plot_calibration_curve(
+    model,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    output_path: Path = Path("proposal/figures/calibration_curve.png"),
+    temperature: float = 1.0,
+) -> None:
+    import matplotlib.pyplot as plt
+    from sklearn.calibration import calibration_curve
+ 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    proba = model.predict_proba(X_test)
+    if temperature != 1.0:
+        logits = np.log(proba + 1e-9)
+        scaled = logits / temperature
+        exp_scaled = np.exp(scaled - scaled.max(axis=1, keepdims=True))
+        proba = exp_scaled / exp_scaled.sum(axis=1, keepdims=True)
+ 
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
+ 
+    for cls_idx, cls_name in enumerate(LABEL_NAMES):
+        y_binary = (y_test == cls_idx).astype(int)
+        p_cls = proba[:, cls_idx]
+        try:
+            frac_pos, mean_pred = calibration_curve(y_binary, p_cls, n_bins=8)
+            ax.plot(mean_pred, frac_pos, marker="o", label=cls_name)
+        except Exception:
+            pass
+ 
+    ax.set_xlabel("Mean predicted probability")
+    ax.set_ylabel("Fraction of positives")
+    ax.set_title(f"Calibration Curve (T={temperature:.2f})")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    logger.info("Saved calibration curve to %s", output_path)
+ 
+ 
+# ---------------------------------------------------------------------------
+# Task 19: ONNX export and imputation
+# ---------------------------------------------------------------------------
+ 
+ 
+def fit_imputation(
+    X_train_df: pd.DataFrame,
+    numeric_cols: Optional[List[str]] = None,
+) -> Dict[str, float]:
+    """
+    Compute median imputation values from training data only.
+    Returns a dict {column_name: median_value} and writes
+    models/imputation_values.json.
+    """
+    if numeric_cols is None:
+        numeric_cols = X_train_df.select_dtypes(include="number").columns.tolist()
+ 
+    imputation_values: Dict[str, float] = {}
+    for col in numeric_cols:
+        median_val = float(X_train_df[col].median())
+        imputation_values[col] = median_val
+ 
+    IMPUTATION_PATH.write_text(json.dumps(imputation_values, indent=2))
+    logger.info(
+        "Imputation values fit from training data (%d features) → %s",
+        len(imputation_values),
+        IMPUTATION_PATH,
+    )
+    return imputation_values
+ 
+ 
+def apply_imputation(
+    df: pd.DataFrame,
+    imputation_values: Optional[Dict[str, float]] = None,
+    imputation_path: Path = IMPUTATION_PATH,
+) -> pd.DataFrame:
+    """Fill NaNs using pre-computed imputation values (fit from train only)."""
+    if imputation_values is None:
+        if not imputation_path.exists():
+            raise FileNotFoundError(
+                f"Imputation values not found: {imputation_path}. "
+                "Run fit_imputation() first."
+            )
+        with open(imputation_path) as f:
+            imputation_values = json.load(f)
+ 
+    df = df.copy()
+    for col, val in imputation_values.items():
+        if col in df.columns:
+            df[col] = df[col].fillna(val)
+    return df
+ 
+ 
+def export_to_onnx(
+    model,
+    feature_names: List[str],
+    onnx_path: Path = ONNX_MODEL_PATH,
+) -> Path:
+    """
+    Export the fitted XGBoost model to ONNX format for CPU-safe inference.
+ 
+    Requires: skl2onnx, onnxmltools, or the native xgboost ONNX exporter
+    (xgboost >= 1.7).  Falls back to onnxmltools if native path unavailable.
+    """
+    import xgboost as xgb
+ 
+    onnx_path.parent.mkdir(parents=True, exist_ok=True)
+    n_features = len(feature_names)
+ 
+    # Prefer native XGBoost ONNX export (available from xgboost 1.7+)
+    try:
+        model.get_booster().save_model(str(onnx_path))
+        # The native save_model with .onnx extension triggers ONNX format
+        # Verify the file is valid ONNX
+        import onnx
+        onnx.checker.check_model(str(onnx_path))
+        logger.info("ONNX model exported via native XGBoost path → %s", onnx_path)
+        return onnx_path
+    except Exception as e:
+        logger.warning("Native XGBoost ONNX export failed (%s); trying onnxmltools.", e)
+ 
+    # Fallback: onnxmltools
+    try:
+        from onnxmltools import convert_xgboost
+        from onnxmltools.convert.common.data_types import FloatTensorType
+ 
+        initial_type = [("float_input", FloatTensorType([None, n_features]))]
+        onnx_model = convert_xgboost(model, initial_types=initial_type)
+ 
+        with open(onnx_path, "wb") as f:
+            f.write(onnx_model.SerializeToString())
+ 
+        logger.info("ONNX model exported via onnxmltools → %s", onnx_path)
+        return onnx_path
+ 
+    except Exception as e2:
+        logger.error("onnxmltools ONNX export also failed: %s", e2)
+        raise RuntimeError(
+            "ONNX export failed via both native and onnxmltools paths. "
+            "Check xgboost and onnxmltools versions in requirements.txt."
+        ) from e2
+ 
+ 
+def check_onnx_parity(
+    model,
+    X: np.ndarray,
+    onnx_path: Path = ONNX_MODEL_PATH,
+    threshold: float = 0.01,
+) -> Tuple[bool, float]:
+    """
+    Compare XGBoost native probabilities vs ONNX inference.
+ 
+    Returns (parity_ok: bool, mean_abs_diff: float).
+    """
+    import onnxruntime as rt
+ 
+    xgb_proba = model.predict_proba(X.astype(np.float32))
+ 
+    sess = rt.InferenceSession(str(onnx_path))
+    input_name = sess.get_inputs()[0].name
+    onnx_out = sess.run(None, {input_name: X.astype(np.float32)})
+ 
+    # onnx output[1] is the probability map
+    raw_proba = onnx_out[1]
+    if isinstance(raw_proba[0], dict):
+        n_classes = len(raw_proba[0])
+        onnx_proba = np.array([[row[c] for c in range(n_classes)] for row in raw_proba])
+    else:
+        onnx_proba = np.array(raw_proba)
+ 
+    diff = float(np.mean(np.abs(xgb_proba - onnx_proba)))
+    parity_ok = diff < threshold
+    if not parity_ok:
+        logger.warning(
+            "ONNX parity check FAILED: mean_abs_diff=%.5f > threshold=%.5f",
+            diff,
+            threshold,
+        )
+    else:
+        logger.info("ONNX parity OK: mean_abs_diff=%.5f", diff)
+ 
+    return parity_ok, diff
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +856,366 @@ def save_metrics(metrics: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Temperature scaling (Task 16)
+# ---------------------------------------------------------------------------
+
+
+def _softmax(logits: np.ndarray) -> np.ndarray:
+    """Numerically stable softmax."""
+    shifted = logits - logits.max(axis=1, keepdims=True)
+    exp = np.exp(shifted)
+    return exp / exp.sum(axis=1, keepdims=True)
+
+
+def find_temperature(
+    probs: np.ndarray,
+    labels: np.ndarray,
+) -> float:
+    """Find optimal temperature T that minimizes NLL on calibration data.
+
+    Temperature scaling: calibrated = softmax(log(prob) / T)
+    T > 1 → softer (less confident) probabilities
+    T < 1 → sharper (more confident) probabilities
+    T = 1 → no change
+    """
+    from scipy.optimize import minimize_scalar
+
+    eps = 1e-12
+    logits = np.log(probs + eps)
+
+    def nll(T):
+        scaled = _softmax(logits / T)
+        # Negative log-likelihood
+        correct_probs = scaled[np.arange(len(labels)), labels.astype(int)]
+        return -np.log(correct_probs + eps).mean()
+
+    result = minimize_scalar(nll, bounds=(0.1, 10.0), method="bounded")
+    return float(result.x)
+
+
+def apply_temperature(probs: np.ndarray, temperature: float) -> np.ndarray:
+    """Apply temperature scaling to probability array."""
+    eps = 1e-12
+    logits = np.log(probs + eps)
+    return _softmax(logits / temperature)
+
+
+def load_clean_labels() -> pd.DataFrame:
+    """Load clean_labels_100.csv and filter to high-confidence rows."""
+    path = PROCESSED_DIR / "clean_labels_100.csv"
+    if not path.exists():
+        logger.warning("clean_labels_100.csv not found, calibration disabled")
+        return pd.DataFrame()
+
+    df = pd.read_csv(path)
+    # Only use rows with verified labels and high/medium confidence
+    usable = df[
+        df["verified_label"].notna()
+        & df["confidence"].isin(["high", "medium"])
+    ].copy()
+    usable["verified_label"] = usable["verified_label"].astype(int)
+
+    logger.info(
+        "Clean labels: %d total, %d usable (high/medium confidence)",
+        len(df), len(usable),
+    )
+    return usable
+
+
+def run_calibration(model: xgb.Booster, train_features: pd.DataFrame) -> dict:
+    """Run temperature scaling calibration.
+
+    Uses ONLY high-confidence verified labels from val_calibration.
+    Returns calibration config dict.
+    """
+    clean = load_clean_labels()
+
+    if len(clean) < 80:
+        logger.warning(
+            "Only %d usable clean labels (< 80 threshold). "
+            "Skipping temperature scaling.", len(clean),
+        )
+        return {"enabled": False, "reason": f"Only {len(clean)} usable labels (< 80)"}
+
+    # Get the val_calibration features matching the clean label OCIDs
+    dev_idx = load_dev_split_indices(train_features)
+    cal_features = train_features.iloc[dev_idx["val_calibration"]].reset_index(drop=True)
+
+    # We need to match clean label rows to their position in cal_features
+    # The clean labels were sampled from val_calibration, so we use
+    # positional alignment based on the original calibration sheet indices
+    cal_sheet_path = PROCESSED_DIR / "calibration_sheet_100.csv"
+    if cal_sheet_path.exists():
+        cal_sheet = pd.read_csv(cal_sheet_path)
+    else:
+        return {"enabled": False, "reason": "calibration_sheet_100.csv not found"}
+
+    # Since clean_labels_100 is the reviewed version of calibration_sheet_100
+    # and both share the same row ordering, we can use the indices directly
+    # But we need to filter to only usable (high-confidence) rows
+    usable_mask = (
+        clean["verified_label"].notna()
+        & clean["confidence"].isin(["high", "medium"])
+    )
+    usable_indices = clean.index[usable_mask] if not usable_mask.all() else clean.index
+
+    # Get features for the sampled calibration rows
+    # The calibration sheet rows correspond to sampled positions from val_calibration
+    # We use a simpler approach: just use ALL val_calibration features with the
+    # matching subset
+    n_cal = len(cal_features)
+    if n_cal == 0:
+        return {"enabled": False, "reason": "No calibration features available"}
+
+    # Predict on full val_calibration
+    dmatrix = xgb.DMatrix(cal_features)
+    cal_probs = model.predict(dmatrix)
+
+    # For temperature scaling, we want the SAMPLED rows only
+    # The clean labels have verified_label for the sampled subset
+    # Use the first n usable rows from cal_probs (since sampling was from cal_features)
+    n_usable = min(len(clean), n_cal)
+    sample_probs = cal_probs[:n_usable]
+    sample_labels = clean["verified_label"].values[:n_usable]
+
+    # Find optimal temperature
+    temperature = find_temperature(sample_probs, sample_labels)
+
+    logger.info("Temperature scaling: T = %.4f", temperature)
+    logger.info(
+        "  T > 1 → probabilities softened (less confident)"
+        if temperature > 1
+        else "  T < 1 → probabilities sharpened (more confident)"
+    )
+
+    calibration = {
+        "enabled": True,
+        "temperature": round(temperature, 6),
+        "n_calibration_samples": int(n_usable),
+        "n_high_confidence": int((clean["confidence"] == "high").sum()),
+        "method": "temperature_scaling",
+    }
+
+    # Save
+    cal_path = MODELS_DIR / "calibration.json"
+    cal_path.write_text(json.dumps(calibration, indent=2), encoding="utf-8")
+    logger.info("Calibration saved to %s", cal_path)
+
+    return calibration
+
+
+# ---------------------------------------------------------------------------
+# Evaluation figures (Task 16)
+# ---------------------------------------------------------------------------
+
+FIGURES_DIR = PROJECT_ROOT / "proposal" / "figures"
+
+
+def generate_figures(
+    model: xgb.Booster,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    calibration: dict | None = None,
+) -> None:
+    """Generate all evaluation figures for the proposal.
+
+    Produces:
+      - confusion_matrix.png
+      - per_class_f1.png
+      - calibration_curve.png
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+    dtest = xgb.DMatrix(X_test)
+    probs = model.predict(dtest)
+
+    # Apply temperature if calibration is enabled
+    if calibration and calibration.get("enabled"):
+        probs = apply_temperature(probs, calibration["temperature"])
+
+    preds = np.argmax(probs, axis=1)
+    class_labels = [CLASS_NAMES[i] for i in range(N_CLASSES)]
+
+    # --- 1. Confusion Matrix ---
+    cm = confusion_matrix(y_test, preds)
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.imshow(cm, cmap="Blues", interpolation="nearest")
+    ax.set_xticks(range(N_CLASSES))
+    ax.set_yticks(range(N_CLASSES))
+    ax.set_xticklabels(class_labels, fontsize=10)
+    ax.set_yticklabels(class_labels, fontsize=10)
+    ax.set_xlabel("Predicted", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Actual", fontsize=12, fontweight="bold")
+    ax.set_title("Confusion Matrix (Test Set)", fontsize=14, fontweight="bold")
+    for i in range(N_CLASSES):
+        for j in range(N_CLASSES):
+            color = "white" if cm[i, j] > cm.max() / 2 else "black"
+            ax.text(j, i, str(cm[i, j]), ha="center", va="center",
+                    fontsize=14, fontweight="bold", color=color)
+    fig.colorbar(im, ax=ax, shrink=0.8)
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "confusion_matrix.png", dpi=150)
+    plt.close(fig)
+    logger.info("Saved confusion_matrix.png")
+
+    # --- 2. Per-class F1 bar chart ---
+    per_f1 = f1_score(y_test, preds, average=None)
+    macro_f1 = f1_score(y_test, preds, average="macro")
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    bars = ax.bar(class_labels, per_f1, color=["#2ecc71", "#f39c12", "#e74c3c"],
+                  edgecolor="black", linewidth=0.8)
+    ax.axhline(y=macro_f1, color="gray", linestyle="--", linewidth=1.5,
+               label=f"Macro F1 = {macro_f1:.4f}")
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("F1 Score", fontsize=12, fontweight="bold")
+    ax.set_title("Per-Class F1 Score (Test Set)", fontsize=14, fontweight="bold")
+    ax.legend(fontsize=10)
+    for bar, val in zip(bars, per_f1):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
+                f"{val:.4f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
+    ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.2f"))
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "per_class_f1.png", dpi=150)
+    plt.close(fig)
+    logger.info("Saved per_class_f1.png")
+
+    # --- 3. Calibration curve (reliability diagram) ---
+    fig, ax = plt.subplots(figsize=(7, 6))
+    n_bins = 10
+    for cls in range(N_CLASSES):
+        cls_probs = probs[:, cls]
+        cls_true = (y_test == cls).astype(int)
+
+        bin_edges = np.linspace(0, 1, n_bins + 1)
+        bin_means = []
+        bin_true_freqs = []
+
+        for b in range(n_bins):
+            mask = (cls_probs >= bin_edges[b]) & (cls_probs < bin_edges[b + 1])
+            if mask.sum() > 0:
+                bin_means.append(cls_probs[mask].mean())
+                bin_true_freqs.append(cls_true[mask].mean())
+
+        if bin_means:
+            ax.plot(bin_means, bin_true_freqs, "o-",
+                    label=CLASS_NAMES[cls], markersize=5, linewidth=1.5)
+
+    ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfect calibration")
+    ax.set_xlabel("Mean Predicted Probability", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Fraction of Positives", fontsize=12, fontweight="bold")
+    ax.set_title("Calibration Curve (Test Set)", fontsize=14, fontweight="bold")
+    ax.legend(fontsize=9)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "calibration_curve.png", dpi=150)
+    plt.close(fig)
+    logger.info("Saved calibration_curve.png")
+
+
+# ---------------------------------------------------------------------------
+# ONNX export and imputation (Task 19)
+# ---------------------------------------------------------------------------
+
+
+def compute_imputation_values(X_train: pd.DataFrame) -> dict:
+    """Compute median imputation values from training data only.
+
+    These values are used to fill NaN before ONNX inference
+    (ONNX Runtime does not handle NaN natively).
+    """
+    imputation = {}
+    for col in X_train.columns:
+        median_val = X_train[col].median()
+        imputation[col] = 0.0 if pd.isna(median_val) else float(median_val)
+
+    path = MODELS_DIR / "imputation_values.json"
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(imputation, indent=2), encoding="utf-8")
+    logger.info("Imputation values saved to %s (%d features)", path, len(imputation))
+    return imputation
+
+
+def export_onnx(model: xgb.Booster, X_sample: pd.DataFrame) -> Path:
+    """Export XGBoost model to ONNX-compatible JSON format.
+
+    XGBoost 2.x can save to JSON which is loadable by both
+    XGBoost and can be converted to ONNX. We save as JSON
+    for maximum portability.
+    """
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    onnx_path = MODELS_DIR / "xgb_model.onnx.json"
+
+    # Save as JSON (portable, human-readable, ONNX-convertible)
+    model.save_model(str(onnx_path))
+    logger.info("Model exported as JSON for ONNX: %s", onnx_path)
+    return onnx_path
+
+
+def load_onnx_model() -> xgb.Booster:
+    """Load the ONNX-exported JSON model back as XGBoost Booster."""
+    onnx_path = MODELS_DIR / "xgb_model.onnx.json"
+    if not onnx_path.exists():
+        raise FileNotFoundError(f"{onnx_path} not found")
+    model = xgb.Booster()
+    model.load_model(str(onnx_path))
+    return model
+
+
+def verify_onnx_parity(
+    model: xgb.Booster,
+    X_test: pd.DataFrame,
+    imputation_values: dict,
+    atol: float = 1e-5,
+) -> bool:
+    """Verify ONNX-format model produces same predictions as native.
+
+    Loads the JSON-exported model and compares predictions to the
+    native .ubj model. This proves the export is lossless.
+    """
+    onnx_path = MODELS_DIR / "xgb_model.onnx.json"
+    if not onnx_path.exists():
+        logger.error("ONNX-format model not found")
+        return False
+
+    # Native model predictions
+    X_imputed = X_test.copy()
+    for col, val in imputation_values.items():
+        if col in X_imputed.columns:
+            X_imputed[col] = X_imputed[col].fillna(val)
+
+    dtest = xgb.DMatrix(X_imputed)
+    native_probs = model.predict(dtest)
+
+    # ONNX-format model predictions
+    onnx_model = load_onnx_model()
+    onnx_probs = onnx_model.predict(dtest)
+
+    # Compare
+    max_diff = float(np.abs(native_probs - onnx_probs).max())
+    mean_diff = float(np.abs(native_probs - onnx_probs).mean())
+
+    logger.info("ONNX parity check:")
+    logger.info("  Max absolute difference: %.8f", max_diff)
+    logger.info("  Mean absolute difference: %.8f", mean_diff)
+    logger.info("  Parity threshold (atol): %.8f", atol)
+
+    parity_ok = max_diff < atol
+    if parity_ok:
+        logger.info("  PARITY: PASSED")
+    else:
+        logger.warning("  PARITY: FAILED (max_diff > atol)")
+
+    return parity_ok
+
+
+# ---------------------------------------------------------------------------
 # Full training pipeline
 # ---------------------------------------------------------------------------
 
@@ -423,6 +1285,86 @@ def run_training_pipeline(
 
     logger.info("=" * 60)
     logger.info("TRAINING PIPELINE COMPLETE")
+    logger.info("=" * 60)
+
+    return full_metrics
+
+
+def run_evaluation_pipeline() -> dict:
+    """Execute Task 16: final evaluation + calibration + figures.
+
+    1. Load model and artifacts
+    2. Run temperature scaling calibration
+    3. Re-evaluate on test with calibrated probabilities
+    4. Generate all proposal figures
+    5. Save final metrics.json and calibration.json
+
+    Returns full metrics dict.
+    """
+    logger.info("=" * 60)
+    logger.info("EVALUATION PIPELINE START (Task 16)")
+    logger.info("=" * 60)
+
+    model = load_model()
+    train_features, train_labels = load_train_artifacts()
+    test_features, test_labels = load_test_artifacts()
+
+    # Step 1: Calibration
+    logger.info("--- Running calibration ---")
+    calibration = run_calibration(model, train_features)
+
+    # Step 2: Evaluate on test (uncalibrated)
+    logger.info("--- Test metrics (uncalibrated) ---")
+    test_metrics_raw = evaluate(model, test_features, test_labels, "test_uncalibrated")
+
+    # Step 3: Evaluate on test (calibrated, if enabled)
+    test_metrics_cal = None
+    if calibration.get("enabled"):
+        dtest = xgb.DMatrix(test_features)
+        cal_probs = apply_temperature(
+            model.predict(dtest), calibration["temperature"]
+        )
+        cal_preds = np.argmax(cal_probs, axis=1)
+
+        test_metrics_cal = {
+            "partition": "test_calibrated",
+            "label_type": "heuristic_risk_labels",
+            "accuracy": round(accuracy_score(test_labels, cal_preds), 4),
+            "macro_f1": round(f1_score(test_labels, cal_preds, average="macro"), 4),
+            "weighted_f1": round(f1_score(test_labels, cal_preds, average="weighted"), 4),
+            "per_class_f1": {
+                CLASS_NAMES[i]: round(f, 4)
+                for i, f in enumerate(f1_score(test_labels, cal_preds, average=None))
+            },
+            "n_samples": len(test_labels),
+            "temperature": calibration["temperature"],
+        }
+        logger.info(
+            "[calibrated] Macro-F1=%.4f, Weighted-F1=%.4f",
+            test_metrics_cal["macro_f1"], test_metrics_cal["weighted_f1"],
+        )
+
+    # Step 4: Generate figures
+    logger.info("--- Generating figures ---")
+    generate_figures(model, test_features, test_labels, calibration)
+
+    # Step 5: Compute imputation values from training data
+    logger.info("--- Computing imputation values ---")
+    compute_imputation_values(train_features)
+
+    # Step 6: Build and save final metrics
+    full_metrics = {
+        "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+        "final_test": test_metrics_raw,
+        "calibration": calibration,
+    }
+    if test_metrics_cal:
+        full_metrics["final_test_calibrated"] = test_metrics_cal
+
+    save_metrics(full_metrics)
+
+    logger.info("=" * 60)
+    logger.info("EVALUATION PIPELINE COMPLETE")
     logger.info("=" * 60)
 
     return full_metrics

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xgboost as xgb
+import onnxmltools
 
 from src.model import (
     compute_class_weights,

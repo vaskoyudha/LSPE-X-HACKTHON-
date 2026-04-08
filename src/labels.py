@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import json
+import warnings
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -25,10 +28,300 @@ logger = logging.getLogger(__name__)
 TRAIN_DIR = PROJECT_ROOT / "train_data"
 TEST_DIR = PROJECT_ROOT / "test_data"
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+ 
+LABEL_NAMES = {0: "Rendah", 1: "Sedang", 2: "Tinggi"}
+ 
+_DEV_MANIFEST = Path("data/processed/dev_split_manifest.json")
+
 
 # ---------------------------------------------------------------------------
 # Individual red-flag indicators (ICW PFA-based)
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+ 
+ 
+def _price_deviation_ratio(row: pd.Series) -> float:
+    """(awarded_price - hps) / hps.  NaN if hps is missing or zero."""
+    hps = row.get("hps_value", np.nan)
+    awarded = row.get("awarded_value", np.nan)
+    if pd.isna(hps) or hps == 0 or pd.isna(awarded):
+        return np.nan
+    return (awarded - hps) / hps
+ 
+ 
+def _single_bid_flag(row: pd.Series) -> int:
+    """1 if only one bid was submitted."""
+    n = row.get("bid_count", np.nan)
+    if pd.isna(n):
+        return 0
+    return int(n <= 1)
+ 
+ 
+def _short_window_flag(row: pd.Series, threshold_days: int = 3) -> int:
+    """1 if the bid submission window was unusually short."""
+    days = row.get("bid_window_days", np.nan)
+    if pd.isna(days):
+        return 0
+    return int(days <= threshold_days)
+ 
+ 
+def _repeat_winner_flag(row: pd.Series, history: Optional[pd.DataFrame] = None) -> int:
+    """
+    1 if the same supplier won from the same buyer in the past 12 months.
+    Requires past-only history (expanding window).  Returns 0 when history
+    is unavailable so the feature is nullable but never forward-leaking.
+    """
+    if history is None or history.empty:
+        return 0
+    supplier = row.get("winner_supplier_id")
+    buyer = row.get("buyer_id")
+    tender_date = row.get("tender_date")
+    if pd.isna(supplier) or pd.isna(buyer) or pd.isna(tender_date):
+        return 0
+    cutoff = tender_date - pd.Timedelta(days=365)
+    mask = (
+        (history["winner_supplier_id"] == supplier)
+        & (history["buyer_id"] == buyer)
+        & (history["tender_date"] >= cutoff)
+        & (history["tender_date"] < tender_date)
+    )
+    return int(mask.any())
+ 
+ 
+# ---------------------------------------------------------------------------
+# Weak-label rule (ICW-style)
+# ---------------------------------------------------------------------------
+ 
+# Thresholds – documented so the proposal can cite them
+PRICE_DEV_HIGH = 0.02    # ≤2% below HPS → suspicious
+PRICE_DEV_LOW = -0.30    # >30% below HPS → also suspicious (extremely low bid)
+MIN_BIDDERS_MEDIUM = 2   # fewer than this → medium risk boost
+MIN_BIDDERS_LOW = 3      # at least this many bidders required for low risk
+ 
+ 
+def assign_heuristic_label(
+    row: pd.Series,
+    past_history: Optional[pd.DataFrame] = None,
+) -> int:
+    """
+    Assign a heuristic risk label (0 / 1 / 2) to a single procurement record.
+ 
+    Expanding-window features (repeat_winner) require `past_history`, which
+    must contain only rows with tender_date < row.tender_date.
+    """
+    score = 0
+ 
+    # --- single-bid flag ---
+    if _single_bid_flag(row):
+        score += 2
+ 
+    # --- short window ---
+    if _short_window_flag(row):
+        score += 1
+ 
+    # --- price deviation near HPS ---
+    pdr = _price_deviation_ratio(row)
+    if not pd.isna(pdr):
+        if PRICE_DEV_LOW <= pdr <= PRICE_DEV_HIGH:
+            score += 2
+        elif pdr > PRICE_DEV_HIGH:
+            # awarded above HPS – data error or emergency procurement
+            score += 1
+ 
+    # --- repeat winner ---
+    if _repeat_winner_flag(row, history=past_history):
+        score += 1
+ 
+    # --- bid count (separate from single-bid) ---
+    n_bidders = row.get("bid_count", np.nan)
+    if not pd.isna(n_bidders):
+        if n_bidders < MIN_BIDDERS_MEDIUM:
+            score += 1
+        elif n_bidders < MIN_BIDDERS_LOW:
+            score += 0  # neutral
+ 
+    # --- map score to class ---
+    if score >= 4:
+        return 2  # Tinggi
+    elif score >= 2:
+        return 1  # Sedang
+    else:
+        return 0  # Rendah
+ 
+ 
+def label_dataframe(
+    df: pd.DataFrame,
+    date_col: str = "tender_date",
+) -> pd.DataFrame:
+    """
+    Apply expanding-window heuristic labeling to an entire DataFrame.
+ 
+    The DataFrame must already be sorted by `date_col` ascending.
+    Past history for each row contains only rows with earlier dates,
+    satisfying the no-look-ahead requirement.
+ 
+    Returns the DataFrame with a new column `heuristic_label`.
+    """
+    df = df.copy()
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    df = df.sort_values(date_col).reset_index(drop=True)
+ 
+    labels = []
+    for i, row in df.iterrows():
+        past = df.loc[:i - 1] if i > 0 else pd.DataFrame()
+        labels.append(assign_heuristic_label(row, past_history=past))
+ 
+    df["heuristic_label"] = labels
+    return df
+ 
+ 
+# ---------------------------------------------------------------------------
+# Task 14: Calibration sample selection helpers
+# ---------------------------------------------------------------------------
+ 
+ 
+def select_calibration_samples(
+    features_df: pd.DataFrame,
+    labels_df: pd.DataFrame,
+    model,  # fitted XGBClassifier
+    manifest_path: Path = _DEV_MANIFEST,
+    target_n: int = 120,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """
+    Select calibration review samples from ``val_calibration`` only.
+ 
+    Parameters
+    ----------
+    features_df : features for the train split (all sub-splits combined)
+    labels_df   : labels for the train split
+    model       : fitted XGBClassifier
+    manifest_path : path to dev_split_manifest.json
+    target_n    : number of rows to sample (default 120, buffer above 80)
+    random_state : reproducibility seed
+ 
+    Returns
+    -------
+    DataFrame with columns:
+        tender_id, heuristic_label, model_pred_class,
+        model_proba_0, model_proba_1, model_proba_2,
+        verified_label, review_notes
+ 
+    ``verified_label`` and ``review_notes`` are pre-filled with empty strings
+    for the reviewer to complete.
+    """
+    if not manifest_path.exists():
+        raise FileNotFoundError(
+            f"Dev split manifest not found: {manifest_path}.  "
+            "Run Task 6 first."
+        )
+ 
+    with open(manifest_path) as f:
+        manifest = json.load(f)
+ 
+    cal_ids = set(manifest.get("val_calibration", {}).get("tender_ids", []))
+    if not cal_ids:
+        # Fall back to date range
+        cal_start = manifest.get("val_calibration", {}).get("start_date")
+        cal_end = manifest.get("val_calibration", {}).get("end_date")
+        if cal_start and cal_end and "tender_date" in features_df.columns:
+            mask = (
+                (features_df["tender_date"] >= cal_start)
+                & (features_df["tender_date"] <= cal_end)
+            )
+            cal_features = features_df[mask]
+            cal_labels = labels_df[mask]
+        else:
+            raise ValueError(
+                "val_calibration section in manifest has neither tender_ids "
+                "nor start_date/end_date.  Cannot select calibration samples."
+            )
+    else:
+        id_col = "tender_id" if "tender_id" in features_df.columns else features_df.index.name
+        if id_col and id_col in features_df.columns:
+            mask = features_df[id_col].isin(cal_ids)
+        else:
+            mask = features_df.index.isin(cal_ids)
+        cal_features = features_df[mask]
+        cal_labels = labels_df[mask]
+ 
+    if len(cal_features) == 0:
+        warnings.warn(
+            "val_calibration subset is empty.  Calibration will be skipped.",
+            UserWarning,
+        )
+        return pd.DataFrame()
+ 
+    # ---- model predictions ------------------------------------------------
+    numeric_cols = cal_features.select_dtypes(include="number").columns.tolist()
+    X_cal = cal_features[numeric_cols].values.astype(np.float32)
+ 
+    proba = model.predict_proba(X_cal)        # (n, 3)
+    pred_class = np.argmax(proba, axis=1)
+ 
+    # ---- uncertainty score (entropy) for sorting --------------------------
+    eps = 1e-9
+    entropy = -np.sum(proba * np.log(proba + eps), axis=1)
+ 
+    # ---- stratified sample ------------------------------------------------
+    result_df = cal_features.copy()
+    if "tender_id" not in result_df.columns:
+        result_df["tender_id"] = result_df.index.astype(str)
+ 
+    result_df = result_df[["tender_id"]].copy()
+    result_df["heuristic_label"] = cal_labels["heuristic_label"].values if "heuristic_label" in cal_labels.columns else -1
+    result_df["model_pred_class"] = pred_class
+    result_df["model_proba_0"] = proba[:, 0].round(4)
+    result_df["model_proba_1"] = proba[:, 1].round(4)
+    result_df["model_proba_2"] = proba[:, 2].round(4)
+    result_df["entropy"] = entropy
+    result_df["verified_label"] = ""
+    result_df["review_notes"] = ""
+ 
+    # Sort by uncertainty descending (most ambiguous first)
+    result_df = result_df.sort_values("entropy", ascending=False)
+ 
+    # Stratified by heuristic label
+    per_class = target_n // 3
+    sampled_parts = []
+    rng = np.random.default_rng(random_state)
+    for cls in [0, 1, 2]:
+        cls_rows = result_df[result_df["heuristic_label"] == cls]
+        n_take = min(per_class, len(cls_rows))
+        sampled_parts.append(cls_rows.iloc[:n_take])
+ 
+    sampled = pd.concat(sampled_parts).drop_duplicates("tender_id")
+    # Top up if needed
+    remaining = result_df[~result_df["tender_id"].isin(sampled["tender_id"])]
+    if len(sampled) < target_n:
+        top_up = remaining.iloc[: target_n - len(sampled)]
+        sampled = pd.concat([sampled, top_up])
+ 
+    return sampled.drop(columns=["entropy"]).reset_index(drop=True)
+ 
+ 
+def load_verified_labels(
+    path: Path = Path("data/processed/clean_labels_100.csv"),
+) -> pd.DataFrame:
+    """
+    Load and validate the reviewed calibration CSV.
+ 
+    Returns only rows where verified_label is a valid integer (0/1/2).
+    Rows marked UNCERTAIN are silently dropped.
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"Calibration CSV not found: {path}")
+ 
+    df = pd.read_csv(path, dtype={"verified_label": str})
+    df = df[df["verified_label"].str.strip().isin(["0", "1", "2"])].copy()
+    df["verified_label"] = df["verified_label"].astype(int)
+    return df
 
 
 def flag_single_bidder(df: pd.DataFrame) -> pd.Series:
