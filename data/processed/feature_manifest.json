@@ -1,0 +1,49 @@
+{
+  "feature_count": 30,
+  "feature_names": [
+    "f_tender_value_log",
+    "f_award_value_log",
+    "f_price_deviation_ratio",
+    "f_tender_duration_days",
+    "f_award_duration_days",
+    "f_num_tenderers",
+    "f_single_bidder",
+    "f_title_length",
+    "f_description_length",
+    "f_procurement_method_enc",
+    "f_is_q4",
+    "f_is_december",
+    "f_contract_value_log",
+    "f_contract_award_ratio",
+    "f_days_to_contract",
+    "f_buyer_hist_avg_value",
+    "f_buyer_hist_value_std",
+    "f_supplier_hist_win_count",
+    "f_buyer_supplier_repeat_count",
+    "f_buyer_hist_tender_count",
+    "f_supplier_hist_max_award",
+    "f_tender_value_zscore_buyer",
+    "f_days_since_last_buyer_tender",
+    "f_buyer_method_diversity",
+    "f_supplier_unique_buyers",
+    "f_buyer_value_growth_rate",
+    "f_supplier_capacity_ratio",
+    "f_buyer_hist_avg_award",
+    "f_buyer_hist_award_std",
+    "f_supplier_hist_avg_award"
+  ],
+  "train_rows": 4003,
+  "test_rows": 997,
+  "label_distribution": {
+    "train": {
+      "low_risk": 954,
+      "medium_risk": 2658,
+      "high_risk": 391
+    },
+    "test": {
+      "low_risk": 225,
+      "medium_risk": 677,
+      "high_risk": 95
+    }
+  }
+}

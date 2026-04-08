@@ -4,13 +4,21 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
+# Raw data (large, downloaded separately)
 data/raw/
-models/*.onnx
+
+# Large generated data artifacts (reproducible via scripts/materialize.py)
+train_data/
+test_data/
+
+# Large model binaries (reproducible via training pipeline)
 models/*.ubj
+models/*.onnx
+models/*.onnx.json
 models/*.pkl
 
-proposal/bab*.md
-proposal/proposal-final.*
+# Proposal PDF (generated from markdown)
+proposal/proposal-final.pdf
 
 .env
 .DS_Store

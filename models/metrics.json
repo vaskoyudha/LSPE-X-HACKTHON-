@@ -1,0 +1,88 @@
+{
+  "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+  "final_test": {
+    "partition": "test_uncalibrated",
+    "label_type": "heuristic_risk_labels",
+    "accuracy": 0.997,
+    "macro_f1": 0.995,
+    "weighted_f1": 0.997,
+    "per_class_f1": {
+      "Low Risk": 0.9978,
+      "Medium Risk": 0.9978,
+      "High Risk": 0.9894
+    },
+    "log_loss": 0.0165,
+    "confusion_matrix": [
+      [
+        225,
+        0,
+        0
+      ],
+      [
+        1,
+        676,
+        0
+      ],
+      [
+        0,
+        2,
+        93
+      ]
+    ],
+    "classification_report": {
+      "Low Risk": {
+        "precision": 0.995575221238938,
+        "recall": 1.0,
+        "f1-score": 0.9977827050997783,
+        "support": 225.0
+      },
+      "Medium Risk": {
+        "precision": 0.9970501474926253,
+        "recall": 0.9985228951255539,
+        "f1-score": 0.9977859778597786,
+        "support": 677.0
+      },
+      "High Risk": {
+        "precision": 1.0,
+        "recall": 0.9789473684210527,
+        "f1-score": 0.9893617021276596,
+        "support": 95.0
+      },
+      "accuracy": 0.9969909729187563,
+      "macro avg": {
+        "precision": 0.9975417895771878,
+        "recall": 0.9924900878488688,
+        "f1-score": 0.9949767950290722,
+        "support": 997.0
+      },
+      "weighted avg": {
+        "precision": 0.9969983697404898,
+        "recall": 0.9969909729187563,
+        "f1-score": 0.9969825249354543,
+        "support": 997.0
+      }
+    },
+    "n_samples": 997
+  },
+  "calibration": {
+    "enabled": true,
+    "temperature": 9.999901,
+    "n_calibration_samples": 95,
+    "n_high_confidence": 94,
+    "method": "temperature_scaling"
+  },
+  "final_test_calibrated": {
+    "partition": "test_calibrated",
+    "label_type": "heuristic_risk_labels",
+    "accuracy": 0.997,
+    "macro_f1": 0.995,
+    "weighted_f1": 0.997,
+    "per_class_f1": {
+      "Low Risk": 0.9978,
+      "Medium Risk": 0.9978,
+      "High Risk": 0.9894
+    },
+    "n_samples": 997,
+    "temperature": 9.999901
+  }
+}
