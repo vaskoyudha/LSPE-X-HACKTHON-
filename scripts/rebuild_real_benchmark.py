@@ -26,7 +26,7 @@ from src.model import compute_sample_weights, run_evaluation_pipeline, run_train
 MODELS_DIR = ROOT / "models"
 EVIDENCE_DIR = ROOT / ".sisyphus" / "evidence"
 PUBLICATION_URL = "https://data.open-contracting.org/en/publication/101"
-SELECTED_YEARS = [2023]
+SELECTED_YEARS = [2021, 2022, 2023]
 
 
 def _read_json(path: Path) -> dict | None:
