@@ -10,6 +10,7 @@ import pytest
 
 from src.data import (
     _flatten_release,
+    _gzip_looks_readable,
     _safe_get,
     clean_dates,
     generate_quality_report,
@@ -94,6 +95,18 @@ class TestSafeGet:
 
     def test_empty_dict(self):
         assert _safe_get({}, "a", default=None) is None
+
+
+@pytest.mark.p1
+def test_gzip_integrity_check_detects_truncated_file(tmp_path: Path):
+    good = tmp_path / "good.jsonl.gz"
+    with gzip.open(good, "wt", encoding="utf-8") as fh:
+        fh.write(json.dumps(SAMPLE_RECORD) + "\n")
+    assert _gzip_looks_readable(good) is True
+
+    broken = tmp_path / "broken.jsonl.gz"
+    broken.write_bytes(good.read_bytes()[:-8])
+    assert _gzip_looks_readable(broken) is False
 
 
 @pytest.mark.p0

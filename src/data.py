@@ -85,13 +85,31 @@ def download_year(year: int, dest_dir: Path | None = None) -> Path:
     dest = dest_dir / filename
 
     if dest.exists():
-        logger.info("Already downloaded: %s", dest)
-        return dest
+        if _gzip_looks_readable(dest):
+            logger.info("Already downloaded: %s", dest)
+            return dest
+        logger.warning("Existing download is corrupted, re-downloading: %s", dest)
+        dest.unlink()
 
     logger.info("Downloading %s → %s", url, dest)
     urlretrieve(url, dest)
     logger.info("Downloaded %s (%.1f MB)", dest.name, dest.stat().st_size / 1e6)
     return dest
+
+
+def _gzip_looks_readable(path: Path) -> bool:
+    """Quick integrity check for a gzip file.
+
+    We only read enough to ensure the file header and at least the first record
+    are accessible, which is sufficient to detect interrupted downloads.
+    """
+    try:
+        with gzip.open(path, "rb") as fh:
+            for _ in iter(lambda: fh.read(1024 * 1024), b""):
+                pass
+        return True
+    except (OSError, EOFError):
+        return False
 
 
 def download_all(

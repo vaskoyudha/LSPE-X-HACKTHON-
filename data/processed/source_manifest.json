@@ -1,12 +1,16 @@
 {
-  "mode": "real_recent_year_slice",
+  "mode": "real_recent_multi_year_slice",
   "publication_url": "https://data.open-contracting.org/en/publication/101",
   "selected_years": [
+    2021,
+    2022,
     2023
   ],
   "downloaded_files": [
+    "data/raw/2021.jsonl.gz",
+    "data/raw/2022.jsonl.gz",
     "data/raw/2023.jsonl.gz"
   ],
-  "generated_at_utc": "2026-04-09T15:36:26.699889+00:00",
-  "note": "This benchmark intentionally uses a recent real data slice to improve external validity while keeping the repo runnable. It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
+  "generated_at_utc": "2026-04-09T18:29:42.423182+00:00",
+  "note": "This benchmark intentionally uses a recent multi-year real data slice to improve external validity while keeping the repo runnable. It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
 }

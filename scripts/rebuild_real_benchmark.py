@@ -21,12 +21,25 @@ import onnxruntime as rt
 
 from scripts.materialize import materialize
 from src.data import RAW_DIR, PROCESSED_DIR, run_pipeline
-from src.model import compute_sample_weights, run_evaluation_pipeline, run_training_pipeline
+from src.model import (
+    BEST_PARAMS_PATH,
+    apply_temperature,
+    compute_imputation_values,
+    compute_sample_weights,
+    evaluate,
+    generate_figures,
+    load_dev_split_indices,
+    run_calibration,
+    save_metrics,
+    save_model,
+    train_final_model,
+)
 
 MODELS_DIR = ROOT / "models"
 EVIDENCE_DIR = ROOT / ".sisyphus" / "evidence"
 PUBLICATION_URL = "https://data.open-contracting.org/en/publication/101"
 SELECTED_YEARS = [2021, 2022, 2023]
+USE_EXISTING_BEST_PARAMS = True
 HPO_TRIALS = 3
 HPO_TIMEOUT = 60
 
@@ -137,6 +150,65 @@ def _build_local_onnx_artifacts() -> dict:
     }
 
 
+def _train_and_evaluate_current_split() -> None:
+    """Retrain on the current split using the tracked best params.
+
+    This avoids expensive HPO reruns when the benchmark slice changes but the
+    immediate goal is to refresh the submission bundle quickly and consistently.
+    """
+    train_features = pd.read_parquet(ROOT / "train_data" / "features.parquet")
+    train_labels = pd.read_parquet(ROOT / "train_data" / "labels.parquet")["risk_label"]
+    test_features = pd.read_parquet(ROOT / "test_data" / "features.parquet")
+    test_labels = pd.read_parquet(ROOT / "test_data" / "labels.parquet")["risk_label"]
+
+    best_params = json.loads(BEST_PARAMS_PATH.read_text())
+    dev_idx = load_dev_split_indices(train_features)
+    X_fit = train_features.iloc[dev_idx["train_fit"]].reset_index(drop=True)
+    y_fit = train_labels.iloc[dev_idx["train_fit"]].reset_index(drop=True)
+    X_hpo = train_features.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
+    y_hpo = train_labels.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
+
+    model = train_final_model(X_fit, y_fit, X_hpo, y_hpo, best_params.copy())
+    save_model(model, best_params)
+
+    val_metrics = evaluate(model, X_hpo, y_hpo, "val_hpo")
+    test_metrics = evaluate(model, test_features, test_labels, "test_uncalibrated")
+
+    calibration = run_calibration(model, train_features)
+    calibrated_metrics = None
+    if calibration.get("enabled"):
+        dtest = xgb.DMatrix(test_features)
+        cal_probs = apply_temperature(model.predict(dtest), calibration["temperature"])
+        cal_preds = np.argmax(cal_probs, axis=1)
+        calibrated_metrics = {
+            "partition": "test_calibrated",
+            "label_type": "heuristic_risk_labels",
+            "accuracy": round(float((cal_preds == test_labels.to_numpy()).mean()), 4),
+            "macro_f1": round(float(__import__("sklearn.metrics").metrics.f1_score(test_labels, cal_preds, average="macro")), 4),
+            "weighted_f1": round(float(__import__("sklearn.metrics").metrics.f1_score(test_labels, cal_preds, average="weighted")), 4),
+            "per_class_f1": {
+                "Low Risk": round(float(__import__("sklearn.metrics").metrics.f1_score(test_labels, cal_preds, average=None, labels=[0, 1, 2])[0]), 4),
+                "Medium Risk": round(float(__import__("sklearn.metrics").metrics.f1_score(test_labels, cal_preds, average=None, labels=[0, 1, 2])[1]), 4),
+                "High Risk": round(float(__import__("sklearn.metrics").metrics.f1_score(test_labels, cal_preds, average=None, labels=[0, 1, 2])[2]), 4),
+            },
+            "n_samples": len(test_labels),
+            "temperature": calibration["temperature"],
+        }
+
+    generate_figures(model, test_features, test_labels, calibration)
+    compute_imputation_values(train_features)
+
+    full_metrics = {
+        "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+        "internal_validation": val_metrics,
+        "final_test": test_metrics,
+        "calibration": calibration,
+    }
+    if calibrated_metrics:
+        full_metrics["final_test_calibrated"] = calibrated_metrics
+    save_metrics(full_metrics)
+
+
 def main() -> None:
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -154,8 +226,11 @@ def main() -> None:
     materialize(use_synthetic=False)
 
     # Step 3: retrain and evaluate on the real benchmark.
-    run_training_pipeline(n_trials=HPO_TRIALS, hpo_timeout=HPO_TIMEOUT)
-    real_metrics = run_evaluation_pipeline()
+    if USE_EXISTING_BEST_PARAMS:
+        _train_and_evaluate_current_split()
+    else:
+        run_training_pipeline(n_trials=HPO_TRIALS, hpo_timeout=HPO_TIMEOUT)
+        run_evaluation_pipeline()
 
     # Step 4: rebuild local model artifacts and diagnostics.
     onnx_info = _build_local_onnx_artifacts()

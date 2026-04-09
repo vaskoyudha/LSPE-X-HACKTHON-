@@ -171,70 +171,70 @@
       "final_test": {
         "partition": "test_uncalibrated",
         "label_type": "heuristic_risk_labels",
-        "accuracy": 0.9561,
-        "macro_f1": 0.8309,
-        "weighted_f1": 0.9549,
+        "accuracy": 0.9906,
+        "macro_f1": 0.9349,
+        "weighted_f1": 0.9905,
         "per_class_f1": {
-          "Low Risk": 0.9493,
-          "Medium Risk": 0.9654,
-          "High Risk": 0.578
+          "Low Risk": 0.991,
+          "Medium Risk": 0.9912,
+          "High Risk": 0.8225
         },
-        "log_loss": 0.1662,
+        "log_loss": 0.07,
         "confusion_matrix": [
           [
-            8987,
-            0,
+            42611,
+            5,
             0
           ],
           [
-            959,
-            16206,
-            0
+            770,
+            49313,
+            17
           ],
           [
             0,
-            203,
-            139
+            84,
+            234
           ]
         ],
         "classification_report": {
           "Low Risk": {
-            "precision": 0.9035793283732154,
-            "recall": 1.0,
-            "f1-score": 0.9493476997834469,
-            "support": 8987.0
+            "precision": 0.982250293907471,
+            "recall": 0.9998826731743946,
+            "f1-score": 0.9909880577229438,
+            "support": 42616.0
           },
           "Medium Risk": {
-            "precision": 0.9876287403254311,
-            "recall": 0.9441304981066123,
-            "f1-score": 0.9653898850300828,
-            "support": 17165.0
+            "precision": 0.9981984535039067,
+            "recall": 0.9842914171656687,
+            "f1-score": 0.9911961568611686,
+            "support": 50100.0
           },
           "High Risk": {
-            "precision": 1.0,
-            "recall": 0.4064327485380117,
-            "f1-score": 0.577962577962578,
-            "support": 342.0
+            "precision": 0.9322709163346613,
+            "recall": 0.7358490566037735,
+            "f1-score": 0.8224956063268892,
+            "support": 318.0
           },
-          "accuracy": 0.9561410130595607,
+          "accuracy": 0.9905840875378894,
           "macro avg": {
-            "precision": 0.9637360228995488,
-            "recall": 0.7835210822148747,
-            "f1-score": 0.8309000542587026,
-            "support": 26494.0
+            "precision": 0.970906554582013,
+            "recall": 0.9066743823146123,
+            "f1-score": 0.9348932736370005,
+            "support": 93034.0
           },
           "weighted avg": {
-            "precision": 0.9592781290773803,
-            "recall": 0.9561410130595607,
-            "f1-score": 0.9549470958012537,
-            "support": 26494.0
+            "precision": 0.9906677472440285,
+            "recall": 0.9905840875378894,
+            "f1-score": 0.990524196847147,
+            "support": 93034.0
           }
         },
-        "n_samples": 26494
+        "n_samples": 93034
       },
       "calibration": {
         "enabled": true,
-        "temperature": 9.999995,
+        "temperature": 9.999996,
         "n_calibration_samples": 95,
         "n_high_confidence": 94,
         "method": "temperature_scaling"
@@ -242,55 +242,55 @@
       "final_test_calibrated": {
         "partition": "test_calibrated",
         "label_type": "heuristic_risk_labels",
-        "accuracy": 0.9561,
-        "macro_f1": 0.8309,
-        "weighted_f1": 0.9549,
+        "accuracy": 0.9906,
+        "macro_f1": 0.9349,
+        "weighted_f1": 0.9905,
         "per_class_f1": {
-          "Low Risk": 0.9493,
-          "Medium Risk": 0.9654,
-          "High Risk": 0.578
+          "Low Risk": 0.991,
+          "Medium Risk": 0.9912,
+          "High Risk": 0.8225
         },
-        "n_samples": 26494,
-        "temperature": 9.999995
+        "n_samples": 93034,
+        "temperature": 9.999996
       }
     },
     "provenance": {
       "data_kind": "real_or_mixed_ocds",
       "synthetic_ratio": 0.0,
       "all_ocids_use_synthetic_prefix": false,
-      "row_count_total": 133774,
-      "row_count_train": 107280,
-      "row_count_test": 26494,
+      "row_count_total": 465184,
+      "row_count_train": 372150,
+      "row_count_test": 93034,
       "date_range_train": {
         "min": "2015-07-09 00:00:00+00:00",
-        "max": "2023-07-21 00:00:00+00:00"
+        "max": "2023-03-10 07:27:51+00:00"
       },
       "date_range_test": {
-        "min": "2023-07-21 06:24:04+00:00",
+        "min": "2023-03-10 07:38:45+00:00",
         "max": "2023-12-20 23:00:00+00:00"
       },
-      "unique_buyers": 583,
-      "unique_suppliers": 28477,
+      "unique_buyers": 618,
+      "unique_suppliers": 60976,
       "procurement_methods": {
-        "": 133774
+        "": 465184
       },
       "warning": "Dataset provenance does not appear fully synthetic from OCID prefixes."
     },
     "robustness": {
       "full": {
         "feature_count": 30,
-        "accuracy": 0.9557,
-        "macro_f1": 0.8299,
-        "weighted_f1": 0.9546,
-        "log_loss": 0.1756
+        "accuracy": 0.991,
+        "macro_f1": 0.9432,
+        "weighted_f1": 0.9909,
+        "log_loss": 0.0735
       },
       "proxy_core_removed": {
         "feature_count": 21,
-        "accuracy": 0.51,
-        "macro_f1": 0.3466,
-        "weighted_f1": 0.5192,
-        "log_loss": 0.7964,
-        "macro_f1_drop_vs_full": 0.4833,
+        "accuracy": 0.5426,
+        "macro_f1": 0.3854,
+        "weighted_f1": 0.5367,
+        "log_loss": 0.7363,
+        "macro_f1_drop_vs_full": 0.5578,
         "dropped_features": [
           "f_tender_value_log",
           "f_price_deviation_ratio",
@@ -305,11 +305,11 @@
       },
       "proxy_broad_removed": {
         "feature_count": 18,
-        "accuracy": 0.507,
-        "macro_f1": 0.3371,
-        "weighted_f1": 0.5169,
-        "log_loss": 0.8271,
-        "macro_f1_drop_vs_full": 0.4928,
+        "accuracy": 0.5373,
+        "macro_f1": 0.3781,
+        "weighted_f1": 0.5306,
+        "log_loss": 0.747,
+        "macro_f1_drop_vs_full": 0.5651,
         "dropped_features": [
           "f_tender_value_log",
           "f_award_value_log",
@@ -328,16 +328,20 @@
       "interpretation": "Large performance drops after removing direct heuristic proxies indicate the current benchmark acts more as an interpretable risk-rule accelerator than a validated real-world anomaly detector."
     },
     "source_manifest": {
-      "mode": "real_recent_year_slice",
+      "mode": "real_recent_multi_year_slice",
       "publication_url": "https://data.open-contracting.org/en/publication/101",
       "selected_years": [
+        2021,
+        2022,
         2023
       ],
       "downloaded_files": [
+        "data/raw/2021.jsonl.gz",
+        "data/raw/2022.jsonl.gz",
         "data/raw/2023.jsonl.gz"
       ],
-      "generated_at_utc": "2026-04-09T15:36:26.699889+00:00",
-      "note": "This benchmark intentionally uses a recent real data slice to improve external validity while keeping the repo runnable. It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
+      "generated_at_utc": "2026-04-09T18:29:42.423182+00:00",
+      "note": "This benchmark intentionally uses a recent multi-year real data slice to improve external validity while keeping the repo runnable. It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
     },
     "onnx": {
       "ubj_path": "models/xgb_model.ubj",
@@ -346,8 +350,8 @@
   },
   "summary": {
     "synthetic_macro_f1": 0.995,
-    "real_macro_f1": 0.8309,
-    "macro_f1_delta_real_minus_synthetic": -0.1641,
+    "real_macro_f1": 0.9349,
+    "macro_f1_delta_real_minus_synthetic": -0.0601,
     "synthetic_data_kind": "synthetic_structured_benchmark",
     "real_data_kind": "real_or_mixed_ocds"
   }
