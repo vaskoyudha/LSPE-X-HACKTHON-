@@ -13,7 +13,7 @@ models/*.ubj
 models/*.pkl
 
 # Keep source proposal chapters versioned; ignore only the generated final export.
-proposal/proposal-final.*
+proposal/proposal-final.pdf
 
 .env
 .DS_Store
