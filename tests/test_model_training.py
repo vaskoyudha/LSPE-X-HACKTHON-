@@ -182,3 +182,16 @@ class TestEvaluation:
         assert metrics["partition"] == "val_hpo"
         assert metrics["label_type"] == "heuristic_risk_labels"
         assert 0 <= metrics["macro_f1"] <= 1
+
+    def test_metrics_structure_when_a_class_is_missing(self, synthetic_split_data):
+        X_fit, y_fit, X_hpo, y_hpo = synthetic_split_data
+        y_fit = y_fit.replace(0, 1)
+        y_hpo = y_hpo.replace(0, 1)
+        params = {"max_depth": 4, "learning_rate": 0.1, "n_rounds": 20,
+                  "subsample": 0.8, "colsample_bytree": 0.8,
+                  "min_child_weight": 3, "gamma": 0.1,
+                  "reg_alpha": 0.01, "reg_lambda": 1.0}
+        model = train_final_model(X_fit, y_fit, X_hpo, y_hpo, params)
+        metrics = evaluate(model, X_hpo, y_hpo, "val_hpo_missing_class")
+        assert set(metrics["per_class_f1"].keys()) == {"Low Risk", "Medium Risk", "High Risk"}
+        assert len(metrics["confusion_matrix"]) == 3

@@ -805,12 +805,13 @@ def evaluate(
     dmatrix = xgb.DMatrix(X)
     probs = model.predict(dmatrix)
     preds = np.argmax(probs, axis=1)
+    labels = list(range(N_CLASSES))
 
     macro_f1 = f1_score(y, preds, average="macro")
     weighted_f1 = f1_score(y, preds, average="weighted")
-    per_class_f1 = f1_score(y, preds, average=None).tolist()
+    per_class_f1 = f1_score(y, preds, average=None, labels=labels).tolist()
     acc = accuracy_score(y, preds)
-    cm = confusion_matrix(y, preds).tolist()
+    cm = confusion_matrix(y, preds, labels=labels).tolist()
 
     # Log loss (if probabilities available)
     try:
@@ -819,7 +820,12 @@ def evaluate(
         ll = None
 
     report = classification_report(
-        y, preds, target_names=[CLASS_NAMES[i] for i in range(N_CLASSES)], output_dict=True
+        y,
+        preds,
+        labels=labels,
+        target_names=[CLASS_NAMES[i] for i in range(N_CLASSES)],
+        output_dict=True,
+        zero_division=0,
     )
 
     metrics = {
