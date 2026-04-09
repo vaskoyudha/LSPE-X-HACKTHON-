@@ -78,16 +78,23 @@ Nilai praktis utama sistem ini adalah explainable prioritization. Auditor dapat:
 
 Dengan pendekatan ini, sistem tidak hanya memberi label, tetapi juga memberi konteks yang dapat ditindaklanjuti.
 
-## 4.7 Keterbatasan
+## 4.7 Audit Kelemahan Model
+
+Audit tambahan pada `models/robustness.json` memberi insight yang sangat penting. Ketika model hanya diberi 9 fitur yang langsung beririsan dengan aturan labeling (proxy-only), Macro-F1 tetap **0,9990**. Namun ketika fitur-fitur proksi langsung tersebut dihapus (proxy-reduced), Macro-F1 turun tajam menjadi **0,3911**.
+
+Artinya, model saat ini memang sangat kuat, tetapi kekuatan itu sebagian besar berasal dari kemampuannya memulihkan struktur aturan heuristik yang dipakai untuk membuat label. Dari perspektif Phase 2, ini tetap bernilai karena membuktikan explainable screening pipeline. Namun dari perspektif validitas ilmiah, hasil ini menegaskan bahwa model belum boleh diposisikan sebagai detektor fraud operasional yang independen dari rubric labeling.
+
+## 4.8 Keterbatasan
 
 Walaupun hasil metrik sangat tinggi, ada beberapa keterbatasan penting:
 
 1. Label yang dipakai adalah **heuristik risiko**, bukan ground-truth fraud outcome.
-2. Sebagian fitur dan label dibangun dari keluarga red flag yang berdekatan, sehingga ada risiko circularity.
-3. Artefak data kerja saat ini merepresentasikan snapshot pipeline yang sangat terstruktur; generalisasi ke data lapangan mentah tetap perlu validasi tambahan.
-4. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
+2. Provenance audit menunjukkan dataset kerja saat ini **bersifat sintetis** (`synthetic_ocid_ratio = 1.0`).
+3. Audit ablation menunjukkan adanya circularity risk yang kuat antara aturan labeling dan fitur prediktif utama.
+4. Artefak data kerja merepresentasikan snapshot pipeline yang terstruktur; generalisasi ke data lapangan mentah tetap perlu validasi tambahan.
+5. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
 
-## 4.8 Kesimpulan Bab
+## 4.9 Kesimpulan Bab
 
 Secara keseluruhan, LPSE-X berhasil memenuhi tujuan Phase 2: membangun pipeline explainable AI berbasis XGBoost + SHAP yang bekerja offline, menjaga prinsip anti-leakage, menghasilkan metrik kuat pada test split, dan menyajikan penjelasan yang dapat dibaca auditor non-teknis.
 

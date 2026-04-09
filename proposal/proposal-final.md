@@ -10,10 +10,10 @@
 
 ## Daftar Isi
 
-1. [Bab 1 — Pendahuluan](#bab-1--pendahuluan)
-2. [Bab 2 — Metodologi](#bab-2--metodologi)
-3. [Bab 3 — Kepatuhan dan Implementasi](#bab-3--kepatuhan-dan-implementasi)
-4. [Bab 4 — Hasil dan Pembahasan](#bab-4--hasil-dan-pembahasan)
+1. Bab 1 — Pendahuluan
+2. Bab 2 — Metodologi
+3. Bab 3 — Kepatuhan dan Implementasi
+4. Bab 4 — Hasil dan Pembahasan
 
 ---
 
@@ -84,7 +84,7 @@ Pipeline ini mengikuti constraint kompetisi Track C: seluruh inferensi berjalan 
 
 ## 2.2 Sumber dan Kualitas Data
 
-Sumber data kerja proyek ini disimpan dalam artefak kanonik `data/processed/ocds_flat.parquet`, dengan ringkasan kualitas pada `data/processed/quality_report.md`. Dataset yang tersedia berisi 5.000 baris dengan 24 kolom utama, rentang waktu 2014-01-02 hingga 2023-12-30, serta 5.000 OCID unik. Cakupan untuk kolom inti berada di atas 92%, sehingga cukup kuat untuk eksperimen hackathon.
+Sumber data kerja proyek ini disimpan dalam artefak kanonik `data/processed/ocds_flat.parquet`, dengan ringkasan kualitas pada `data/processed/quality_report.md` dan provenance ringkas pada `data/processed/data_provenance.json`. Dataset yang tersedia berisi 5.000 baris dengan 24 kolom utama, rentang waktu 2014-01-02 hingga 2023-12-30, serta 5.000 OCID unik. Provenance audit menunjukkan bahwa snapshot kerja saat ini bersifat **synthetic structured dataset** (`synthetic_ocid_ratio = 1.0`) dengan 50 buyer dan 200 supplier. Karena itu, dataset ini cocok untuk membuktikan pipeline Phase 2, tetapi belum cukup untuk mengklaim validitas operasional pada data LPSE riil.
 
 Beberapa temuan penting dari quality report:
 
@@ -237,6 +237,17 @@ Artefak utama yang digunakan oleh metodologi ini adalah:
 Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkungan CPU lokal dengan dependency yang dipin pada `requirements.txt`.
 
 
+## 2.10 Audit Circularity dan Robustness
+
+Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
+
+- **baseline_all_features (30 fitur)** → Macro-F1 0,9970
+- **proxy_only (9 fitur proksi langsung)** → Macro-F1 0,9990
+- **proxy_reduced (21 fitur non-proksi)** → Macro-F1 0,3911
+
+Hasil ini menunjukkan bahwa sebagian besar kekuatan model saat ini berasal dari fitur yang sangat dekat dengan red-flag heuristic rules. Dengan kata lain, model Phase 2 sangat efektif sebagai **risk-rule recovery engine**, namun belum bisa diposisikan sebagai bukti kuat generalisasi terhadap fraud outcome yang independen dari aturan labeling.
+
+
 ---
 
 # Bab 3 — Kepatuhan dan Implementasi
@@ -386,6 +397,16 @@ Verifikasi terkini pada branch kerja menunjukkan:
 Bukti ini menegaskan bahwa basis implementasi stabil untuk dibawa ke tahap finalisasi submission.
 
 
+## 3.6 Posisi Ilmiah yang Jujur
+
+Secara engineering, sistem sudah memenuhi kebutuhan Phase 2: pipeline lengkap, explainability tersedia, notebook dapat dieksekusi, dan inferensi berjalan offline. Namun, secara ilmiah ada dua pembatas utama yang harus dinyatakan secara eksplisit kepada juri:
+
+1. dataset kerja saat ini masih sintetis,
+2. label target masih berupa heuristic risk labels.
+
+Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektur dan explainability pipeline**, bukan klaim final akurasi terhadap kasus korupsi riil. Robustness audit tambahan dipakai untuk memperkuat kejujuran posisi ini.
+
+
 ---
 
 # Bab 4 — Hasil dan Pembahasan
@@ -470,16 +491,23 @@ Nilai praktis utama sistem ini adalah explainable prioritization. Auditor dapat:
 
 Dengan pendekatan ini, sistem tidak hanya memberi label, tetapi juga memberi konteks yang dapat ditindaklanjuti.
 
-## 4.7 Keterbatasan
+## 4.7 Audit Kelemahan Model
+
+Audit tambahan pada `models/robustness.json` memberi insight yang sangat penting. Ketika model hanya diberi 9 fitur yang langsung beririsan dengan aturan labeling (proxy-only), Macro-F1 tetap **0,9990**. Namun ketika fitur-fitur proksi langsung tersebut dihapus (proxy-reduced), Macro-F1 turun tajam menjadi **0,3911**.
+
+Artinya, model saat ini memang sangat kuat, tetapi kekuatan itu sebagian besar berasal dari kemampuannya memulihkan struktur aturan heuristik yang dipakai untuk membuat label. Dari perspektif Phase 2, ini tetap bernilai karena membuktikan explainable screening pipeline. Namun dari perspektif validitas ilmiah, hasil ini menegaskan bahwa model belum boleh diposisikan sebagai detektor fraud operasional yang independen dari rubric labeling.
+
+## 4.8 Keterbatasan
 
 Walaupun hasil metrik sangat tinggi, ada beberapa keterbatasan penting:
 
 1. Label yang dipakai adalah **heuristik risiko**, bukan ground-truth fraud outcome.
-2. Sebagian fitur dan label dibangun dari keluarga red flag yang berdekatan, sehingga ada risiko circularity.
-3. Artefak data kerja saat ini merepresentasikan snapshot pipeline yang sangat terstruktur; generalisasi ke data lapangan mentah tetap perlu validasi tambahan.
-4. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
+2. Provenance audit menunjukkan dataset kerja saat ini **bersifat sintetis** (`synthetic_ocid_ratio = 1.0`).
+3. Audit ablation menunjukkan adanya circularity risk yang kuat antara aturan labeling dan fitur prediktif utama.
+4. Artefak data kerja merepresentasikan snapshot pipeline yang terstruktur; generalisasi ke data lapangan mentah tetap perlu validasi tambahan.
+5. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
 
-## 4.8 Kesimpulan Bab
+## 4.9 Kesimpulan Bab
 
 Secara keseluruhan, LPSE-X berhasil memenuhi tujuan Phase 2: membangun pipeline explainable AI berbasis XGBoost + SHAP yang bekerja offline, menjaga prinsip anti-leakage, menghasilkan metrik kuat pada test split, dan menyajikan penjelasan yang dapat dibaca auditor non-teknis.
 

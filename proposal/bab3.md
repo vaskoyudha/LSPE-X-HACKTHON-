@@ -141,3 +141,13 @@ Verifikasi terkini pada branch kerja menunjukkan:
 - `git diff --check` → passed
 
 Bukti ini menegaskan bahwa basis implementasi stabil untuk dibawa ke tahap finalisasi submission.
+
+
+## 3.6 Posisi Ilmiah yang Jujur
+
+Secara engineering, sistem sudah memenuhi kebutuhan Phase 2: pipeline lengkap, explainability tersedia, notebook dapat dieksekusi, dan inferensi berjalan offline. Namun, secara ilmiah ada dua pembatas utama yang harus dinyatakan secara eksplisit kepada juri:
+
+1. dataset kerja saat ini masih sintetis,
+2. label target masih berupa heuristic risk labels.
+
+Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektur dan explainability pipeline**, bukan klaim final akurasi terhadap kasus korupsi riil. Robustness audit tambahan dipakai untuk memperkuat kejujuran posisi ini.

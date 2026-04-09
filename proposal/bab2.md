@@ -8,7 +8,7 @@ Pipeline ini mengikuti constraint kompetisi Track C: seluruh inferensi berjalan 
 
 ## 2.2 Sumber dan Kualitas Data
 
-Sumber data kerja proyek ini disimpan dalam artefak kanonik `data/processed/ocds_flat.parquet`, dengan ringkasan kualitas pada `data/processed/quality_report.md`. Dataset yang tersedia berisi 5.000 baris dengan 24 kolom utama, rentang waktu 2014-01-02 hingga 2023-12-30, serta 5.000 OCID unik. Cakupan untuk kolom inti berada di atas 92%, sehingga cukup kuat untuk eksperimen hackathon.
+Sumber data kerja proyek ini disimpan dalam artefak kanonik `data/processed/ocds_flat.parquet`, dengan ringkasan kualitas pada `data/processed/quality_report.md` dan provenance ringkas pada `data/processed/data_provenance.json`. Dataset yang tersedia berisi 5.000 baris dengan 24 kolom utama, rentang waktu 2014-01-02 hingga 2023-12-30, serta 5.000 OCID unik. Provenance audit menunjukkan bahwa snapshot kerja saat ini bersifat **synthetic structured dataset** (`synthetic_ocid_ratio = 1.0`) dengan 50 buyer dan 200 supplier. Karena itu, dataset ini cocok untuk membuktikan pipeline Phase 2, tetapi belum cukup untuk mengklaim validitas operasional pada data LPSE riil.
 
 Beberapa temuan penting dari quality report:
 
@@ -159,3 +159,14 @@ Artefak utama yang digunakan oleh metodologi ini adalah:
 - `inference.ipynb`
 
 Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkungan CPU lokal dengan dependency yang dipin pada `requirements.txt`.
+
+
+## 2.10 Audit Circularity dan Robustness
+
+Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
+
+- **baseline_all_features (30 fitur)** → Macro-F1 0,9970
+- **proxy_only (9 fitur proksi langsung)** → Macro-F1 0,9990
+- **proxy_reduced (21 fitur non-proksi)** → Macro-F1 0,3911
+
+Hasil ini menunjukkan bahwa sebagian besar kekuatan model saat ini berasal dari fitur yang sangat dekat dengan red-flag heuristic rules. Dengan kata lain, model Phase 2 sangat efektif sebagai **risk-rule recovery engine**, namun belum bisa diposisikan sebagai bukti kuat generalisasi terhadap fraud outcome yang independen dari aturan labeling.
