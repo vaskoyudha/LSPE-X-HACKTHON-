@@ -32,18 +32,18 @@
     "f_buyer_hist_award_std",
     "f_supplier_hist_avg_award"
   ],
-  "train_rows": 4003,
-  "test_rows": 997,
+  "train_rows": 107280,
+  "test_rows": 26494,
   "label_distribution": {
     "train": {
-      "low_risk": 954,
-      "medium_risk": 2658,
-      "high_risk": 391
+      "low_risk": 52855,
+      "medium_risk": 54092,
+      "high_risk": 333
     },
     "test": {
-      "low_risk": 225,
-      "medium_risk": 677,
-      "high_risk": 95
+      "low_risk": 8987,
+      "medium_risk": 17165,
+      "high_risk": 342
     }
   }
 }

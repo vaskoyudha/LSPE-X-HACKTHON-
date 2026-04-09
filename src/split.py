@@ -89,8 +89,18 @@ def external_raw_split(
     
     split_ts = pd.Timestamp(split_date)
 
-    train_df = df_dated[df_dated[date_col] <= split_ts].copy()
-    test_df = df_dated[df_dated[date_col] > split_ts].copy()
+    train_df = (
+        df_dated[df_dated[date_col] <= split_ts]
+        .sort_values(date_col)
+        .reset_index(drop=True)
+        .copy()
+    )
+    test_df = (
+        df_dated[df_dated[date_col] > split_ts]
+        .sort_values(date_col)
+        .reset_index(drop=True)
+        .copy()
+    )
 
     # Validation: no temporal overlap
     train_max = train_df[date_col].max()

@@ -1,44 +1,41 @@
 {
   "provenance": {
-    "data_kind": "synthetic_structured_benchmark",
-    "synthetic_ratio": 1.0,
-    "all_ocids_use_synthetic_prefix": true,
-    "row_count_total": 5000,
-    "row_count_train": 4003,
-    "row_count_test": 997,
+    "data_kind": "real_or_mixed_ocds",
+    "synthetic_ratio": 0.0,
+    "all_ocids_use_synthetic_prefix": false,
+    "row_count_total": 133774,
+    "row_count_train": 107280,
+    "row_count_test": 26494,
     "date_range_train": {
-      "min": "2014-01-02 00:00:00+00:00",
-      "max": "2021-12-27 00:00:00+00:00"
+      "min": "2015-07-09 00:00:00+00:00",
+      "max": "2023-07-21 00:00:00+00:00"
     },
     "date_range_test": {
-      "min": "2021-12-28 00:00:00+00:00",
-      "max": "2023-12-30 00:00:00+00:00"
+      "min": "2023-07-21 06:24:04+00:00",
+      "max": "2023-12-20 23:00:00+00:00"
     },
-    "unique_buyers": 50,
-    "unique_suppliers": 200,
+    "unique_buyers": 583,
+    "unique_suppliers": 28477,
     "procurement_methods": {
-      "open": 2787,
-      "direct": 975,
-      "limited": 751,
-      "selective": 487
+      "": 133774
     },
-    "warning": "Current tracked benchmark is synthetic, so metrics should be interpreted as pipeline validation rather than proof of real-world fraud-detection performance."
+    "warning": "Dataset provenance does not appear fully synthetic from OCID prefixes."
   },
   "robustness": {
     "full": {
       "feature_count": 30,
-      "accuracy": 0.998,
-      "macro_f1": 0.997,
-      "weighted_f1": 0.998,
-      "log_loss": 0.0115
+      "accuracy": 0.9557,
+      "macro_f1": 0.8299,
+      "weighted_f1": 0.9546,
+      "log_loss": 0.1756
     },
     "proxy_core_removed": {
       "feature_count": 21,
-      "accuracy": 0.4975,
-      "macro_f1": 0.3911,
-      "weighted_f1": 0.5147,
-      "log_loss": 0.9711,
-      "macro_f1_drop_vs_full": 0.6059,
+      "accuracy": 0.51,
+      "macro_f1": 0.3466,
+      "weighted_f1": 0.5192,
+      "log_loss": 0.7964,
+      "macro_f1_drop_vs_full": 0.4833,
       "dropped_features": [
         "f_tender_value_log",
         "f_price_deviation_ratio",
@@ -53,11 +50,11 @@
     },
     "proxy_broad_removed": {
       "feature_count": 18,
-      "accuracy": 0.4714,
-      "macro_f1": 0.3829,
-      "weighted_f1": 0.4921,
-      "log_loss": 1.0144,
-      "macro_f1_drop_vs_full": 0.6141,
+      "accuracy": 0.507,
+      "macro_f1": 0.3371,
+      "weighted_f1": 0.5169,
+      "log_loss": 0.8271,
+      "macro_f1_drop_vs_full": 0.4928,
       "dropped_features": [
         "f_tender_value_log",
         "f_award_value_log",

@@ -1,0 +1,354 @@
+{
+  "synthetic_before": {
+    "metrics": {
+      "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+      "final_test": {
+        "partition": "test_uncalibrated",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.997,
+        "macro_f1": 0.995,
+        "weighted_f1": 0.997,
+        "per_class_f1": {
+          "Low Risk": 0.9978,
+          "Medium Risk": 0.9978,
+          "High Risk": 0.9894
+        },
+        "log_loss": 0.0165,
+        "confusion_matrix": [
+          [
+            225,
+            0,
+            0
+          ],
+          [
+            1,
+            676,
+            0
+          ],
+          [
+            0,
+            2,
+            93
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.995575221238938,
+            "recall": 1.0,
+            "f1-score": 0.9977827050997783,
+            "support": 225.0
+          },
+          "Medium Risk": {
+            "precision": 0.9970501474926253,
+            "recall": 0.9985228951255539,
+            "f1-score": 0.9977859778597786,
+            "support": 677.0
+          },
+          "High Risk": {
+            "precision": 1.0,
+            "recall": 0.9789473684210527,
+            "f1-score": 0.9893617021276596,
+            "support": 95.0
+          },
+          "accuracy": 0.9969909729187563,
+          "macro avg": {
+            "precision": 0.9975417895771878,
+            "recall": 0.9924900878488688,
+            "f1-score": 0.9949767950290722,
+            "support": 997.0
+          },
+          "weighted avg": {
+            "precision": 0.9969983697404898,
+            "recall": 0.9969909729187563,
+            "f1-score": 0.9969825249354543,
+            "support": 997.0
+          }
+        },
+        "n_samples": 997
+      },
+      "calibration": {
+        "enabled": true,
+        "temperature": 9.999901,
+        "n_calibration_samples": 95,
+        "n_high_confidence": 94,
+        "method": "temperature_scaling"
+      },
+      "final_test_calibrated": {
+        "partition": "test_calibrated",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.997,
+        "macro_f1": 0.995,
+        "weighted_f1": 0.997,
+        "per_class_f1": {
+          "Low Risk": 0.9978,
+          "Medium Risk": 0.9978,
+          "High Risk": 0.9894
+        },
+        "n_samples": 997,
+        "temperature": 9.999901
+      }
+    },
+    "provenance": {
+      "data_kind": "synthetic_structured_benchmark",
+      "synthetic_ratio": 1.0,
+      "all_ocids_use_synthetic_prefix": true,
+      "row_count_total": 5000,
+      "row_count_train": 4003,
+      "row_count_test": 997,
+      "date_range_train": {
+        "min": "2014-01-02 00:00:00+00:00",
+        "max": "2021-12-27 00:00:00+00:00"
+      },
+      "date_range_test": {
+        "min": "2021-12-28 00:00:00+00:00",
+        "max": "2023-12-30 00:00:00+00:00"
+      },
+      "unique_buyers": 50,
+      "unique_suppliers": 200,
+      "procurement_methods": {
+        "open": 2787,
+        "direct": 975,
+        "limited": 751,
+        "selective": 487
+      },
+      "warning": "Current tracked benchmark is synthetic, so metrics should be interpreted as pipeline validation rather than proof of real-world fraud-detection performance."
+    },
+    "robustness": {
+      "full": {
+        "feature_count": 30,
+        "accuracy": 0.998,
+        "macro_f1": 0.997,
+        "weighted_f1": 0.998,
+        "log_loss": 0.0115
+      },
+      "proxy_core_removed": {
+        "feature_count": 21,
+        "accuracy": 0.4975,
+        "macro_f1": 0.3911,
+        "weighted_f1": 0.5147,
+        "log_loss": 0.9711,
+        "macro_f1_drop_vs_full": 0.6059,
+        "dropped_features": [
+          "f_tender_value_log",
+          "f_price_deviation_ratio",
+          "f_num_tenderers",
+          "f_single_bidder",
+          "f_title_length",
+          "f_description_length",
+          "f_procurement_method_enc",
+          "f_is_q4",
+          "f_is_december"
+        ]
+      },
+      "proxy_broad_removed": {
+        "feature_count": 18,
+        "accuracy": 0.4714,
+        "macro_f1": 0.3829,
+        "weighted_f1": 0.4921,
+        "log_loss": 1.0144,
+        "macro_f1_drop_vs_full": 0.6141,
+        "dropped_features": [
+          "f_tender_value_log",
+          "f_award_value_log",
+          "f_price_deviation_ratio",
+          "f_num_tenderers",
+          "f_single_bidder",
+          "f_title_length",
+          "f_description_length",
+          "f_procurement_method_enc",
+          "f_is_q4",
+          "f_is_december",
+          "f_contract_value_log",
+          "f_contract_award_ratio"
+        ]
+      },
+      "interpretation": "Large performance drops after removing direct heuristic proxies indicate the current benchmark acts more as an interpretable risk-rule accelerator than a validated real-world anomaly detector."
+    }
+  },
+  "real_after": {
+    "metrics": {
+      "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+      "final_test": {
+        "partition": "test_uncalibrated",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9561,
+        "macro_f1": 0.8309,
+        "weighted_f1": 0.9549,
+        "per_class_f1": {
+          "Low Risk": 0.9493,
+          "Medium Risk": 0.9654,
+          "High Risk": 0.578
+        },
+        "log_loss": 0.1662,
+        "confusion_matrix": [
+          [
+            8987,
+            0,
+            0
+          ],
+          [
+            959,
+            16206,
+            0
+          ],
+          [
+            0,
+            203,
+            139
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9035793283732154,
+            "recall": 1.0,
+            "f1-score": 0.9493476997834469,
+            "support": 8987.0
+          },
+          "Medium Risk": {
+            "precision": 0.9876287403254311,
+            "recall": 0.9441304981066123,
+            "f1-score": 0.9653898850300828,
+            "support": 17165.0
+          },
+          "High Risk": {
+            "precision": 1.0,
+            "recall": 0.4064327485380117,
+            "f1-score": 0.577962577962578,
+            "support": 342.0
+          },
+          "accuracy": 0.9561410130595607,
+          "macro avg": {
+            "precision": 0.9637360228995488,
+            "recall": 0.7835210822148747,
+            "f1-score": 0.8309000542587026,
+            "support": 26494.0
+          },
+          "weighted avg": {
+            "precision": 0.9592781290773803,
+            "recall": 0.9561410130595607,
+            "f1-score": 0.9549470958012537,
+            "support": 26494.0
+          }
+        },
+        "n_samples": 26494
+      },
+      "calibration": {
+        "enabled": true,
+        "temperature": 9.999995,
+        "n_calibration_samples": 95,
+        "n_high_confidence": 94,
+        "method": "temperature_scaling"
+      },
+      "final_test_calibrated": {
+        "partition": "test_calibrated",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9561,
+        "macro_f1": 0.8309,
+        "weighted_f1": 0.9549,
+        "per_class_f1": {
+          "Low Risk": 0.9493,
+          "Medium Risk": 0.9654,
+          "High Risk": 0.578
+        },
+        "n_samples": 26494,
+        "temperature": 9.999995
+      }
+    },
+    "provenance": {
+      "data_kind": "real_or_mixed_ocds",
+      "synthetic_ratio": 0.0,
+      "all_ocids_use_synthetic_prefix": false,
+      "row_count_total": 133774,
+      "row_count_train": 107280,
+      "row_count_test": 26494,
+      "date_range_train": {
+        "min": "2015-07-09 00:00:00+00:00",
+        "max": "2023-07-21 00:00:00+00:00"
+      },
+      "date_range_test": {
+        "min": "2023-07-21 06:24:04+00:00",
+        "max": "2023-12-20 23:00:00+00:00"
+      },
+      "unique_buyers": 583,
+      "unique_suppliers": 28477,
+      "procurement_methods": {
+        "": 133774
+      },
+      "warning": "Dataset provenance does not appear fully synthetic from OCID prefixes."
+    },
+    "robustness": {
+      "full": {
+        "feature_count": 30,
+        "accuracy": 0.9557,
+        "macro_f1": 0.8299,
+        "weighted_f1": 0.9546,
+        "log_loss": 0.1756
+      },
+      "proxy_core_removed": {
+        "feature_count": 21,
+        "accuracy": 0.51,
+        "macro_f1": 0.3466,
+        "weighted_f1": 0.5192,
+        "log_loss": 0.7964,
+        "macro_f1_drop_vs_full": 0.4833,
+        "dropped_features": [
+          "f_tender_value_log",
+          "f_price_deviation_ratio",
+          "f_num_tenderers",
+          "f_single_bidder",
+          "f_title_length",
+          "f_description_length",
+          "f_procurement_method_enc",
+          "f_is_q4",
+          "f_is_december"
+        ]
+      },
+      "proxy_broad_removed": {
+        "feature_count": 18,
+        "accuracy": 0.507,
+        "macro_f1": 0.3371,
+        "weighted_f1": 0.5169,
+        "log_loss": 0.8271,
+        "macro_f1_drop_vs_full": 0.4928,
+        "dropped_features": [
+          "f_tender_value_log",
+          "f_award_value_log",
+          "f_price_deviation_ratio",
+          "f_num_tenderers",
+          "f_single_bidder",
+          "f_title_length",
+          "f_description_length",
+          "f_procurement_method_enc",
+          "f_is_q4",
+          "f_is_december",
+          "f_contract_value_log",
+          "f_contract_award_ratio"
+        ]
+      },
+      "interpretation": "Large performance drops after removing direct heuristic proxies indicate the current benchmark acts more as an interpretable risk-rule accelerator than a validated real-world anomaly detector."
+    },
+    "source_manifest": {
+      "mode": "real_recent_year_slice",
+      "publication_url": "https://data.open-contracting.org/en/publication/101",
+      "selected_years": [
+        2023
+      ],
+      "downloaded_files": [
+        "data/raw/2023.jsonl.gz"
+      ],
+      "generated_at_utc": "2026-04-09T15:36:26.699889+00:00",
+      "note": "This benchmark intentionally uses a recent real data slice to improve external validity while keeping the repo runnable. It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
+    },
+    "onnx": {
+      "ubj_path": "models/xgb_model.ubj",
+      "onnx_path": "models/xgb_model.onnx"
+    }
+  },
+  "summary": {
+    "synthetic_macro_f1": 0.995,
+    "real_macro_f1": 0.8309,
+    "macro_f1_delta_real_minus_synthetic": -0.1641,
+    "synthetic_data_kind": "synthetic_structured_benchmark",
+    "real_data_kind": "real_or_mixed_ocds"
+  }
+}

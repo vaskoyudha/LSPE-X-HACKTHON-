@@ -1,18 +1,18 @@
 {
   "full": {
     "feature_count": 30,
-    "accuracy": 0.998,
-    "macro_f1": 0.997,
-    "weighted_f1": 0.998,
-    "log_loss": 0.0115
+    "accuracy": 0.9557,
+    "macro_f1": 0.8299,
+    "weighted_f1": 0.9546,
+    "log_loss": 0.1756
   },
   "proxy_core_removed": {
     "feature_count": 21,
-    "accuracy": 0.4975,
-    "macro_f1": 0.3911,
-    "weighted_f1": 0.5147,
-    "log_loss": 0.9711,
-    "macro_f1_drop_vs_full": 0.6059,
+    "accuracy": 0.51,
+    "macro_f1": 0.3466,
+    "weighted_f1": 0.5192,
+    "log_loss": 0.7964,
+    "macro_f1_drop_vs_full": 0.4833,
     "dropped_features": [
       "f_tender_value_log",
       "f_price_deviation_ratio",
@@ -27,11 +27,11 @@
   },
   "proxy_broad_removed": {
     "feature_count": 18,
-    "accuracy": 0.4714,
-    "macro_f1": 0.3829,
-    "weighted_f1": 0.4921,
-    "log_loss": 1.0144,
-    "macro_f1_drop_vs_full": 0.6141,
+    "accuracy": 0.507,
+    "macro_f1": 0.3371,
+    "weighted_f1": 0.5169,
+    "log_loss": 0.8271,
+    "macro_f1_drop_vs_full": 0.4928,
     "dropped_features": [
       "f_tender_value_log",
       "f_award_value_log",

@@ -70,6 +70,12 @@ class TestExternalRawSplit:
         train, test = external_raw_split(sample_df, test_ratio=0.2)
         assert len(train) + len(test) == len(sample_df)
 
+    def test_outputs_are_sorted_by_date(self, sample_df: pd.DataFrame):
+        shuffled = sample_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
+        train, test = external_raw_split(shuffled, test_ratio=0.2)
+        assert train["tender_datePublished"].is_monotonic_increasing
+        assert test["tender_datePublished"].is_monotonic_increasing
+
     def test_raises_on_missing_column(self, sample_df: pd.DataFrame):
         with pytest.raises(ValueError, match="not found"):
             external_raw_split(sample_df, date_col="nonexistent_col")

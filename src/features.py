@@ -159,7 +159,7 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     supplier_id = df.get("supplier_id", pd.Series("", index=df.index)).fillna("")
 
     # We need sorted order for expanding-window calculations
-    sort_idx = dates.argsort()
+    sort_idx = dates.sort_values(kind="mergesort").index.to_numpy()
     df_sorted = df.iloc[sort_idx].copy()
     dates_sorted = dates.iloc[sort_idx]
 
