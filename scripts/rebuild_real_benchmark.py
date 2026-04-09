@@ -27,6 +27,8 @@ MODELS_DIR = ROOT / "models"
 EVIDENCE_DIR = ROOT / ".sisyphus" / "evidence"
 PUBLICATION_URL = "https://data.open-contracting.org/en/publication/101"
 SELECTED_YEARS = [2021, 2022, 2023]
+HPO_TRIALS = 3
+HPO_TIMEOUT = 60
 
 
 def _read_json(path: Path) -> dict | None:
@@ -65,13 +67,13 @@ def _load_historical_synthetic_snapshot() -> dict | None:
 def _save_source_manifest() -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     manifest = {
-        "mode": "real_recent_year_slice",
+        "mode": "real_recent_multi_year_slice",
         "publication_url": PUBLICATION_URL,
         "selected_years": SELECTED_YEARS,
         "downloaded_files": [str((RAW_DIR / f"{year}.jsonl.gz").relative_to(ROOT)) for year in SELECTED_YEARS],
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "note": (
-            "This benchmark intentionally uses a recent real data slice to improve external validity while keeping the repo runnable. "
+            "This benchmark intentionally uses a recent multi-year real data slice to improve external validity while keeping the repo runnable. "
             "It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
         ),
     }
@@ -152,7 +154,7 @@ def main() -> None:
     materialize(use_synthetic=False)
 
     # Step 3: retrain and evaluate on the real benchmark.
-    run_training_pipeline(n_trials=8, hpo_timeout=120)
+    run_training_pipeline(n_trials=HPO_TRIALS, hpo_timeout=HPO_TIMEOUT)
     real_metrics = run_evaluation_pipeline()
 
     # Step 4: rebuild local model artifacts and diagnostics.
