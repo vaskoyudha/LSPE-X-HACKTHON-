@@ -1,0 +1,25 @@
+{
+  "data_kind": "synthetic_structured_benchmark",
+  "synthetic_ratio": 1.0,
+  "all_ocids_use_synthetic_prefix": true,
+  "row_count_total": 5000,
+  "row_count_train": 4003,
+  "row_count_test": 997,
+  "date_range_train": {
+    "min": "2014-01-02 00:00:00+00:00",
+    "max": "2021-12-27 00:00:00+00:00"
+  },
+  "date_range_test": {
+    "min": "2021-12-28 00:00:00+00:00",
+    "max": "2023-12-30 00:00:00+00:00"
+  },
+  "unique_buyers": 50,
+  "unique_suppliers": 200,
+  "procurement_methods": {
+    "open": 2787,
+    "direct": 975,
+    "limited": 751,
+    "selective": 487
+  },
+  "warning": "Current tracked benchmark is synthetic, so metrics should be interpreted as pipeline validation rather than proof of real-world fraud-detection performance."
+}

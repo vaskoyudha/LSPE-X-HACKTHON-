@@ -1,0 +1,51 @@
+{
+  "full": {
+    "feature_count": 30,
+    "accuracy": 0.998,
+    "macro_f1": 0.997,
+    "weighted_f1": 0.998,
+    "log_loss": 0.0115
+  },
+  "proxy_core_removed": {
+    "feature_count": 21,
+    "accuracy": 0.4975,
+    "macro_f1": 0.3911,
+    "weighted_f1": 0.5147,
+    "log_loss": 0.9711,
+    "macro_f1_drop_vs_full": 0.6059,
+    "dropped_features": [
+      "f_tender_value_log",
+      "f_price_deviation_ratio",
+      "f_num_tenderers",
+      "f_single_bidder",
+      "f_title_length",
+      "f_description_length",
+      "f_procurement_method_enc",
+      "f_is_q4",
+      "f_is_december"
+    ]
+  },
+  "proxy_broad_removed": {
+    "feature_count": 18,
+    "accuracy": 0.4714,
+    "macro_f1": 0.3829,
+    "weighted_f1": 0.4921,
+    "log_loss": 1.0144,
+    "macro_f1_drop_vs_full": 0.6141,
+    "dropped_features": [
+      "f_tender_value_log",
+      "f_award_value_log",
+      "f_price_deviation_ratio",
+      "f_num_tenderers",
+      "f_single_bidder",
+      "f_title_length",
+      "f_description_length",
+      "f_procurement_method_enc",
+      "f_is_q4",
+      "f_is_december",
+      "f_contract_value_log",
+      "f_contract_award_ratio"
+    ]
+  },
+  "interpretation": "Large performance drops after removing direct heuristic proxies indicate the current benchmark acts more as an interpretable risk-rule accelerator than a validated real-world anomaly detector."
+}
