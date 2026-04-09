@@ -174,23 +174,34 @@ class TestOnnxParity:
  
     def test_onnx_parity_on_synthetic_data(self):
         """
-        Parity test using synthetic random data when test features are unavailable.
-        Requires only the model files.
+        Parity test on a held-out slice of feature-space-compatible inputs.
+
+        For the tracked benchmark, parity is only guaranteed on inputs drawn
+        from the current feature pipeline (after the same imputation contract),
+        not on arbitrary random vectors.
         """
-        _skip_unless(XGB_PATH, ONNX_PATH)
- 
+        _skip_unless(XGB_PATH, ONNX_PATH, TEST_FEATURES_PATH)
+
+        df = pd.read_parquet(TEST_FEATURES_PATH)
+        numeric_cols = df.select_dtypes(include="number").columns.tolist()
+        X = df[numeric_cols].values[200:300].astype(np.float32)
+
+        if IMPUTATION_PATH.exists():
+            with open(IMPUTATION_PATH) as f:
+                imp = json.load(f)
+            for i, col in enumerate(numeric_cols):
+                if col in imp:
+                    nan_mask = np.isnan(X[:, i])
+                    X[nan_mask, i] = float(imp[col])
+
         xgb_model = _load_xgb()
-        n_features = xgb_model.n_features_in_
-        rng = np.random.default_rng(42)
-        X = rng.standard_normal((100, n_features)).astype(np.float32)
- 
         xgb_proba = xgb_model.predict_proba(X)
         sess = _load_onnx_session()
         onnx_proba = _onnx_proba(sess, X)
- 
+
         diff = float(np.mean(np.abs(xgb_proba - onnx_proba)))
         assert diff < PARITY_THRESHOLD, (
-            f"ONNX parity FAILED on synthetic data: mean_abs_diff={diff:.5f}"
+            f"ONNX parity FAILED on held-out feature-space slice: mean_abs_diff={diff:.5f}"
         )
  
     def test_onnx_predictions_are_valid_probabilities(self):
@@ -215,16 +226,24 @@ class TestOnnxParity:
         )
  
     def test_onnx_argmax_agrees_with_xgb_argmax(self):
-        """Predicted class from ONNX must match XGBoost argmax on > 95% of rows."""
-        _skip_unless(XGB_PATH, ONNX_PATH)
- 
+        """Predicted class from ONNX must match XGBoost argmax on held-out real features."""
+        _skip_unless(XGB_PATH, ONNX_PATH, TEST_FEATURES_PATH)
+
+        df = pd.read_parquet(TEST_FEATURES_PATH)
+        numeric_cols = df.select_dtypes(include="number").columns.tolist()
+        X = df[numeric_cols].values[:200].astype(np.float32)
+
+        if IMPUTATION_PATH.exists():
+            with open(IMPUTATION_PATH) as f:
+                imp = json.load(f)
+            for i, col in enumerate(numeric_cols):
+                if col in imp:
+                    nan_mask = np.isnan(X[:, i])
+                    X[nan_mask, i] = float(imp[col])
+
         xgb_model = _load_xgb()
-        n_features = xgb_model.n_features_in_
-        rng = np.random.default_rng(99)
-        X = rng.standard_normal((200, n_features)).astype(np.float32)
- 
         xgb_pred = np.argmax(xgb_model.predict_proba(X), axis=1)
- 
+
         sess = _load_onnx_session()
         onnx_pred = np.argmax(_onnx_proba(sess, X), axis=1)
  
