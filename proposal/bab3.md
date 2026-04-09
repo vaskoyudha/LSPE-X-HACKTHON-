@@ -79,7 +79,7 @@ Sudah terpenuhi:
 
 ### Gate 1 — Data freeze dan compliance split
 
-Sudah terpenuhi pada benchmark riil terkini:
+Sudah terpenuhi pada benchmark riil multi-tahun:
 
 - raw split train/test tersedia,
 - metadata split tersedia,
@@ -111,7 +111,7 @@ Dipenuhi melalui dua notebook terpisah:
 - `training.ipynb`
 - `inference.ipynb`
 
-Keduanya sudah dieksekusi ulang setelah migrasi ke benchmark riil.
+Keduanya sudah dieksekusi ulang setelah perluasan benchmark riil multi-tahun.
 
 ### Gate 5 — Submission ready
 
@@ -138,17 +138,17 @@ Beberapa kill-switch dari rencana awal tetap dipertahankan:
 
 Verifikasi terkini pada branch kerja menunjukkan:
 
-- `pytest -q` → suite hijau setelah migrasi benchmark riil
+- `pytest -q` → suite hijau setelah perluasan benchmark riil
 - `python3 -m compileall src tests scripts` → passed
 - `git diff --check` → passed
 - notebook training dan inference dapat dieksekusi dengan `nbconvert`
 
 ## 3.6 Posisi Ilmiah yang Jujur
 
-Migrasi ke data riil memperbaiki kredibilitas submission secara signifikan, karena benchmark tidak lagi sepenuhnya sintetis. Namun, ada tiga pembatas utama yang tetap harus dinyatakan secara eksplisit kepada juri:
+Perluasan ke data riil multi-tahun memperbaiki kredibilitas submission lebih jauh dibanding benchmark riil satu tahun. Namun, ada tiga pembatas utama yang tetap harus dinyatakan secara eksplisit kepada juri:
 
-1. benchmark riil saat ini masih berupa **slice satu tahun (2023)**, bukan seluruh histori LPSE/OCDS,
+1. benchmark riil saat ini masih berupa **slice 2021-2023**, bukan seluruh histori LPSE/OCDS,
 2. label target masih berupa **heuristic risk labels**,
 3. audit ablation menunjukkan circularity risk yang tetap kuat.
 
-Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektur dan explainability pipeline pada data riil yang tidak sempurna**, bukan klaim final akurasi terhadap kasus korupsi terverifikasi.
+Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektur dan explainability pipeline pada data riil multi-tahun yang tidak sempurna**, bukan klaim final akurasi terhadap kasus korupsi terverifikasi.

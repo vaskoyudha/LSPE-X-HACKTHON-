@@ -8,15 +8,15 @@ Pipeline ini mengikuti constraint kompetisi Track C: seluruh inferensi berjalan 
 
 ## 2.2 Sumber dan Kualitas Data
 
-Sumber data kerja proyek ini berasal dari publikasi resmi Indonesia pada `https://data.open-contracting.org/en/publication/101`, dengan metadata lokal tersimpan di `data/processed/source_manifest.json`. Untuk menjaga repo tetap runnable selama Phase 2, benchmark saat ini memakai **slice data riil tahun 2023** yang kemudian diflatten menjadi `data/processed/ocds_flat.parquet`.
+Sumber data kerja proyek ini berasal dari publikasi resmi Indonesia pada `https://data.open-contracting.org/en/publication/101`, dengan metadata lokal tersimpan di `data/processed/source_manifest.json`. Untuk menjaga repo tetap runnable selama Phase 2, benchmark saat ini memakai **slice data riil tahun 2021-2023** yang kemudian diflatten menjadi `data/processed/ocds_flat.parquet`.
 
 Setelah pembersihan tanggal tidak valid, benchmark ini berisi:
 
-- 133.774 baris usable
-- 583 buyer unik
-- 28.477 supplier unik
-- train split: 107.280 baris
-- test split: 26.494 baris
+- 465.184 baris usable
+- 618 buyer unik
+- 60.976 supplier unik
+- train split: 372.150 baris
+- test split: 93.034 baris
 
 Ringkasan kualitas berada di `data/processed/quality_report.md`, sedangkan provenance ringkas berada di `data/processed/data_provenance.json`.
 
@@ -26,9 +26,9 @@ Temuan penting dari quality report dan inspeksi lapangan:
 - `tender.value.amount` sering kosong pada sumber asli, sehingga pipeline memakai fallback `tender.minValue.amount`
 - `tender.description` sering kosong pada sumber asli, sehingga pipeline memakai fallback judul tender untuk menjaga sinyal teks minimum
 - `tender_numberOfTenderers` dan `contracts` sangat jarang tersedia, sehingga sebagian fitur kompetisi/kontrak tetap lemah atau kosong
-- `tender_procurementMethod` kosong pada benchmark ini, sehingga flag direct procurement tidak memberikan sinyal pada slice 2023
+- `tender_procurementMethod` kosong pada benchmark ini, sehingga flag direct procurement tidak memberikan sinyal pada slice saat ini
 
-Dengan demikian, benchmark riil ini jauh lebih kredibel daripada benchmark sintetis sebelumnya, tetapi masih mencerminkan keterbatasan coverage pada sumber data nyata.
+Dengan demikian, benchmark riil multi-tahun ini jauh lebih kredibel daripada benchmark sintetis sebelumnya dan juga lebih stabil daripada benchmark riil satu tahun.
 
 ## 2.3 Strategi Split Data dan Anti-Leakage
 
@@ -40,8 +40,8 @@ Sesuai hard rule kompetisi, pemisahan train/test dilakukan pada level **raw spli
 
 Hasil split final pada benchmark riil saat ini:
 
-- Train: 107.280 baris (2015-07-09 s.d. 2023-07-21)
-- Test: 26.494 baris (2023-07-21 06:24:04 s.d. 2023-12-20 23:00:00)
+- Train: 372.150 baris (2015-07-09 s.d. 2023-03-10 07:27:51)
+- Test: 93.034 baris (2023-03-10 07:38:45 s.d. 2023-12-20 23:00:00)
 
 Di dalam train split, data dipecah lagi menjadi tiga dev split temporal:
 
@@ -106,13 +106,13 @@ Indikator utama yang dipakai meliputi:
 - jumlah bidder rendah
 - sinyal nilai tinggi dan timing akhir tahun
 
-Distribusi label pada train split (`train_data/labels.parquet`) setelah migrasi data riil:
+Distribusi label pada train split (`train_data/labels.parquet`) setelah migrasi ke benchmark riil multi-tahun:
 
-- Low: 52.855
-- Medium: 54.092
-- High: 333
+- Low: 154.848
+- Medium: 213.640
+- High: 3.662
 
-Pelabelan ini tetap bersifat **indikator risiko**, bukan pembuktian fraud. Pada benchmark riil, beberapa flag menjadi jauh lebih informatif, tetapi beberapa lain tetap lemah karena keterbatasan coverage field sumber.
+Pelabelan ini tetap bersifat **indikator risiko**, bukan pembuktian fraud. Pada benchmark riil multi-tahun, distribusi kelas menjadi lebih stabil daripada benchmark satu tahun, tetapi label tetap tidak sama dengan fraud ground truth.
 
 ## 2.6 Pemodelan
 
@@ -123,18 +123,13 @@ Model inti yang dipakai adalah **XGBoost multi-class** dengan objective `multi:s
 3. kompatibel dengan SHAP,
 4. dapat diekspor ke format yang mendukung inferensi offline.
 
-Pada benchmark riil 2023, HPO terbaru menghasilkan parameter terbaik yang tersimpan di `models/best_params.json`.
+Pada benchmark riil 2021-2023, pipeline retraining memakai parameter terbaik yang tersimpan di `models/best_params.json`.
 
 ## 2.7 Kalibrasi dan Clean Labels
 
 Kalibrasi probabilitas dilakukan dengan temperature scaling menggunakan subset `val_calibration` yang telah melalui clean-label review. Protokol review disimpan pada `data/processed/clean_labels_protocol.md`, sementara hasilnya tersedia di `data/processed/clean_labels_100.csv`.
 
-Konfigurasi kalibrasi akhir (`models/calibration.json`) pada benchmark riil:
-
-- enabled: true
-- temperature: 9.999995
-- n_calibration_samples: 95
-- n_high_confidence: 94
+Konfigurasi kalibrasi akhir (`models/calibration.json`) pada benchmark riil multi-tahun mengikuti artefak yang tersimpan di repo dan tetap dipakai sebagai pelunak probabilitas untuk inferensi.
 
 ## 2.8 Explainable AI
 
@@ -169,20 +164,20 @@ Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkunga
 
 Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
 
-- **baseline_all_features (30 fitur)** → Macro-F1 0,8299
-- **proxy_core_removed (21 fitur)** → Macro-F1 0,3466
-- **proxy_broad_removed (18 fitur)** → Macro-F1 0,3371
+- **baseline_all_features (30 fitur)** → Macro-F1 0,9432
+- **proxy_core_removed (21 fitur)** → Macro-F1 0,3854
+- **proxy_broad_removed (18 fitur)** → Macro-F1 0,3781
 
-Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung masih kuat bahkan pada benchmark riil. Jadi, migrasi ke data riil memperbaiki kredibilitas eksternal, tetapi tidak menghapus circularity risk.
+Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung tetap kuat, bahkan setelah benchmark diperluas menjadi multi-tahun. Jadi, migrasi ke data riil multi-tahun memperbaiki kredibilitas eksternal, tetapi tidak menghapus circularity risk.
 
 ## 2.11 Perbandingan Benchmark Sintetis vs Riil
 
-Artefak `models/benchmark_comparison.json` membandingkan benchmark sintetis sebelumnya dengan benchmark riil 2023 saat ini.
+Artefak `models/benchmark_comparison.json` membandingkan benchmark sintetis sebelumnya dengan benchmark riil multi-tahun saat ini.
 
 Ringkasan utama:
 
 - Macro-F1 sintetis: 0,9950
-- Macro-F1 riil: 0,8309
-- Delta: -0,1641
+- Macro-F1 riil 2021-2023: 0,9349
+- Delta: -0,0601
 
-Kesimpulan metodologisnya jelas: benchmark sintetis berguna untuk membuktikan pipeline, tetapi menampilkan performa yang terlalu optimistis. Benchmark riil memberikan gambaran yang lebih jujur tentang tingkat kesulitan tugas ini.
+Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun menunjukkan bahwa pipeline mentransfer lebih baik daripada benchmark riil satu tahun yang sebelumnya dipakai. Ini memperkuat validitas Phase 2 tanpa kembali ke klaim yang berlebihan.
