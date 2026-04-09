@@ -4,35 +4,50 @@ LPSE-X is an offline, explainable procurement-risk prototype for Find IT! 2026 T
 
 ## Current Scope
 
+- real OCDS benchmark slice built from the official Indonesia publication on data.open-contracting.org
 - temporal train/test split with split-aware feature engineering
 - heuristic risk labeling for Low / Medium / High procurement risk
 - XGBoost + SHAP + Bahasa Indonesia narrative explanation
 - CPU-safe local inference artifacts (`.ubj` + `.onnx`)
 - executable `training.ipynb` and `inference.ipynb`
 - proposal bundle (Bab 1-4 + final markdown)
-- robustness and provenance diagnostics for Phase 2 positioning
+- provenance, robustness, and synthetic-vs-real comparison diagnostics
 
-## Important Data Provenance Note
+## Current Data Provenance
 
-The current working dataset is **synthetic**.
+The tracked benchmark is now a **real recent-year OCDS slice**.
 
 Evidence:
-- `data/processed/data_provenance.json` marks `dataset_type = "synthetic"`
-- OCIDs in the working split use the `ocds-synth-*` prefix
-- the current snapshot contains 5,000 rows, 50 buyers, and 200 suppliers
+- `data/processed/source_manifest.json` records the official source publication and selected year slice
+- `data/processed/data_provenance.json` reports `data_kind = "real_or_mixed_ocds"`
+- the current real benchmark contains **133,774** usable rows after date cleaning, with **583 buyers** and **28,477 suppliers**
 
-This means the current scores should be interpreted as proof that the pipeline works and that the model can recover the designed heuristic-risk structure. They should **not** be overstated as proof of real-world fraud-detection accuracy on authentic LPSE production data.
+Important limitation:
+- the benchmark currently uses **2023 only**, so it is far more credible than the previous synthetic benchmark but still narrower than a full historical LPSE migration
+
+## Synthetic vs Real Benchmark Comparison
+
+Tracked comparison artifact:
+- `models/benchmark_comparison.json`
+- `proposal/figures/benchmark_comparison.png`
+
+Current comparison:
+- synthetic benchmark Macro-F1: **0.9950**
+- real 2023 benchmark Macro-F1: **0.8309**
+- delta: **-0.1641**
+
+Interpretation: the previous synthetic benchmark overstated performance. The real-data run is a better Phase 2 signal because it keeps the full offline/XAI pipeline while forcing the model to operate on noisier, incomplete procurement fields.
 
 ## Robustness Snapshot
 
-The repository now includes a circularity audit at `models/robustness.json` and `proposal/figures/robustness_ablation.png`.
+The repository includes a circularity audit at `models/robustness.json` and `proposal/figures/robustness_ablation.png`.
 
-Key finding:
-- full model (30 features): Macro-F1 **0.9970**
-- core-proxy removed (21 features): Macro-F1 **0.3911**
-- broad-proxy removed (18 features): Macro-F1 **0.3829**
+Current real-benchmark findings:
+- full model (30 features): Macro-F1 **0.8299**
+- core-proxy removed (21 features): Macro-F1 **0.3466**
+- broad-proxy removed (18 features): Macro-F1 **0.3371**
 
-Interpretation: the current model is highly effective at learning the heuristic risk rules, but much of that strength is concentrated in features that are close to the labeling rubric itself. The audit now quantifies that weakness instead of leaving it implicit.
+Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but that weakness is now measured on a real data slice instead of only on synthetic data.
 
 ## Project Structure
 
@@ -41,7 +56,7 @@ src/            core Python modules
 tests/          pytest suite
 proposal/       proposal drafts and figures
 data/           raw and processed data
-models/         trained model artifacts and robustness reports
+models/         trained model artifacts and comparison reports
 train_data/     raw/features/labels train split
 test_data/      raw/features/labels test split
 drafts/         research and planning notes
@@ -63,6 +78,6 @@ python scripts/run_diagnostics.py
 
 ## Notes
 
-- Raw data and model binaries are intentionally ignored by git.
-- `models/metrics.json` is the canonical tracked metrics artifact.
-- Use the proposal wording carefully: the current package is strongest as an **explainable risk-screening prototype**, not as a proven production fraud detector.
+- Raw download files and model binaries are intentionally ignored by git.
+- `models/metrics.json` is the canonical tracked metrics artifact for the current benchmark.
+- The current package is strongest as an **explainable risk-screening prototype on a real recent-year OCDS slice**, not as a fully validated production fraud detector.

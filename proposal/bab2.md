@@ -8,14 +8,27 @@ Pipeline ini mengikuti constraint kompetisi Track C: seluruh inferensi berjalan 
 
 ## 2.2 Sumber dan Kualitas Data
 
-Sumber data kerja proyek ini disimpan dalam artefak kanonik `data/processed/ocds_flat.parquet`, dengan ringkasan kualitas pada `data/processed/quality_report.md` dan provenance ringkas pada `data/processed/data_provenance.json`. Dataset yang tersedia berisi 5.000 baris dengan 24 kolom utama, rentang waktu 2014-01-02 hingga 2023-12-30, serta 5.000 OCID unik. Provenance audit menunjukkan bahwa snapshot kerja saat ini bersifat **synthetic structured dataset** (`synthetic_ocid_ratio = 1.0`) dengan 50 buyer dan 200 supplier. Karena itu, dataset ini cocok untuk membuktikan pipeline Phase 2, tetapi belum cukup untuk mengklaim validitas operasional pada data LPSE riil.
+Sumber data kerja proyek ini berasal dari publikasi resmi Indonesia pada `https://data.open-contracting.org/en/publication/101`, dengan metadata lokal tersimpan di `data/processed/source_manifest.json`. Untuk menjaga repo tetap runnable selama Phase 2, benchmark saat ini memakai **slice data riil tahun 2023** yang kemudian diflatten menjadi `data/processed/ocds_flat.parquet`.
 
-Beberapa temuan penting dari quality report:
+Setelah pembersihan tanggal tidak valid, benchmark ini berisi:
 
-- `tender_numberOfTenderers` tersedia pada 96,9% baris, sehingga fitur terkait kompetisi tender dapat diaktifkan.
-- `award_value_amount` tersedia pada 96,9% baris.
-- `contract_value_amount` tersedia pada 92,1% baris.
-- Tidak ada field inti dengan missing value di atas 30%.
+- 133.774 baris usable
+- 583 buyer unik
+- 28.477 supplier unik
+- train split: 107.280 baris
+- test split: 26.494 baris
+
+Ringkasan kualitas berada di `data/processed/quality_report.md`, sedangkan provenance ringkas berada di `data/processed/data_provenance.json`.
+
+Temuan penting dari quality report dan inspeksi lapangan:
+
+- `award_value_amount` tersedia luas dan dapat dipakai untuk evaluasi nilai award
+- `tender.value.amount` sering kosong pada sumber asli, sehingga pipeline memakai fallback `tender.minValue.amount`
+- `tender.description` sering kosong pada sumber asli, sehingga pipeline memakai fallback judul tender untuk menjaga sinyal teks minimum
+- `tender_numberOfTenderers` dan `contracts` sangat jarang tersedia, sehingga sebagian fitur kompetisi/kontrak tetap lemah atau kosong
+- `tender_procurementMethod` kosong pada benchmark ini, sehingga flag direct procurement tidak memberikan sinyal pada slice 2023
+
+Dengan demikian, benchmark riil ini jauh lebih kredibel daripada benchmark sintetis sebelumnya, tetapi masih mencerminkan keterbatasan coverage pada sumber data nyata.
 
 ## 2.3 Strategi Split Data dan Anti-Leakage
 
@@ -25,10 +38,10 @@ Sesuai hard rule kompetisi, pemisahan train/test dilakukan pada level **raw spli
 - `test_data/raw.parquet`
 - `data/processed/split_metadata.json`
 
-Hasil split final:
+Hasil split final pada benchmark riil saat ini:
 
-- Train: 4.003 baris (2014-01-02 s.d. 2021-12-27)
-- Test: 997 baris (2021-12-28 s.d. 2023-12-30)
+- Train: 107.280 baris (2015-07-09 s.d. 2023-07-21)
+- Test: 26.494 baris (2023-07-21 06:24:04 s.d. 2023-12-20 23:00:00)
 
 Di dalam train split, data dipecah lagi menjadi tiga dev split temporal:
 
@@ -46,7 +59,7 @@ Sistem menggunakan **30 feature families** yang dibagi menjadi dua kelompok:
 
 Contoh fitur Tier 1:
 
-- log nilai tender
+- log nilai tender (dengan fallback dari `minValue.amount`)
 - log nilai award
 - rasio deviasi harga
 - durasi tender
@@ -91,14 +104,15 @@ Indikator utama yang dipakai meliputi:
 - deviasi harga terhadap nilai referensi
 - supplier menang berulang pada buyer yang sama
 - jumlah bidder rendah
+- sinyal nilai tinggi dan timing akhir tahun
 
-Distribusi label pada train split (`train_data/labels.parquet`):
+Distribusi label pada train split (`train_data/labels.parquet`) setelah migrasi data riil:
 
-- Low: 954
-- Medium: 2.658
-- High: 391
+- Low: 52.855
+- Medium: 54.092
+- High: 333
 
-Pelabelan ini bersifat **indikator risiko**, bukan pembuktian fraud. Keterbatasan ini dijelaskan eksplisit pada protokol clean-label dan pada pembahasan hasil.
+Pelabelan ini tetap bersifat **indikator risiko**, bukan pembuktian fraud. Pada benchmark riil, beberapa flag menjadi jauh lebih informatif, tetapi beberapa lain tetap lemah karena keterbatasan coverage field sumber.
 
 ## 2.6 Pemodelan
 
@@ -109,26 +123,16 @@ Model inti yang dipakai adalah **XGBoost multi-class** dengan objective `multi:s
 3. kompatibel dengan SHAP,
 4. dapat diekspor ke format yang mendukung inferensi offline.
 
-Hyperparameter terbaik yang tersimpan di `models/best_params.json` meliputi:
-
-- `max_depth = 3`
-- `learning_rate = 0.1865`
-- `subsample = 0.8693`
-- `colsample_bytree = 0.6505`
-- `min_child_weight = 8`
-- `gamma = 0.0259`
-- `reg_alpha = 0.0003047`
-- `reg_lambda = 0.0000580`
-- `n_rounds = 449`
+Pada benchmark riil 2023, HPO terbaru menghasilkan parameter terbaik yang tersimpan di `models/best_params.json`.
 
 ## 2.7 Kalibrasi dan Clean Labels
 
 Kalibrasi probabilitas dilakukan dengan temperature scaling menggunakan subset `val_calibration` yang telah melalui clean-label review. Protokol review disimpan pada `data/processed/clean_labels_protocol.md`, sementara hasilnya tersedia di `data/processed/clean_labels_100.csv`.
 
-Konfigurasi kalibrasi akhir (`models/calibration.json`):
+Konfigurasi kalibrasi akhir (`models/calibration.json`) pada benchmark riil:
 
 - enabled: true
-- temperature: 9.999901
+- temperature: 9.999995
 - n_calibration_samples: 95
 - n_high_confidence: 94
 
@@ -154,19 +158,31 @@ Artefak utama yang digunakan oleh metodologi ini adalah:
 - `models/metrics.json`
 - `models/calibration.json`
 - `models/imputation_values.json`
+- `models/benchmark_comparison.json`
 - `proposal/figures/*.png`
 - `training.ipynb`
 - `inference.ipynb`
 
 Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkungan CPU lokal dengan dependency yang dipin pada `requirements.txt`.
 
-
 ## 2.10 Audit Circularity dan Robustness
 
 Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
 
-- **baseline_all_features (30 fitur)** → Macro-F1 0,9970
-- **proxy_only (9 fitur proksi langsung)** → Macro-F1 0,9990
-- **proxy_reduced (21 fitur non-proksi)** → Macro-F1 0,3911
+- **baseline_all_features (30 fitur)** → Macro-F1 0,8299
+- **proxy_core_removed (21 fitur)** → Macro-F1 0,3466
+- **proxy_broad_removed (18 fitur)** → Macro-F1 0,3371
 
-Hasil ini menunjukkan bahwa sebagian besar kekuatan model saat ini berasal dari fitur yang sangat dekat dengan red-flag heuristic rules. Dengan kata lain, model Phase 2 sangat efektif sebagai **risk-rule recovery engine**, namun belum bisa diposisikan sebagai bukti kuat generalisasi terhadap fraud outcome yang independen dari aturan labeling.
+Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung masih kuat bahkan pada benchmark riil. Jadi, migrasi ke data riil memperbaiki kredibilitas eksternal, tetapi tidak menghapus circularity risk.
+
+## 2.11 Perbandingan Benchmark Sintetis vs Riil
+
+Artefak `models/benchmark_comparison.json` membandingkan benchmark sintetis sebelumnya dengan benchmark riil 2023 saat ini.
+
+Ringkasan utama:
+
+- Macro-F1 sintetis: 0,9950
+- Macro-F1 riil: 0,8309
+- Delta: -0,1641
+
+Kesimpulan metodologisnya jelas: benchmark sintetis berguna untuk membuktikan pipeline, tetapi menampilkan performa yang terlalu optimistis. Benchmark riil memberikan gambaran yang lebih jujur tentang tingkat kesulitan tugas ini.

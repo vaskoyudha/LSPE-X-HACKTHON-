@@ -62,6 +62,7 @@ Arsitektur kode dibagi ke beberapa modul yang memiliki kontrak jelas:
 - `src/model.py` — training, evaluation, calibration, ONNX/export helpers
 - `src/explain.py` — SHAP, explain_single, counterfactual path
 - `src/narrative.py` — render narasi Bahasa Indonesia
+- `src/diagnostics.py` — provenance + circularity audit
 
 Struktur ini membantu pemisahan tanggung jawab serta memudahkan verifikasi oleh panel software engineering dan architect.
 
@@ -78,7 +79,7 @@ Sudah terpenuhi:
 
 ### Gate 1 — Data freeze dan compliance split
 
-Sudah terpenuhi secara implementasi internal:
+Sudah terpenuhi pada benchmark riil terkini:
 
 - raw split train/test tersedia,
 - metadata split tersedia,
@@ -110,18 +111,19 @@ Dipenuhi melalui dua notebook terpisah:
 - `training.ipynb`
 - `inference.ipynb`
 
-Notebook ini dirancang untuk mengeksekusi pipeline training dan inference secara lokal.
+Keduanya sudah dieksekusi ulang setelah migrasi ke benchmark riil.
 
 ### Gate 5 — Submission ready
 
-Komponen submission-ready difokuskan pada:
+Komponen submission-ready saat ini mencakup:
 
 - proposal Bab 1–4,
 - proposal final markdown,
 - proposal final PDF,
 - notebook training/inference,
 - model hasil training,
-- requirements dengan exact pins.
+- requirements dengan exact pins,
+- provenance dan benchmark comparison artifacts.
 
 ## 3.4 Pengendalian Risiko Teknis
 
@@ -136,18 +138,17 @@ Beberapa kill-switch dari rencana awal tetap dipertahankan:
 
 Verifikasi terkini pada branch kerja menunjukkan:
 
-- `pytest -q` → 106 passed, 5 skipped
+- `pytest -q` → suite hijau setelah migrasi benchmark riil
 - `python3 -m compileall src tests scripts` → passed
 - `git diff --check` → passed
-
-Bukti ini menegaskan bahwa basis implementasi stabil untuk dibawa ke tahap finalisasi submission.
-
+- notebook training dan inference dapat dieksekusi dengan `nbconvert`
 
 ## 3.6 Posisi Ilmiah yang Jujur
 
-Secara engineering, sistem sudah memenuhi kebutuhan Phase 2: pipeline lengkap, explainability tersedia, notebook dapat dieksekusi, dan inferensi berjalan offline. Namun, secara ilmiah ada dua pembatas utama yang harus dinyatakan secara eksplisit kepada juri:
+Migrasi ke data riil memperbaiki kredibilitas submission secara signifikan, karena benchmark tidak lagi sepenuhnya sintetis. Namun, ada tiga pembatas utama yang tetap harus dinyatakan secara eksplisit kepada juri:
 
-1. dataset kerja saat ini masih sintetis,
-2. label target masih berupa heuristic risk labels.
+1. benchmark riil saat ini masih berupa **slice satu tahun (2023)**, bukan seluruh histori LPSE/OCDS,
+2. label target masih berupa **heuristic risk labels**,
+3. audit ablation menunjukkan circularity risk yang tetap kuat.
 
-Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektur dan explainability pipeline**, bukan klaim final akurasi terhadap kasus korupsi riil. Robustness audit tambahan dipakai untuk memperkuat kejujuran posisi ini.
+Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektur dan explainability pipeline pada data riil yang tidak sempurna**, bukan klaim final akurasi terhadap kasus korupsi terverifikasi.
