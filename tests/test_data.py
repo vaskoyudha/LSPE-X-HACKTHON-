@@ -143,6 +143,32 @@ class TestFlattenRelease:
         assert rows[0]["supplier_name"] == "Supplier 1"
         assert rows[1]["supplier_name"] == "Supplier 2"
 
+    def test_falls_back_to_min_value_and_title_description(self):
+        record = {
+            "ocid": "ocds-test-realish-001",
+            "buyer": {"id": "buyer-1", "name": ""},
+            "tender": {
+                "id": "T-REAL-1",
+                "title": "Pengadaan Alat Laboratorium",
+                "description": None,
+                "value": {"currency": "IDR"},
+                "minValue": {"amount": 125000000, "currency": "IDR"},
+                "procuringEntity": {"name": "Kementerian Contoh"},
+            },
+            "awards": [
+                {
+                    "id": "A-REAL-1",
+                    "value": {"amount": 118000000, "currency": "IDR"},
+                    "suppliers": [{"id": "s-real", "name": "PT Contoh"}],
+                }
+            ],
+        }
+        row = _flatten_release(record)[0]
+        assert row["tender_value_amount"] == 125000000
+        assert row["tender_value_currency"] == "IDR"
+        assert row["tender_description"] == "Pengadaan Alat Laboratorium"
+        assert row["buyer_name"] == "Kementerian Contoh"
+
 
 @pytest.mark.p1
 class TestFlattenJsonlGz:

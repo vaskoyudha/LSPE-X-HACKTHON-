@@ -615,7 +615,7 @@ def compute_class_weights(y: pd.Series) -> dict[int, float]:
     """Compute balanced class weights (inverse frequency)."""
     counts = y.value_counts()
     total = len(y)
-    n_classes = len(counts)
+    n_classes = N_CLASSES
     weights = {}
     for cls in range(n_classes):
         if cls in counts.index:

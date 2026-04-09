@@ -75,6 +75,13 @@ class TestClassWeights:
         assert len(sw) == len(y)
         assert all(w > 0 for w in sw)
 
+    def test_missing_class_still_gets_weight_entry(self):
+        y = pd.Series([1, 1, 2, 2, 2])
+        weights = compute_class_weights(y)
+        assert len(weights) == N_CLASSES
+        assert 0 in weights
+        assert weights[0] == 1.0
+
 
 @pytest.mark.p0
 class TestHPO:

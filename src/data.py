@@ -140,6 +140,11 @@ def _flatten_release(record: dict) -> list[dict]:
     parties = record.get("parties", []) or []
     awards = record.get("awards", []) or []
     contracts = record.get("contracts", []) or []
+    tender_value = tender.get("value", {}) or {}
+    tender_min_value = tender.get("minValue", {}) or {}
+    tender_title = tender.get("title", "")
+    tender_description = tender.get("description") or tender_title
+    buyer_name = buyer.get("name", "") or _safe_get(tender, "procuringEntity", "name", default="")
 
     # Build a lookup for contracts by awardID
     contract_by_award = {}
@@ -152,18 +157,16 @@ def _flatten_release(record: dict) -> list[dict]:
     base = {
         "ocid": ocid,
         "tender_id": tender.get("id", ""),
-        "tender_title": tender.get("title", ""),
-        "tender_description": tender.get("description", ""),
+        "tender_title": tender_title,
+        "tender_description": tender_description,
         "tender_status": tender.get("status", ""),
         "tender_statusDetail": _safe_get(tender, "statusDetails", default=""),
         "tender_procurementMethod": tender.get("procurementMethod", ""),
         "tender_procurementMethodDetails": tender.get(
             "procurementMethodDetails", ""
         ),
-        "tender_value_amount": _safe_get(tender, "value", "amount"),
-        "tender_value_currency": _safe_get(
-            tender, "value", "currency", default="IDR"
-        ),
+        "tender_value_amount": tender_value.get("amount", tender_min_value.get("amount")),
+        "tender_value_currency": tender_value.get("currency", tender_min_value.get("currency", "IDR")),
         "tender_tenderPeriod_startDate": _safe_get(
             tender, "tenderPeriod", "startDate"
         ),
@@ -176,7 +179,7 @@ def _flatten_release(record: dict) -> list[dict]:
             default=record.get("date", ""),
         ),
         "buyer_id": buyer.get("id", ""),
-        "buyer_name": buyer.get("name", ""),
+        "buyer_name": buyer_name,
     }
 
     # If no awards, emit a single row
