@@ -4,14 +4,18 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
+# Raw data is downloaded separately.
 data/raw/
+
+# Large model binaries are reproducible via the training pipeline.
 models/*.onnx
 models/*.ubj
 models/*.pkl
 
-proposal/bab*.md
+# Keep source proposal chapters versioned; ignore only the generated final export.
 proposal/proposal-final.*
 
 .env
 .DS_Store
 .agents/
+.omx/

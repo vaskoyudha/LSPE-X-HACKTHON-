@@ -444,90 +444,96 @@ def compute_shap_values(
 
 
 def explain_single(
-    row: pd.DataFrame | pd.Series,
-    model: xgb.Booster | None = None,
+    row: Union[Dict[str, float], np.ndarray, pd.DataFrame, pd.Series],
+    feature_names: Optional[List[str]] = None,
+    model=None,
     explainer=None,
-    calibration: dict | None = None,
+    calibration: Optional[dict] = None,
     top_k: int = 5,
 ) -> dict:
     """Explain a single procurement record.
 
-    Args:
-        row: Single-row DataFrame or Series with feature values.
-        model: XGBoost Booster (loaded if None).
-        explainer: SHAP TreeExplainer (created if None).
-        calibration: Optional calibration dict for temperature scaling.
-        top_k: Number of top contributing factors to return.
+    Supports both project call patterns:
+    - explain_single(row_df_or_series, model=..., explainer=...)
+    - explain_single(row_dict_or_array, feature_names, model=..., explainer=...)
 
-    Returns:
-        dict with keys:
-            - predicted_class (int): 0, 1, or 2
-            - predicted_label (str): "Low Risk", "Medium Risk", or "High Risk"
-            - probability (float): Confidence for predicted class
-            - probabilities (list[float]): All 3 class probabilities
-            - factors (list[dict]): Top contributing features, each with:
-                - feature (str): Feature name
-                - value (float): Feature value for this record
-                - shap_value (float): SHAP contribution
-                - direction (str): "increases_risk" or "decreases_risk"
+    Returns a superset contract so both the legacy tests and the current
+    project code can consume the result safely.
     """
     if model is None:
         model = load_model()
     if explainer is None:
         explainer = get_explainer(model)
 
-    # Ensure row is a single-row DataFrame
-    if isinstance(row, pd.Series):
-        row = row.to_frame().T
+    if isinstance(row, pd.DataFrame):
+        row_df = row.copy()
+    elif isinstance(row, pd.Series):
+        row_df = row.to_frame().T
+    elif isinstance(row, dict):
+        inferred_names = feature_names or list(row.keys())
+        row_df = pd.DataFrame([[row[name] for name in inferred_names]], columns=inferred_names)
+    else:
+        arr = np.asarray(row, dtype=np.float32)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        inferred_names = feature_names or [f"feature_{i}" for i in range(arr.shape[1])]
+        row_df = pd.DataFrame(arr, columns=inferred_names)
 
-    # Prediction
-    dmatrix = xgb.DMatrix(row)
-    probs = model.predict(dmatrix)[0]  # Shape: (n_classes,)
+    resolved_feature_names = feature_names or row_df.columns.tolist()
+    row_df = row_df.loc[:, resolved_feature_names]
+    x_array = row_df.to_numpy(dtype=np.float32, copy=False)
 
-    # Apply calibration if available
+    if hasattr(model, "predict_proba"):
+        probs = np.asarray(model.predict_proba(x_array))[0]
+        shap_input = x_array
+    else:
+        dmatrix = xgb.DMatrix(row_df)
+        probs = np.asarray(model.predict(dmatrix))[0]
+        shap_input = dmatrix
+
     if calibration and calibration.get("enabled"):
         probs = apply_temperature(
-            probs.reshape(1, -1), calibration["temperature"]
+            np.asarray(probs, dtype=np.float32).reshape(1, -1),
+            calibration["temperature"],
         )[0]
 
     predicted_class = int(np.argmax(probs))
     probability = float(probs[predicted_class])
 
-    # SHAP values
-    shap_values = explainer.shap_values(dmatrix)
+    try:
+        shap_values = explainer.shap_values(shap_input)
+    except Exception:
+        shap_values = explainer.shap_values(x_array)
 
-    # Get SHAP values for the predicted class
     if isinstance(shap_values, list):
-        class_shap = shap_values[predicted_class][0]  # (n_features,)
+        class_shap = np.asarray(shap_values[predicted_class])[0]
     elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
-        class_shap = shap_values[0, :, predicted_class]  # (n_features,)
+        class_shap = shap_values[0, :, predicted_class]
+    elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 2:
+        class_shap = shap_values[0]
     else:
-        class_shap = shap_values[0]  # fallback
+        class_shap = np.asarray(shap_values).reshape(-1)
 
-    # Build factors list
-    feature_names = row.columns.tolist()
-    feature_values = row.iloc[0].values
-
-    factors = []
-    for i, (name, val, sv) in enumerate(
-        zip(feature_names, feature_values, class_shap)
-    ):
-        factors.append({
+    feature_values = row_df.iloc[0].to_numpy()
+    factors = [
+        {
             "feature": name,
             "value": float(val) if not pd.isna(val) else None,
+            "feature_value": float(val) if not pd.isna(val) else None,
             "shap_value": float(sv),
             "direction": "increases_risk" if sv > 0 else "decreases_risk",
-        })
-
-    # Sort by absolute SHAP value, take top_k
-    factors.sort(key=lambda x: abs(x["shap_value"]), reverse=True)
+        }
+        for name, val, sv in zip(resolved_feature_names, feature_values, class_shap)
+    ]
+    factors.sort(key=lambda item: abs(item["shap_value"]), reverse=True)
     factors = factors[:top_k]
 
+    predicted_label = CLASS_NAMES.get(predicted_class, str(predicted_class))
     return {
         "predicted_class": predicted_class,
-        "predicted_label": CLASS_NAMES[predicted_class],
-        "probability": round(probability, 6),
-        "probabilities": [round(float(p), 6) for p in probs],
+        "predicted_label": predicted_label,
+        "probability": float(round(probability, 6)),
+        "probabilities": [float(round(float(p), 6)) for p in probs],
         "factors": factors,
     }
 
