@@ -123,6 +123,20 @@ def validate_evidence_labels(df: pd.DataFrame) -> pd.DataFrame:
     return normalized
 
 
+def add_evidence_strength(df: pd.DataFrame) -> pd.DataFrame:
+    """Attach a simple evidence-strength score by label family."""
+
+    weighted = df.copy()
+    weighted["evidence_strength"] = weighted["label_family"].map(
+        {
+            "reviewed_risk": 0.5,
+            "confirmed_irregularity": 0.8,
+            "confirmed_fraud": 1.0,
+        }
+    )
+    return weighted
+
+
 def normalize_reviewed_evidence_rows(
     imported: pd.DataFrame,
     review_base: pd.DataFrame,
