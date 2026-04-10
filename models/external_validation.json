@@ -1,0 +1,366 @@
+{
+  "years_covered": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "fold_count": 5,
+  "folds": [
+    {
+      "holdout_year": 2019,
+      "train_rows": 3456,
+      "test_rows": 115794,
+      "metrics": {
+        "partition": "external_holdout_2019",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.7293,
+        "macro_f1": 0.6956,
+        "weighted_f1": 0.7223,
+        "per_class_f1": {
+          "Low Risk": 0.5321,
+          "Medium Risk": 0.7898,
+          "High Risk": 0.765
+        },
+        "log_loss": 0.707,
+        "confusion_matrix": [
+          [
+            13664,
+            15403,
+            0
+          ],
+          [
+            8587,
+            58802,
+            6112
+          ],
+          [
+            41,
+            1206,
+            11979
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.612955320294276,
+            "recall": 0.4700863522207314,
+            "f1-score": 0.5320975875698515,
+            "support": 29067.0
+          },
+          "Medium Risk": {
+            "precision": 0.7797536168463487,
+            "recall": 0.8000163263084856,
+            "f1-score": 0.7897550231008919,
+            "support": 73501.0
+          },
+          "High Risk": {
+            "precision": 0.6621524514952186,
+            "recall": 0.9057160139119915,
+            "f1-score": 0.7650158061116965,
+            "support": 13226.0
+          },
+          "accuracy": 0.7292692194759659,
+          "macro avg": {
+            "precision": 0.6849537962119477,
+            "recall": 0.7252728974804029,
+            "f1-score": 0.6956228055941466,
+            "support": 115794.0
+          },
+          "weighted avg": {
+            "precision": 0.7244509319161007,
+            "recall": 0.7292692194759659,
+            "f1-score": 0.7222512702079972,
+            "support": 115794.0
+          }
+        },
+        "n_samples": 115794
+      }
+    },
+    {
+      "holdout_year": 2020,
+      "train_rows": 119250,
+      "test_rows": 84619,
+      "metrics": {
+        "partition": "external_holdout_2020",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9346,
+        "macro_f1": 0.9053,
+        "weighted_f1": 0.9399,
+        "per_class_f1": {
+          "Low Risk": 0.991,
+          "Medium Risk": 0.9494,
+          "High Risk": 0.7756
+        },
+        "log_loss": 0.5849,
+        "confusion_matrix": [
+          [
+            18173,
+            282,
+            0
+          ],
+          [
+            47,
+            51912,
+            5183
+          ],
+          [
+            0,
+            24,
+            8998
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9974204171240395,
+            "recall": 0.9847195881874831,
+            "f1-score": 0.9910293115201091,
+            "support": 18455.0
+          },
+          "Medium Risk": {
+            "precision": 0.9941399517407791,
+            "recall": 0.9084736271044066,
+            "f1-score": 0.9493782004389173,
+            "support": 57142.0
+          },
+          "High Risk": {
+            "precision": 0.6345109653762075,
+            "recall": 0.9973398359565506,
+            "f1-score": 0.7755893634443822,
+            "support": 9022.0
+          },
+          "accuracy": 0.9345773407863482,
+          "macro avg": {
+            "precision": 0.8753571114136753,
+            "recall": 0.9635110170828135,
+            "f1-score": 0.9053322918011362,
+            "support": 84619.0
+          },
+          "weighted avg": {
+            "precision": 0.9565120936198713,
+            "recall": 0.9345773407863482,
+            "f1-score": 0.9399329029009966,
+            "support": 84619.0
+          }
+        },
+        "n_samples": 84619
+      }
+    },
+    {
+      "holdout_year": 2021,
+      "train_rows": 203869,
+      "test_rows": 174314,
+      "metrics": {
+        "partition": "external_holdout_2021",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9952,
+        "macro_f1": 0.9907,
+        "weighted_f1": 0.9952,
+        "per_class_f1": {
+          "Low Risk": 0.9965,
+          "Medium Risk": 0.9959,
+          "High Risk": 0.9798
+        },
+        "log_loss": 0.0174,
+        "confusion_matrix": [
+          [
+            61510,
+            35,
+            0
+          ],
+          [
+            400,
+            102126,
+            98
+          ],
+          [
+            0,
+            307,
+            9838
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9935390082377645,
+            "recall": 0.9994313104232675,
+            "f1-score": 0.9964764489085092,
+            "support": 61545.0
+          },
+          "Medium Risk": {
+            "precision": 0.9966623726431666,
+            "recall": 0.9951473339569691,
+            "f1-score": 0.995904277104909,
+            "support": 102624.0
+          },
+          "High Risk": {
+            "precision": 0.9901368760064412,
+            "recall": 0.9697387875800887,
+            "f1-score": 0.9798316816891589,
+            "support": 10145.0
+          },
+          "accuracy": 0.995181109951008,
+          "macro avg": {
+            "precision": 0.9934460856291242,
+            "recall": 0.9881058106534417,
+            "f1-score": 0.9907374692341923,
+            "support": 174314.0
+          },
+          "weighted avg": {
+            "precision": 0.9951798260564895,
+            "recall": 0.995181109951008,
+            "f1-score": 0.9951708755029712,
+            "support": 174314.0
+          }
+        },
+        "n_samples": 174314
+      }
+    },
+    {
+      "holdout_year": 2022,
+      "train_rows": 378183,
+      "test_rows": 155639,
+      "metrics": {
+        "partition": "external_holdout_2022",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9947,
+        "macro_f1": 0.9903,
+        "weighted_f1": 0.9947,
+        "per_class_f1": {
+          "Low Risk": 0.9958,
+          "Medium Risk": 0.9955,
+          "High Risk": 0.9795
+        },
+        "log_loss": 0.014,
+        "confusion_matrix": [
+          [
+            53835,
+            319,
+            0
+          ],
+          [
+            132,
+            92005,
+            307
+          ],
+          [
+            0,
+            69,
+            8972
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9975540608149425,
+            "recall": 0.9941093917346826,
+            "f1-score": 0.99582874742187,
+            "support": 54154.0
+          },
+          "Medium Risk": {
+            "precision": 0.995800547660537,
+            "recall": 0.9952511790922072,
+            "f1-score": 0.9955257875858189,
+            "support": 92444.0
+          },
+          "High Risk": {
+            "precision": 0.9669145382045479,
+            "recall": 0.9923681008737971,
+            "f1-score": 0.9794759825327511,
+            "support": 9041.0
+          },
+          "accuracy": 0.9946864217837431,
+          "macro avg": {
+            "precision": 0.9867563822266758,
+            "recall": 0.9939095572335623,
+            "f1-score": 0.9902768391801468,
+            "support": 155639.0
+          },
+          "weighted avg": {
+            "precision": 0.9947327005262845,
+            "recall": 0.9946864217837431,
+            "f1-score": 0.9946988753046859,
+            "support": 155639.0
+          }
+        },
+        "n_samples": 155639
+      }
+    },
+    {
+      "holdout_year": 2023,
+      "train_rows": 533822,
+      "test_rows": 131310,
+      "metrics": {
+        "partition": "external_holdout_2023",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9964,
+        "macro_f1": 0.9934,
+        "weighted_f1": 0.9964,
+        "per_class_f1": {
+          "Low Risk": 0.9972,
+          "Medium Risk": 0.9968,
+          "High Risk": 0.9862
+        },
+        "log_loss": 0.0154,
+        "confusion_matrix": [
+          [
+            51584,
+            5,
+            0
+          ],
+          [
+            287,
+            72839,
+            9
+          ],
+          [
+            0,
+            171,
+            6415
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9944670432418885,
+            "recall": 0.9999030801139778,
+            "f1-score": 0.9971776531993041,
+            "support": 51589.0
+          },
+          "Medium Risk": {
+            "precision": 0.9975895363966308,
+            "recall": 0.9959526902303959,
+            "f1-score": 0.9967704413274033,
+            "support": 73135.0
+          },
+          "High Risk": {
+            "precision": 0.9985990037359901,
+            "recall": 0.9740358335863953,
+            "f1-score": 0.9861644888547272,
+            "support": 6586.0
+          },
+          "accuracy": 0.9964054527454116,
+          "macro avg": {
+            "precision": 0.9968851944581698,
+            "recall": 0.989963867976923,
+            "f1-score": 0.9933708611271449,
+            "support": 131310.0
+          },
+          "weighted avg": {
+            "precision": 0.9964134039812551,
+            "recall": 0.9964054527454116,
+            "f1-score": 0.9963984730864045,
+            "support": 131310.0
+          }
+        },
+        "n_samples": 131310
+      }
+    }
+  ],
+  "summary": {
+    "macro_f1_mean": 0.9151,
+    "macro_f1_min": 0.6956,
+    "macro_f1_max": 0.9934,
+    "high_risk_f1_mean": 0.8972,
+    "high_risk_f1_min": 0.765,
+    "high_risk_f1_max": 0.9862
+  },
+  "note": "External validation trains on prior years and evaluates on a held-out future year. It broadens coverage without replacing the tracked benchmark bundle."
+}

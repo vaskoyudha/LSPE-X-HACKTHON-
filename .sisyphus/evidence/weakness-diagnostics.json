@@ -94,5 +94,62 @@
       ]
     },
     "interpretation": "Large performance drops after removing direct heuristic proxies indicate the current benchmark acts more as an interpretable risk-rule accelerator than a validated real-world anomaly detector."
+  },
+  "operational_metrics": {
+    "positive_class": "High Risk",
+    "positive_prevalence": 0.062354,
+    "total_samples": 93034,
+    "total_positive": 5801,
+    "budgets": {
+      "50": {
+        "review_count": 50,
+        "captured_positive": 50,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.0086,
+        "lift_vs_base_rate": 16.0376,
+        "score_threshold_min": 0.889918
+      },
+      "100": {
+        "review_count": 100,
+        "captured_positive": 100,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.0172,
+        "lift_vs_base_rate": 16.0376,
+        "score_threshold_min": 0.862626
+      },
+      "250": {
+        "review_count": 250,
+        "captured_positive": 250,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.0431,
+        "lift_vs_base_rate": 16.0376,
+        "score_threshold_min": 0.856421
+      },
+      "500": {
+        "review_count": 500,
+        "captured_positive": 500,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.0862,
+        "lift_vs_base_rate": 16.0376,
+        "score_threshold_min": 0.849273
+      },
+      "1000": {
+        "review_count": 1000,
+        "captured_positive": 1000,
+        "precision_at_k": 1.0,
+        "recall_at_k": 0.1724,
+        "lift_vs_base_rate": 16.0376,
+        "score_threshold_min": 0.704832
+      }
+    }
+  },
+  "reviewed_subset_metrics": {
+    "status": "pending_human_review",
+    "message": "No reviewed benchmark rows with reviewed_label available yet."
+  },
+  "explanation_validation": {
+    "status": "pending_human_review",
+    "reviewed_rows": 0,
+    "message": "No reviewed explanation rows available yet."
   }
 }

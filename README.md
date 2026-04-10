@@ -12,6 +12,7 @@ LPSE-X is an offline, explainable procurement-risk prototype for Find IT! 2026 T
 - executable `training.ipynb` and `inference.ipynb`
 - proposal bundle (Bab 1-4 + final markdown)
 - provenance, robustness, and synthetic-vs-real comparison diagnostics
+- larger reviewed-calibration artifacts, operational review metrics, and external-validation artifacts
 
 ## Current Data Provenance
 
@@ -24,6 +25,22 @@ Evidence:
 
 Important limitation:
 - this is a strong Phase 2 benchmark upgrade, but it still uses the currently selected publication slice and heuristic labels rather than confirmed fraud outcomes
+
+## Review and Validation Upgrades
+
+New validation-layer artifacts now exist:
+- `data/processed/calibration_sheet_300.csv`
+- `data/processed/clean_labels_300.csv`
+- `data/processed/review_benchmark_500.csv`
+- `models/operational_metrics.json`
+- `models/external_validation.json`
+- `models/reviewed_subset_metrics.json`
+- `models/explanation_validation.json`
+
+Current status:
+- reviewed calibration rows used: **287**
+- review benchmark template rows prepared for human review: **500**
+- explanation/reviewed-subset metrics: **pending human input**
 
 ## Synthetic vs Real Benchmark Comparison
 
@@ -48,6 +65,35 @@ Current real-benchmark findings:
 - broad-proxy removed (13 features): Macro-F1 **0.5204**
 
 Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but the feature-health audit now shows **0 active dead features** in the tracked real benchmark, so the current weakness is circularity rather than stale feature slots.
+
+## Operational Review Metrics
+
+Tracked artifacts:
+- `models/operational_metrics.json`
+- `proposal/figures/operational_metrics.png`
+
+Current held-out benchmark highlights:
+- Precision@50 = **1.00**
+- Precision@100 = **1.00**
+- Precision@250 = **1.00**
+- Precision@500 = **1.00**
+- Precision@1000 = **1.00**
+
+Interpretation: under the current benchmark target, the top-ranked High Risk queue is extremely concentrated, which is promising for limited-budget review workflows.
+
+## External Validation Snapshot
+
+Tracked artifacts:
+- `models/external_validation.json`
+- `proposal/figures/external_validation.png`
+
+Current year-holdout summary across **2019–2023**:
+- mean Macro-F1: **0.9151**
+- min Macro-F1: **0.6956** (2019)
+- max Macro-F1: **0.9934** (2023)
+- mean High Risk F1: **0.8972**
+
+Interpretation: generalization is strongest on recent years and weakest on the earliest low-history fold, which is useful evidence about temporal robustness.
 
 ## Project Structure
 

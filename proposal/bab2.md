@@ -127,9 +127,9 @@ Pada benchmark riil 2021-2023, pipeline retraining memakai parameter terbaik yan
 
 ## 2.7 Kalibrasi dan Clean Labels
 
-Kalibrasi probabilitas dilakukan dengan temperature scaling menggunakan subset `val_calibration` yang telah melalui clean-label review. Protokol review disimpan pada `data/processed/clean_labels_protocol.md`, sementara hasilnya tersedia di `data/processed/clean_labels_100.csv`.
+Kalibrasi probabilitas dilakukan dengan temperature scaling menggunakan subset `val_calibration` yang telah melalui clean-label review. Protokol review disimpan pada `data/processed/clean_labels_protocol.md`, sementara iterasi review yang lebih besar saat ini tersedia di `data/processed/clean_labels_300.csv`.
 
-Konfigurasi kalibrasi akhir (`models/calibration.json`) pada benchmark riil multi-tahun mengikuti artefak yang tersimpan di repo dan tetap dipakai sebagai pelunak probabilitas untuk inferensi.
+Konfigurasi kalibrasi akhir (`models/calibration.json`) pada benchmark riil multi-tahun mengikuti artefak yang tersimpan di repo dan tetap dipakai sebagai pelunak probabilitas untuk inferensi. Iterasi terbaru menggunakan **287 reviewed rows** yang valid untuk temperature scaling.
 
 ## 2.8 Explainable AI
 
@@ -181,3 +181,24 @@ Ringkasan utama:
 - Delta: -0,0117
 
 Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun yang sudah di-hardening kini mendekati performa sintetis tanpa kehilangan validitas eksternal. Ini memperkuat posisi Phase 2 jauh lebih kuat daripada benchmark riil satu tahun maupun pipeline pra-hardening.
+
+## 2.12 Review Benchmark, Operational Metrics, dan External Validation
+
+Untuk menyiapkan transisi dari heuristic benchmarking menuju evaluasi yang lebih kuat, repo kini menyediakan tiga lapisan tambahan:
+
+1. **review benchmark template** pada `data/processed/review_benchmark_500.csv` untuk 500 baris test riil yang siap diisi reviewer manusia,
+2. **operational review metrics** pada `models/operational_metrics.json` untuk mengukur kualitas ranking pada budget review terbatas,
+3. **external validation** pada `models/external_validation.json` untuk mengevaluasi generalisasi dengan skema holdout-year 2019-2023.
+
+Ringkasan awal:
+
+- reviewed calibration rows: **287**
+- review benchmark template rows: **500**
+- Precision@50/100/250/500/1000: **1,00**
+- mean Macro-F1 external validation: **0,9151**
+- mean High Risk F1 external validation: **0,8972**
+
+Artefak ini belum mengubah target utama benchmark yang masih heuristik, tetapi mereka memperluas bukti menuju:
+- validasi operasional,
+- validasi lintas-waktu,
+- dan kesiapan untuk human-reviewed labels.

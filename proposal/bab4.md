@@ -43,7 +43,7 @@ Kesalahan utama tetap terjadi ketika kelas High diprediksi sebagai Medium, tetap
 
 ## 4.4 Kalibrasi Probabilitas
 
-Model akhir tetap menggunakan temperature scaling berdasarkan clean-label review subset. Temperatur saat ini berada pada **5,669949**, yang menandakan probabilitas mentah model masih cukup tajam dan perlu dilunakkan sebelum dipakai sebagai skor prioritas.
+Model akhir tetap menggunakan temperature scaling berdasarkan clean-label review subset. Temperatur saat ini berada pada **7,836317**, dengan **287 reviewed rows** yang valid untuk fitting. Ini menandakan probabilitas mentah model masih cukup tajam dan perlu dilunakkan sebelum dipakai sebagai skor prioritas.
 
 Figure pendukung:
 
@@ -78,18 +78,50 @@ Audit tambahan pada `models/robustness.json` menunjukkan:
 
 Artinya, model masih sangat bergantung pada fitur yang berdekatan dengan heuristic labeling rules. Namun, `models/feature_health.json` kini menunjukkan **0 active dead features**, sehingga kelemahan utama tersisa benar-benar berada pada circularity risk, bukan lagi pada feature catalog yang rusak.
 
-## 4.8 Keterbatasan
+## 4.8 Operational Review Metrics
+
+Artefak `models/operational_metrics.json` dan `proposal/figures/operational_metrics.png` mengukur seberapa baik model memprioritaskan baris High Risk pada budget review auditor yang terbatas.
+
+Hasil utama:
+
+- Precision@50 = **1,00**
+- Precision@100 = **1,00**
+- Precision@250 = **1,00**
+- Precision@500 = **1,00**
+- Precision@1000 = **1,00**
+
+Artinya, pada benchmark saat ini, daftar prioritas tertinggi hampir sepenuhnya terisi oleh kasus High Risk. Ini adalah sinyal operasional yang kuat untuk workflow audit berbasis antrean review.
+
+## 4.9 External Validation
+
+Artefak `models/external_validation.json` dan `proposal/figures/external_validation.png` mengevaluasi model dengan skema holdout-year pada rentang 2019-2023.
+
+Ringkasan:
+
+- mean Macro-F1 = **0,9151**
+- min Macro-F1 = **0,6956** (holdout 2019)
+- max Macro-F1 = **0,9934** (holdout 2023)
+- mean High Risk F1 = **0,8972**
+
+Interpretasi:
+
+1. Generalisasi pada tahun-tahun terbaru sangat kuat.
+2. Fold 2019 paling lemah karena histori latih sebelum 2019 sangat terbatas.
+3. Validasi ini memberi bukti temporal yang lebih kuat daripada hanya satu split train/test.
+
+## 4.10 Keterbatasan
 
 Walaupun hasil benchmark riil multi-tahun jauh lebih kredibel, ada beberapa keterbatasan penting:
 
 1. Label yang dipakai tetap **heuristik risiko**, bukan ground-truth fraud outcome.
-2. Benchmark riil saat ini hanya memakai **slice 2021-2023**, bukan histori penuh.
+2. Review benchmark 500 baris masih berupa template dan belum diisi reviewer manusia.
 3. `tender_numberOfTenderers`, `contracts`, dan `procurementMethod` masih memiliki coverage yang lemah pada sumber riil.
 4. Audit ablation menunjukkan circularity risk yang tetap kuat antara aturan labeling dan fitur utama.
 5. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
+6. External validation 2019 masih lemah, menandakan adanya sensitivitas pada fold dengan histori sangat pendek.
 
-## 4.9 Kesimpulan Bab
+## 4.11 Kesimpulan Bab
 
 Secara keseluruhan, LPSE-X berhasil menunjukkan bahwa pipeline explainable AI berbasis XGBoost + SHAP tetap bekerja pada data riil multi-tahun yang lebih noisy dan tidak lengkap. Dibanding benchmark riil satu tahun, hasil sekarang lebih stabil; dibanding benchmark sintetis, hasil sekarang jauh lebih kredibel.
 
-Kesimpulan praktisnya: LPSE-X sudah layak diposisikan sebagai **prototype explainable procurement-risk screening** yang berjalan offline dan patuh constraint, tetapi belum boleh diklaim sebagai sistem fraud detection operasional final.
+Kesimpulan praktisnya: LPSE-X sudah layak diposisikan sebagai **prototype explainable procurement-risk screening** yang berjalan offline dan patuh constraint. Bukti sekarang sudah lebih luas karena mencakup kalibrasi review yang lebih besar, operational review metrics, dan external validation lintas tahun, tetapi sistem ini tetap belum boleh diklaim sebagai fraud detection operasional final sampai tersedia reviewed labels yang benar-benar diisi manusia.

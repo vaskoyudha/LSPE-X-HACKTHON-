@@ -138,9 +138,9 @@
   },
   "calibration": {
     "enabled": true,
-    "temperature": 7.435806,
-    "n_calibration_samples": 96,
-    "n_high_confidence": 95,
+    "temperature": 7.836317,
+    "n_calibration_samples": 287,
+    "n_high_confidence": 273,
     "method": "temperature_scaling"
   },
   "final_test_calibrated": {
@@ -155,6 +155,6 @@
       "High Risk": 0.9668
     },
     "n_samples": 93034,
-    "temperature": 7.435806
+    "temperature": 7.836317
   }
 }
