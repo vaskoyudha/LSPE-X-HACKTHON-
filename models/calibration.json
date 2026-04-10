@@ -1,7 +1,7 @@
 {
   "enabled": true,
-  "temperature": 9.999996,
-  "n_calibration_samples": 95,
-  "n_high_confidence": 94,
+  "temperature": 4.799534,
+  "n_calibration_samples": 96,
+  "n_high_confidence": 95,
   "method": "temperature_scaling"
 }

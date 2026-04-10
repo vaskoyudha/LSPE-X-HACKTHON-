@@ -12,6 +12,11 @@ SAFETY: Only val_calibration data is used. test_data is never touched.
 
 import logging
 import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from src.data import PROCESSED_DIR
 from src.split import internal_dev_splits, load_raw_split
