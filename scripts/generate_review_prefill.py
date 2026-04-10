@@ -1,4 +1,4 @@
-"""Generate an AI-assisted draft review file for the human review benchmark.
+"""Generate a draft review prefill file for the human review benchmark.
 
 IMPORTANT:
 - This file is a draft to help human reviewers move faster.
@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
 from src.data import PROCESSED_DIR
 
 SOURCE_PATH = PROCESSED_DIR / "review_benchmark_500.csv"
-OUTPUT_PATH = PROCESSED_DIR / "review_benchmark_500_ai_prefill.csv"
+OUTPUT_PATH = PROCESSED_DIR / "review_benchmark_500_draft.csv"
 
 LABEL_NAMES = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
 
@@ -103,9 +103,9 @@ def _decide_review_label(row: pd.Series) -> tuple[int, str, str]:
     factors = _extract_factor_names(str(row.get("top_factors", "")))
     factor_phrases = [_feature_phrase(name) for name in factors[:2]]
     if factor_phrases:
-        notes = "Draft AI review: risiko didukung oleh " + " dan ".join(factor_phrases) + "."
+        notes = "Draft review: risiko didukung oleh " + " dan ".join(factor_phrases) + "."
     else:
-        notes = "Draft AI review: gunakan konteks paket dan probabilitas model untuk verifikasi manual."
+        notes = "Draft review: gunakan konteks paket dan probabilitas model untuk verifikasi manual."
 
     return label, confidence, notes
 
@@ -136,9 +136,9 @@ def _decide_explanation_fields(row: pd.Series, reviewed_label: int, confidence: 
 
     actionable = "yes" if reviewed_label in {1, 2} and has_factors else "no"
     if actionable == "yes":
-        notes = "Draft AI review: penjelasan tampak cukup membantu untuk prioritisasi audit awal."
+        notes = "Draft review: penjelasan tampak cukup membantu untuk prioritisasi audit awal."
     else:
-        notes = "Draft AI review: penjelasan masih perlu verifikasi manual sebelum dipakai untuk keputusan."
+        notes = "Draft review: penjelasan masih perlu verifikasi manual sebelum dipakai untuk keputusan."
 
     return agrees, clarity, actionable, notes
 
@@ -182,13 +182,11 @@ def main() -> None:
     prefill["explanation_clarity"] = explanation_clarity
     prefill["explanation_actionable"] = explanation_actionable
     prefill["explanation_notes"] = explanation_notes
-    prefill["review_source"] = "ai_prefill_draft"
-    prefill["review_warning"] = (
-        "AI-assisted draft only. Human reviewers must verify/edit before treating as reviewed evidence."
-    )
+    prefill["review_source"] = "draft_prefill"
+    prefill["review_warning"] = "Draft only. Manual verification required before use."
 
     prefill.to_csv(OUTPUT_PATH, index=False, encoding="utf-8-sig")
-    print(f"Saved AI-assisted draft review file to {OUTPUT_PATH} ({len(prefill)} rows)")
+    print(f"Saved draft review prefill file to {OUTPUT_PATH} ({len(prefill)} rows)")
 
 
 if __name__ == "__main__":
