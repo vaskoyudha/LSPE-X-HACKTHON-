@@ -15,15 +15,15 @@ LPSE-X is an offline, explainable procurement-risk prototype for Find IT! 2026 T
 
 ## Current Data Provenance
 
-The tracked benchmark is now a **real multi-year OCDS slice (2021-2023)**.
+The tracked benchmark is now a **real multi-year OCDS slice (2021–2023)**.
 
 Evidence:
 - `data/processed/source_manifest.json` records the official source publication and selected year slice
 - `data/processed/data_provenance.json` reports `data_kind = "real_or_mixed_ocds"`
-- the current real benchmark contains **465,184** usable rows after date cleaning, with **618 buyers** and **60,976 suppliers**
+- the current benchmark contains **465,184** usable rows after date cleaning, with **618 buyers** and **60,976 suppliers**
 
 Important limitation:
-- this is a strong recent multi-year slice, but it is still not the full historical LPSE/OCDS corpus
+- this is a strong Phase 2 benchmark upgrade, but it still uses the currently selected publication slice and heuristic labels rather than confirmed fraud outcomes
 
 ## Synthetic vs Real Benchmark Comparison
 
@@ -33,10 +33,10 @@ Tracked comparison artifact:
 
 Current comparison:
 - synthetic benchmark Macro-F1: **0.9950**
-- real 2021-2023 benchmark Macro-F1: **0.9349**
-- delta: **-0.0601**
+- real 2021–2023 benchmark Macro-F1: **0.9432**
+- delta: **-0.0518**
 
-Interpretation: the previous synthetic benchmark still overstated performance, but the stronger 2021-2023 real slice shows the pipeline transfers much better than the earlier 2023-only benchmark.
+Interpretation: the previous synthetic benchmark overstated performance. The 2021–2023 real-data run is a much stronger Phase 2 signal because it keeps the full offline/XAI pipeline while forcing the model to operate on noisier, incomplete procurement fields over a broader period.
 
 ## Robustness Snapshot
 
@@ -47,7 +47,7 @@ Current real-benchmark findings:
 - core-proxy removed (21 features): Macro-F1 **0.3854**
 - broad-proxy removed (18 features): Macro-F1 **0.3781**
 
-Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but the benchmark is now materially more credible because it spans multiple real years.
+Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but that weakness is now measured on a broader real data slice instead of only on synthetic data.
 
 ## Project Structure
 
@@ -80,4 +80,4 @@ python scripts/run_diagnostics.py
 
 - Raw download files and model binaries are intentionally ignored by git.
 - `models/metrics.json` is the canonical tracked metrics artifact for the current benchmark.
-- The current package is strongest as an **explainable risk-screening prototype on a real 2021-2023 OCDS slice**, not as a fully validated production fraud detector.
+- The current package is strongest as an **explainable risk-screening prototype on a real 2021–2023 OCDS slice**, not as a fully validated production fraud detector.

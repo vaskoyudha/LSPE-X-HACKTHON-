@@ -171,62 +171,62 @@
       "final_test": {
         "partition": "test_uncalibrated",
         "label_type": "heuristic_risk_labels",
-        "accuracy": 0.9906,
-        "macro_f1": 0.9349,
-        "weighted_f1": 0.9905,
+        "accuracy": 0.991,
+        "macro_f1": 0.9432,
+        "weighted_f1": 0.9909,
         "per_class_f1": {
-          "Low Risk": 0.991,
-          "Medium Risk": 0.9912,
-          "High Risk": 0.8225
+          "Low Risk": 0.9912,
+          "Medium Risk": 0.9916,
+          "High Risk": 0.8468
         },
-        "log_loss": 0.07,
+        "log_loss": 0.0735,
         "confusion_matrix": [
           [
-            42611,
-            5,
+            42612,
+            4,
             0
           ],
           [
-            770,
-            49313,
-            17
+            751,
+            49347,
+            2
           ],
           [
             0,
-            84,
-            234
+            83,
+            235
           ]
         ],
         "classification_report": {
           "Low Risk": {
-            "precision": 0.982250293907471,
-            "recall": 0.9998826731743946,
-            "f1-score": 0.9909880577229438,
+            "precision": 0.9826810875631299,
+            "recall": 0.9999061385395157,
+            "f1-score": 0.9912187859826237,
             "support": 42616.0
           },
           "Medium Risk": {
-            "precision": 0.9981984535039067,
-            "recall": 0.9842914171656687,
-            "f1-score": 0.9911961568611686,
+            "precision": 0.99824007767933,
+            "recall": 0.9849700598802396,
+            "f1-score": 0.9915606727349449,
             "support": 50100.0
           },
           "High Risk": {
-            "precision": 0.9322709163346613,
-            "recall": 0.7358490566037735,
-            "f1-score": 0.8224956063268892,
+            "precision": 0.9915611814345991,
+            "recall": 0.7389937106918238,
+            "f1-score": 0.8468468468468469,
             "support": 318.0
           },
-          "accuracy": 0.9905840875378894,
+          "accuracy": 0.9909710428445515,
           "macro avg": {
-            "precision": 0.970906554582013,
-            "recall": 0.9066743823146123,
-            "f1-score": 0.9348932736370005,
+            "precision": 0.990827448892353,
+            "recall": 0.9079566363705264,
+            "f1-score": 0.943208768521472,
             "support": 93034.0
           },
           "weighted avg": {
-            "precision": 0.9906677472440285,
-            "recall": 0.9905840875378894,
-            "f1-score": 0.990524196847147,
+            "precision": 0.9910901560184553,
+            "recall": 0.9909710428445515,
+            "f1-score": 0.9909094178983331,
             "support": 93034.0
           }
         },
@@ -234,24 +234,24 @@
       },
       "calibration": {
         "enabled": true,
-        "temperature": 9.999996,
-        "n_calibration_samples": 95,
-        "n_high_confidence": 94,
+        "temperature": 4.799534,
+        "n_calibration_samples": 96,
+        "n_high_confidence": 95,
         "method": "temperature_scaling"
       },
       "final_test_calibrated": {
         "partition": "test_calibrated",
         "label_type": "heuristic_risk_labels",
-        "accuracy": 0.9906,
-        "macro_f1": 0.9349,
-        "weighted_f1": 0.9905,
+        "accuracy": 0.991,
+        "macro_f1": 0.9432,
+        "weighted_f1": 0.9909,
         "per_class_f1": {
-          "Low Risk": 0.991,
-          "Medium Risk": 0.9912,
-          "High Risk": 0.8225
+          "Low Risk": 0.9912,
+          "Medium Risk": 0.9916,
+          "High Risk": 0.8468
         },
         "n_samples": 93034,
-        "temperature": 9.999996
+        "temperature": 4.799534
       }
     },
     "provenance": {
@@ -350,8 +350,8 @@
   },
   "summary": {
     "synthetic_macro_f1": 0.995,
-    "real_macro_f1": 0.9349,
-    "macro_f1_delta_real_minus_synthetic": -0.0601,
+    "real_macro_f1": 0.9432,
+    "macro_f1_delta_real_minus_synthetic": -0.0518,
     "synthetic_data_kind": "synthetic_structured_benchmark",
     "real_data_kind": "real_or_mixed_ocds"
   }

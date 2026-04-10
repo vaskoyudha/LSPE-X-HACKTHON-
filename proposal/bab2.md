@@ -178,6 +178,6 @@ Ringkasan utama:
 
 - Macro-F1 sintetis: 0,9950
 - Macro-F1 riil 2021-2023: 0,9349
-- Delta: -0,0601
+- Delta: -0,0518
 
 Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun menunjukkan bahwa pipeline mentransfer lebih baik daripada benchmark riil satu tahun yang sebelumnya dipakai. Ini memperkuat validitas Phase 2 tanpa kembali ke klaim yang berlebihan.

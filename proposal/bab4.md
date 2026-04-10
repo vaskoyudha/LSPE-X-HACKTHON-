@@ -4,10 +4,10 @@
 
 Berdasarkan artefak evaluasi pada `models/metrics.json`, model LPSE-X pada benchmark riil 2021-2023 mencapai:
 
-- Accuracy: **0,9906**
-- Macro-F1: **0,9349**
-- Weighted-F1: **0,9905**
-- Log loss: **0,0700**
+- Accuracy: **0,991**
+- Macro-F1: **0,9432**
+- Weighted-F1: **0,9909**
+- Log loss: **0,0735**
 - Jumlah sampel test: **93.034**
 
 Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi jauh lebih kredibel daripada benchmark sintetis maupun benchmark riil satu tahun. Dengan kata lain, perluasan ke 2021-2023 menaikkan kembali performa sambil mempertahankan validitas eksternal yang lebih baik.
@@ -16,9 +16,9 @@ Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi jau
 
 Nilai F1 per kelas pada benchmark riil multi-tahun adalah sebagai berikut:
 
-- Low Risk: **0,9910**
-- Medium Risk: **0,9912**
-- High Risk: **0,8225**
+- Low Risk: **0,9912**
+- Medium Risk: **0,9916**
+- High Risk: **0,8468**
 
 Interpretasi utama:
 
@@ -64,7 +64,7 @@ Perbandingan pada `models/benchmark_comparison.json` menunjukkan:
 
 - Macro-F1 benchmark sintetis: **0,9950**
 - Macro-F1 benchmark riil 2021-2023: **0,9349**
-- Delta: **-0,0601**
+- Delta: **-0,0518**
 
 Ini adalah hasil yang jauh lebih sehat secara ilmiah. Benchmark sintetis sebelumnya jelas terlalu optimistis. Namun setelah benchmark diperluas ke data riil multi-tahun, performa kembali naik dibanding benchmark riil satu tahun dan tetap berada pada level yang kuat untuk Phase 2.
 
