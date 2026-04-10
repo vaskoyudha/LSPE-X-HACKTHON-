@@ -32,6 +32,7 @@ from src.model import (
     run_calibration,
     save_metrics,
     save_model,
+    tune_decision_thresholds,
     train_final_model,
 )
 
@@ -170,9 +171,24 @@ def _train_and_evaluate_current_split() -> None:
 
     model = train_final_model(X_fit, y_fit, X_hpo, y_hpo, best_params.copy())
     save_model(model, best_params)
+    thresholds = tune_decision_thresholds(model, train_features, train_labels)
 
     val_metrics = evaluate(model, X_hpo, y_hpo, "val_hpo")
+    val_metrics_thresholded = evaluate(
+        model,
+        X_hpo,
+        y_hpo,
+        "val_hpo_thresholded",
+        thresholds=thresholds,
+    )
     test_metrics = evaluate(model, test_features, test_labels, "test_uncalibrated")
+    test_metrics_thresholded = evaluate(
+        model,
+        test_features,
+        test_labels,
+        "test_thresholded",
+        thresholds=thresholds,
+    )
 
     calibration = run_calibration(model, train_features)
     calibrated_metrics = None
@@ -201,7 +217,9 @@ def _train_and_evaluate_current_split() -> None:
     full_metrics = {
         "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
         "internal_validation": val_metrics,
+        "internal_validation_thresholded": val_metrics_thresholded,
         "final_test": test_metrics,
+        "final_test_thresholded": test_metrics_thresholded,
         "calibration": calibration,
     }
     if calibrated_metrics:
@@ -247,8 +265,10 @@ def main() -> None:
         "onnx": onnx_info,
     }
 
-    synthetic_macro = (synthetic_snapshot.get("metrics") or {}).get("final_test", {}).get("macro_f1")
-    real_macro = (real_snapshot.get("metrics") or {}).get("final_test", {}).get("macro_f1")
+    synthetic_metrics = synthetic_snapshot.get("metrics") or {}
+    real_metrics = real_snapshot.get("metrics") or {}
+    synthetic_macro = (synthetic_metrics.get("final_test_thresholded") or synthetic_metrics.get("final_test") or {}).get("macro_f1")
+    real_macro = (real_metrics.get("final_test_thresholded") or real_metrics.get("final_test") or {}).get("macro_f1")
     comparison = {
         "synthetic_before": synthetic_snapshot,
         "real_after": real_snapshot,
@@ -256,6 +276,8 @@ def main() -> None:
             "synthetic_macro_f1": synthetic_macro,
             "real_macro_f1": real_macro,
             "macro_f1_delta_real_minus_synthetic": None if synthetic_macro is None or real_macro is None else round(real_macro - synthetic_macro, 4),
+            "synthetic_metric_partition": "final_test_thresholded" if synthetic_metrics.get("final_test_thresholded") else "final_test",
+            "real_metric_partition": "final_test_thresholded" if real_metrics.get("final_test_thresholded") else "final_test",
             "synthetic_data_kind": (synthetic_snapshot.get("provenance") or {}).get("data_kind"),
             "real_data_kind": (real_snapshot.get("provenance") or {}).get("data_kind"),
         },

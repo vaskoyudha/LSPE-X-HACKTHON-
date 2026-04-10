@@ -47,6 +47,7 @@ XGB_MODEL_PATH = MODELS_DIR / "xgb_model.ubj"
 ONNX_MODEL_PATH = MODELS_DIR / "xgb_model.onnx"
 BEST_PARAMS_PATH = MODELS_DIR / "best_params.json"
 METRICS_PATH = MODELS_DIR / "metrics.json"
+DECISION_THRESHOLDS_PATH = MODELS_DIR / "decision_thresholds.json"
 CALIBRATION_PATH = MODELS_DIR / "calibration.json"
 IMPUTATION_PATH = MODELS_DIR / "imputation_values.json"
 
@@ -177,6 +178,7 @@ def run_hpo(
     X_val: np.ndarray,
     y_val: np.ndarray,
     n_trials: int = 30,
+    timeout: int | None = None,
     random_state: int = 42,
 ) -> Dict[str, Any]:
     """
@@ -225,7 +227,12 @@ def run_hpo(
         return f1_score(y_val, preds, average="macro")
  
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=random_state))
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+    study.optimize(
+        objective,
+        n_trials=n_trials,
+        timeout=timeout,
+        show_progress_bar=False,
+    )
  
     best_params: Dict[str, Any] = study.best_params
     best_params["tree_method"] = "hist"
@@ -789,34 +796,124 @@ def load_model() -> xgb.Booster:
 
 
 # ---------------------------------------------------------------------------
-# Evaluation
+# Decision thresholds + evaluation
 # ---------------------------------------------------------------------------
 
 
-def evaluate(
-    model: xgb.Booster,
-    X: pd.DataFrame,
-    y: pd.Series,
-    partition_name: str = "test",
+def save_decision_thresholds(thresholds: dict[str, float]) -> None:
+    """Persist the selected class decision thresholds."""
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    serializable = {key: float(value) for key, value in thresholds.items()}
+    DECISION_THRESHOLDS_PATH.write_text(
+        json.dumps(serializable, indent=2),
+        encoding="utf-8",
+    )
+    logger.info("Decision thresholds saved to %s", DECISION_THRESHOLDS_PATH)
+
+
+def load_decision_thresholds() -> dict[str, float] | None:
+    """Load persisted decision thresholds if available."""
+    if not DECISION_THRESHOLDS_PATH.exists():
+        return None
+    return {
+        key: float(value)
+        for key, value in json.loads(DECISION_THRESHOLDS_PATH.read_text(encoding="utf-8")).items()
+    }
+
+
+def predict_with_thresholds(
+    probs: np.ndarray,
+    thresholds: dict[str, float],
+) -> np.ndarray:
+    """Apply simple low/high overrides on top of argmax predictions."""
+    probs = np.asarray(probs, dtype=float)
+    if probs.ndim != 2 or probs.shape[1] != N_CLASSES:
+        raise ValueError(f"Expected probs shape (n_samples, {N_CLASSES}), got {probs.shape}")
+
+    preds = np.argmax(probs, axis=1).astype(int, copy=True)
+    high_threshold = float(thresholds["high_risk"])
+    low_threshold = float(thresholds["low_risk"])
+
+    high_mask = probs[:, 2] >= high_threshold
+    low_mask = probs[:, 0] >= low_threshold
+    preds[high_mask] = 2
+    preds[~high_mask & low_mask] = 0
+    return preds
+
+
+def search_decision_thresholds(
+    probs: np.ndarray,
+    y_true: pd.Series | np.ndarray,
+) -> dict[str, float]:
+    """Search for val_hpo decision thresholds that lift High Risk F1 without collapsing macro-F1."""
+    y_true_array = pd.Series(y_true).astype(int).to_numpy()
+    baseline_preds = np.argmax(probs, axis=1)
+    baseline_macro = float(
+        f1_score(y_true_array, baseline_preds, average="macro", labels=[0, 1, 2], zero_division=0)
+    )
+    baseline_high = float(
+        f1_score(y_true_array, baseline_preds, average=None, labels=[0, 1, 2], zero_division=0)[2]
+    )
+    macro_floor = baseline_macro - 0.003
+
+    best = {"high_risk": 0.50, "low_risk": 0.50}
+    best_rank = (1, 0, baseline_high, baseline_macro, 0.0)
+
+    for high in np.linspace(0.35, 0.85, 21):
+        for low in np.linspace(0.35, 0.85, 21):
+            candidate = {"high_risk": float(high), "low_risk": float(low)}
+            preds = predict_with_thresholds(probs, candidate)
+            per_class = f1_score(
+                y_true_array,
+                preds,
+                average=None,
+                labels=[0, 1, 2],
+                zero_division=0,
+            )
+            macro_f1 = float(
+                f1_score(y_true_array, preds, average="macro", labels=[0, 1, 2], zero_division=0)
+            )
+            high_f1 = float(per_class[2])
+            keeps_macro = macro_f1 >= macro_floor
+            improves_high = high_f1 > baseline_high + 1e-12
+            centrality = -abs(float(high) - 0.5) - abs(float(low) - 0.5)
+            rank = (
+                1 if keeps_macro else 0,
+                1 if improves_high else 0,
+                high_f1,
+                macro_f1,
+                centrality,
+            )
+            if rank > best_rank:
+                best = candidate
+                best_rank = rank
+
+    logger.info(
+        "Decision threshold search: baseline_macro=%.4f baseline_high_f1=%.4f chosen=%s",
+        baseline_macro,
+        baseline_high,
+        best,
+    )
+    return best
+
+
+def _build_metrics(
+    y: pd.Series | np.ndarray,
+    probs: np.ndarray,
+    preds: np.ndarray,
+    partition_name: str,
+    thresholds: dict[str, float] | None = None,
 ) -> dict:
-    """Evaluate model and return metrics dict.
-
-    Returns the canonical metrics structure for models/metrics.json.
-    """
-    dmatrix = xgb.DMatrix(X)
-    probs = model.predict(dmatrix)
-    preds = np.argmax(probs, axis=1)
+    """Build the canonical metrics structure from probabilities and predictions."""
     labels = list(range(N_CLASSES))
-
-    macro_f1 = f1_score(y, preds, average="macro")
-    weighted_f1 = f1_score(y, preds, average="weighted")
-    per_class_f1 = f1_score(y, preds, average=None, labels=labels).tolist()
+    macro_f1 = f1_score(y, preds, average="macro", labels=labels, zero_division=0)
+    weighted_f1 = f1_score(y, preds, average="weighted", labels=labels, zero_division=0)
+    per_class_f1 = f1_score(y, preds, average=None, labels=labels, zero_division=0).tolist()
     acc = accuracy_score(y, preds)
     cm = confusion_matrix(y, preds, labels=labels).tolist()
 
-    # Log loss (if probabilities available)
     try:
-        ll = log_loss(y, probs, labels=[0, 1, 2])
+        ll = log_loss(y, probs, labels=labels)
     except Exception:
         ll = None
 
@@ -841,17 +938,54 @@ def evaluate(
         "classification_report": report,
         "n_samples": len(y),
     }
+    if thresholds is not None:
+        metrics["decision_thresholds"] = {key: round(float(value), 4) for key, value in thresholds.items()}
 
     logger.info(
         "[%s] Accuracy=%.4f, Macro-F1=%.4f, Weighted-F1=%.4f",
         partition_name, acc, macro_f1, weighted_f1,
     )
     for i in range(N_CLASSES):
-        logger.info(
-            "  %s F1=%.4f", CLASS_NAMES[i], per_class_f1[i]
-        )
+        logger.info("  %s F1=%.4f", CLASS_NAMES[i], per_class_f1[i])
 
     return metrics
+
+
+def evaluate(
+    model: xgb.Booster,
+    X: pd.DataFrame,
+    y: pd.Series,
+    partition_name: str = "test",
+    thresholds: dict[str, float] | None = None,
+) -> dict:
+    """Evaluate model and return metrics dict.
+
+    Returns the canonical metrics structure for models/metrics.json.
+    """
+    dmatrix = xgb.DMatrix(X)
+    probs = model.predict(dmatrix)
+    preds = (
+        predict_with_thresholds(probs, thresholds)
+        if thresholds is not None
+        else np.argmax(probs, axis=1)
+    )
+    return _build_metrics(y, probs, preds, partition_name, thresholds=thresholds)
+
+
+def tune_decision_thresholds(
+    model: xgb.Booster,
+    train_features: pd.DataFrame,
+    train_labels: pd.Series,
+) -> dict[str, float]:
+    """Tune decision thresholds on val_hpo and persist them."""
+    dev_idx = load_dev_split_indices(train_features)
+    X_hpo = train_features.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
+    y_hpo = train_labels.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
+
+    probs = model.predict(xgb.DMatrix(X_hpo))
+    thresholds = search_decision_thresholds(probs, y_hpo)
+    save_decision_thresholds(thresholds)
+    return thresholds
 
 
 def save_metrics(metrics: dict) -> None:
@@ -1028,6 +1162,7 @@ def generate_figures(
     X_test: pd.DataFrame,
     y_test: pd.Series,
     calibration: dict | None = None,
+    thresholds: dict[str, float] | None = None,
 ) -> None:
     """Generate all evaluation figures for the proposal.
 
@@ -1050,7 +1185,11 @@ def generate_figures(
     if calibration and calibration.get("enabled"):
         probs = apply_temperature(probs, calibration["temperature"])
 
-    preds = np.argmax(probs, axis=1)
+    preds = (
+        predict_with_thresholds(probs, thresholds)
+        if thresholds is not None
+        else np.argmax(probs, axis=1)
+    )
     class_labels = [CLASS_NAMES[i] for i in range(N_CLASSES)]
 
     # --- 1. Confusion Matrix ---
@@ -1063,7 +1202,8 @@ def generate_figures(
     ax.set_yticklabels(class_labels, fontsize=10)
     ax.set_xlabel("Predicted", fontsize=12, fontweight="bold")
     ax.set_ylabel("Actual", fontsize=12, fontweight="bold")
-    ax.set_title("Confusion Matrix (Test Set)", fontsize=14, fontweight="bold")
+    title_suffix = " (thresholded)" if thresholds is not None else ""
+    ax.set_title(f"Confusion Matrix (Test Set{title_suffix})", fontsize=14, fontweight="bold")
     for i in range(N_CLASSES):
         for j in range(N_CLASSES):
             color = "white" if cm[i, j] > cm.max() / 2 else "black"
@@ -1086,7 +1226,7 @@ def generate_figures(
                label=f"Macro F1 = {macro_f1:.4f}")
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("F1 Score", fontsize=12, fontweight="bold")
-    ax.set_title("Per-Class F1 Score (Test Set)", fontsize=14, fontweight="bold")
+    ax.set_title(f"Per-Class F1 Score (Test Set{title_suffix})", fontsize=14, fontweight="bold")
     ax.legend(fontsize=10)
     for bar, val in zip(bars, per_f1):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
@@ -1121,7 +1261,7 @@ def generate_figures(
     ax.plot([0, 1], [0, 1], "k--", linewidth=1, label="Perfect calibration")
     ax.set_xlabel("Mean Predicted Probability", fontsize=12, fontweight="bold")
     ax.set_ylabel("Fraction of Positives", fontsize=12, fontweight="bold")
-    ax.set_title("Calibration Curve (Test Set)", fontsize=14, fontweight="bold")
+    ax.set_title(f"Calibration Curve (Test Set{title_suffix})", fontsize=14, fontweight="bold")
     ax.legend(fontsize=9)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
@@ -1283,15 +1423,34 @@ def run_training_pipeline(
     logger.info("--- Internal validation metrics ---")
     val_metrics = evaluate(model, X_hpo, y_hpo, "val_hpo")
 
+    logger.info("--- Threshold tuning on val_hpo ---")
+    thresholds = tune_decision_thresholds(model, train_features, train_labels)
+    val_metrics_thresholded = evaluate(
+        model,
+        X_hpo,
+        y_hpo,
+        "val_hpo_thresholded",
+        thresholds=thresholds,
+    )
+
     # Step 5: Evaluate on test (final held-out metrics)
     logger.info("--- Final test metrics ---")
     test_metrics = evaluate(model, test_features, test_labels, "test")
+    test_metrics_thresholded = evaluate(
+        model,
+        test_features,
+        test_labels,
+        "test_thresholded",
+        thresholds=thresholds,
+    )
 
     # Save canonical metrics
     full_metrics = {
         "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
         "internal_validation": val_metrics,
+        "internal_validation_thresholded": val_metrics_thresholded,
         "final_test": test_metrics,
+        "final_test_thresholded": test_metrics_thresholded,
     }
     save_metrics(full_metrics)
 
@@ -1320,6 +1479,10 @@ def run_evaluation_pipeline() -> dict:
     model = load_model()
     train_features, train_labels = load_train_artifacts()
     test_features, test_labels = load_test_artifacts()
+    thresholds = load_decision_thresholds()
+    if thresholds is None:
+        logger.info("--- Tuning decision thresholds ---")
+        thresholds = tune_decision_thresholds(model, train_features, train_labels)
 
     # Step 1: Calibration
     logger.info("--- Running calibration ---")
@@ -1328,6 +1491,13 @@ def run_evaluation_pipeline() -> dict:
     # Step 2: Evaluate on test (uncalibrated)
     logger.info("--- Test metrics (uncalibrated) ---")
     test_metrics_raw = evaluate(model, test_features, test_labels, "test_uncalibrated")
+    test_metrics_thresholded = evaluate(
+        model,
+        test_features,
+        test_labels,
+        "test_thresholded",
+        thresholds=thresholds,
+    )
 
     # Step 3: Evaluate on test (calibrated, if enabled)
     test_metrics_cal = None
@@ -1358,7 +1528,13 @@ def run_evaluation_pipeline() -> dict:
 
     # Step 4: Generate figures
     logger.info("--- Generating figures ---")
-    generate_figures(model, test_features, test_labels, calibration)
+    generate_figures(
+        model,
+        test_features,
+        test_labels,
+        calibration,
+        thresholds=thresholds,
+    )
 
     # Step 5: Compute imputation values from training data
     logger.info("--- Computing imputation values ---")
@@ -1368,6 +1544,7 @@ def run_evaluation_pipeline() -> dict:
     full_metrics = {
         "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
         "final_test": test_metrics_raw,
+        "final_test_thresholded": test_metrics_thresholded,
         "calibration": calibration,
     }
     if test_metrics_cal:

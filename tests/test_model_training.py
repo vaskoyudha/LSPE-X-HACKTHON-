@@ -13,7 +13,9 @@ from src.model import (
     _select_calibration_subset,
     compute_class_weights,
     compute_sample_weights,
+    predict_with_thresholds,
     run_hpo,
+    search_decision_thresholds,
     train_final_model,
     save_model,
     load_model,
@@ -216,3 +218,34 @@ class TestEvaluation:
         sample_probs, sample_labels = _select_calibration_subset(cal_probs, clean)
         np.testing.assert_array_equal(sample_probs, cal_probs[[3, 1]])
         np.testing.assert_array_equal(sample_labels, np.array([2, 1]))
+
+
+@pytest.mark.p0
+class TestDecisionThresholds:
+    def test_predict_with_thresholds_promotes_high_risk_when_probability_clears_cutoff(self):
+        probs = np.array(
+            [
+                [0.20, 0.55, 0.25],
+                [0.05, 0.30, 0.65],
+            ]
+        )
+        thresholds = {"high_risk": 0.60, "low_risk": 0.80}
+
+        preds = predict_with_thresholds(probs, thresholds)
+
+        np.testing.assert_array_equal(preds, np.array([1, 2]))
+
+    def test_search_thresholds_returns_serializable_thresholds(self):
+        probs = np.array(
+            [
+                [0.7, 0.2, 0.1],
+                [0.2, 0.3, 0.5],
+                [0.1, 0.6, 0.3],
+            ]
+        )
+        y_true = pd.Series([0, 2, 1])
+
+        thresholds = search_decision_thresholds(probs, y_true)
+
+        assert set(thresholds) == {"high_risk", "low_risk"}
+        assert all(isinstance(value, float) for value in thresholds.values())
