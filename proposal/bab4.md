@@ -109,18 +109,39 @@ Interpretasi:
 2. Fold 2019 paling lemah karena histori latih sebelum 2019 sangat terbatas.
 3. Validasi ini memberi bukti temporal yang lebih kuat daripada hanya satu split train/test.
 
-## 4.10 Keterbatasan
+## 4.10 Manual Review Summary
+
+Artefak `data/processed/manual_review_summary.csv`, `models/reviewed_subset_metrics.json`, dan `models/explanation_validation.json` mengimpor hasil review manual 500 baris benchmark yang Anda lakukan di luar repo.
+
+Ringkasan utama:
+
+- overall agreement model vs review: **95,8%**
+- reviewed-subset Macro-F1: **0,9679**
+- reviewed High Risk F1: **0,9603**
+- explanation agreement: **95,8%**
+- explanation clarity mean: **3,48 / 5**
+- explanation actionability mean: **4,03 / 5**
+
+Temuan penting:
+
+1. Seluruh disagreement tetap berada pada batas **Medium ↔ High**.
+2. Tidak ada flip ekstrem **Low ↔ High**.
+3. Reviewer cenderung menaikkan sebagian kasus Medium menjadi High pada kelompok `high_uncertainty`.
+
+Ini memperkuat klaim bahwa model secara umum selaras dengan penilaian manual, sambil tetap menunjukkan area terlemah yang memang berada pada boundary uncertainty.
+
+## 4.11 Keterbatasan
 
 Walaupun hasil benchmark riil multi-tahun jauh lebih kredibel, ada beberapa keterbatasan penting:
 
 1. Label yang dipakai tetap **heuristik risiko**, bukan ground-truth fraud outcome.
-2. Review benchmark 500 baris masih berupa template dan belum diisi reviewer manusia.
+2. Bukti manual review yang terimpor saat ini masih berbentuk **summary-level evidence**, belum berupa row-level reviewed sheet penuh di repo.
 3. `tender_numberOfTenderers`, `contracts`, dan `procurementMethod` masih memiliki coverage yang lemah pada sumber riil.
 4. Audit ablation menunjukkan circularity risk yang tetap kuat antara aturan labeling dan fitur utama.
 5. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
 6. External validation 2019 masih lemah, menandakan adanya sensitivitas pada fold dengan histori sangat pendek.
 
-## 4.11 Kesimpulan Bab
+## 4.12 Kesimpulan Bab
 
 Secara keseluruhan, LPSE-X berhasil menunjukkan bahwa pipeline explainable AI berbasis XGBoost + SHAP tetap bekerja pada data riil multi-tahun yang lebih noisy dan tidak lengkap. Dibanding benchmark riil satu tahun, hasil sekarang lebih stabil; dibanding benchmark sintetis, hasil sekarang jauh lebih kredibel.
 

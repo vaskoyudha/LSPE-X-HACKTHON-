@@ -1,0 +1,72 @@
+section,dimension,metric,value,pct,notes
+1. Label Distribution,label_0_low_risk,count_predicted,50.0,10.0%,Low Risk
+1. Label Distribution,label_0_low_risk,count_reviewed,50.0,10.0%,Low Risk
+1. Label Distribution,label_0_low_risk,count_heuristic,50.0,10.0%,Low Risk
+1. Label Distribution,label_1_medium_risk,count_predicted,192.0,38.4%,Medium Risk
+1. Label Distribution,label_1_medium_risk,count_reviewed,179.0,35.8%,Medium Risk
+1. Label Distribution,label_1_medium_risk,count_heuristic,179.0,35.8%,Medium Risk
+1. Label Distribution,label_2_high_risk,count_predicted,258.0,51.6%,High Risk
+1. Label Distribution,label_2_high_risk,count_reviewed,271.0,54.2%,High Risk
+1. Label Distribution,label_2_high_risk,count_heuristic,271.0,54.2%,High Risk
+2. Agreement,overall,agree_count,479.0,95.8%,reviewed_label == predicted_label
+2. Agreement,overall,disagree_count,21.0,4.2%,reviewed_label != predicted_label
+3. Confusion Matrix,predicted_0_reviewed_0,count,50.0,10.0%,diagonal=agreement
+3. Confusion Matrix,predicted_0_reviewed_1,count,0.0,0.0%,diagonal=agreement
+3. Confusion Matrix,predicted_0_reviewed_2,count,0.0,0.0%,diagonal=agreement
+3. Confusion Matrix,predicted_1_reviewed_0,count,0.0,0.0%,diagonal=agreement
+3. Confusion Matrix,predicted_1_reviewed_1,count,175.0,35.0%,diagonal=agreement
+3. Confusion Matrix,predicted_1_reviewed_2,count,17.0,3.4%,diagonal=agreement
+3. Confusion Matrix,predicted_2_reviewed_0,count,0.0,0.0%,diagonal=agreement
+3. Confusion Matrix,predicted_2_reviewed_1,count,4.0,0.8%,diagonal=agreement
+3. Confusion Matrix,predicted_2_reviewed_2,count,254.0,50.8%,diagonal=agreement
+4. Confidence,high,count,200.0,40.0%,
+4. Confidence,medium,count,141.0,28.2%,
+4. Confidence,low,count,159.0,31.8%,
+5. By Sampling Group,high_risk_probability,n,200.0,,
+5. By Sampling Group,high_risk_probability,label_agreement,1.0,100.0%,
+5. By Sampling Group,high_risk_probability,high_confidence_rate,1.0,100.0%,
+5. By Sampling Group,high_risk_probability,avg_explanation_clarity,4.42,,
+5. By Sampling Group,high_risk_probability,avg_explanation_actionable,4.68,,
+5. By Sampling Group,high_uncertainty,n,150.0,,
+5. By Sampling Group,high_uncertainty,label_agreement,0.8667,86.7%,
+5. By Sampling Group,high_uncertainty,high_confidence_rate,0.0,0.0%,
+5. By Sampling Group,high_uncertainty,avg_explanation_clarity,2.05,,
+5. By Sampling Group,high_uncertainty,avg_explanation_actionable,2.97,,
+5. By Sampling Group,stratified_predicted_high_risk,n,50.0,,
+5. By Sampling Group,stratified_predicted_high_risk,label_agreement,0.98,98.0%,
+5. By Sampling Group,stratified_predicted_high_risk,high_confidence_rate,0.0,0.0%,
+5. By Sampling Group,stratified_predicted_high_risk,avg_explanation_clarity,2.96,,
+5. By Sampling Group,stratified_predicted_high_risk,avg_explanation_actionable,4.68,,
+5. By Sampling Group,stratified_predicted_medium_risk,n,50.0,,
+5. By Sampling Group,stratified_predicted_medium_risk,label_agreement,1.0,100.0%,
+5. By Sampling Group,stratified_predicted_medium_risk,high_confidence_rate,0.0,0.0%,
+5. By Sampling Group,stratified_predicted_medium_risk,avg_explanation_clarity,4.0,,
+5. By Sampling Group,stratified_predicted_medium_risk,avg_explanation_actionable,4.0,,
+5. By Sampling Group,stratified_predicted_low_risk,n,50.0,,
+5. By Sampling Group,stratified_predicted_low_risk,label_agreement,1.0,100.0%,
+5. By Sampling Group,stratified_predicted_low_risk,high_confidence_rate,0.0,0.0%,
+5. By Sampling Group,stratified_predicted_low_risk,avg_explanation_clarity,4.0,,
+5. By Sampling Group,stratified_predicted_low_risk,avg_explanation_actionable,4.0,,
+6. Explanation Quality,explanation_agrees,yes,479.0,95.8%,
+6. Explanation Quality,explanation_agrees,partial,21.0,4.2%,
+6. Explanation Quality,explanation_agrees,no,0.0,0.0%,
+6. Explanation Quality,explanation_clarity,mean,3.48,,scale 1-5
+6. Explanation Quality,explanation_clarity,median,4.0,,
+6. Explanation Quality,explanation_actionable,mean,4.03,,scale 1-5
+6. Explanation Quality,explanation_actionable,median,4.0,,
+7. Top Factors,f_buyer_supplier_repeat_count,frequency,368.0,24.5%,out of 1500 total factor slots
+7. Top Factors,f_is_q4,frequency,301.0,20.1%,out of 1500 total factor slots
+7. Top Factors,f_title_length,frequency,237.0,15.8%,out of 1500 total factor slots
+7. Top Factors,f_supplier_recent_90d_award_count,frequency,214.0,14.3%,out of 1500 total factor slots
+7. Top Factors,f_tender_value_log,frequency,161.0,10.7%,out of 1500 total factor slots
+7. Top Factors,f_tender_value_zscore_buyer,frequency,150.0,10.0%,out of 1500 total factor slots
+7. Top Factors,f_price_deviation_ratio,frequency,68.0,4.5%,out of 1500 total factor slots
+7. Top Factors,f_supplier_hist_win_count,frequency,1.0,0.1%,out of 1500 total factor slots
+8. Disagreements,High → Medium,count,4.0,0.8%,avg_entropy=0.992
+8. Disagreements,Medium → High,count,17.0,3.4%,avg_entropy=1.007
+9. Entropy by Label,reviewed_label_0,mean_entropy,0.6346,,
+9. Entropy by Label,reviewed_label_0,mean_probability,0.7782,,
+9. Entropy by Label,reviewed_label_1,mean_entropy,0.934,,
+9. Entropy by Label,reviewed_label_1,mean_probability,0.5856,,
+9. Entropy by Label,reviewed_label_2,mean_entropy,0.5359,,
+9. Entropy by Label,reviewed_label_2,mean_probability,0.8191,,

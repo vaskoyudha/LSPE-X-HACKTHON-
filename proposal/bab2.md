@@ -186,14 +186,19 @@ Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, te
 
 Untuk menyiapkan transisi dari heuristic benchmarking menuju evaluasi yang lebih kuat, repo kini menyediakan tiga lapisan tambahan:
 
-1. **review benchmark template** pada `data/processed/review_benchmark_500.csv` untuk 500 baris test riil yang siap diisi reviewer manusia,
+1. **review benchmark** pada `data/processed/review_benchmark_500.csv` yang kini sudah memiliki ringkasan manual review terimpor pada `data/processed/manual_review_summary.csv`,
 2. **operational review metrics** pada `models/operational_metrics.json` untuk mengukur kualitas ranking pada budget review terbatas,
 3. **external validation** pada `models/external_validation.json` untuk mengevaluasi generalisasi dengan skema holdout-year 2019-2023.
 
 Ringkasan awal:
 
 - reviewed calibration rows: **287**
-- review benchmark template rows: **500**
+- manual review summary rows: **500**
+- reviewed-subset Macro-F1: **0,9679**
+- reviewed High Risk F1: **0,9603**
+- explanation agreement: **95,8%**
+- explanation clarity mean: **3,48 / 5**
+- explanation actionability mean: **4,03 / 5**
 - Precision@50/100/250/500/1000: **1,00**
 - mean Macro-F1 external validation: **0,9151**
 - mean High Risk F1 external validation: **0,8972**
@@ -201,4 +206,5 @@ Ringkasan awal:
 Artefak ini belum mengubah target utama benchmark yang masih heuristik, tetapi mereka memperluas bukti menuju:
 - validasi operasional,
 - validasi lintas-waktu,
-- dan kesiapan untuk human-reviewed labels.
+- validasi manual tingkat ringkasan,
+- dan kesiapan untuk penyimpanan row-level reviewed labels yang lebih lengkap.

@@ -1,0 +1,570 @@
+[
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_0_low_risk",
+    "metric":"count_predicted",
+    "value":50.0,
+    "pct":"10.0%",
+    "notes":"Low Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_0_low_risk",
+    "metric":"count_reviewed",
+    "value":50.0,
+    "pct":"10.0%",
+    "notes":"Low Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_0_low_risk",
+    "metric":"count_heuristic",
+    "value":50.0,
+    "pct":"10.0%",
+    "notes":"Low Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_1_medium_risk",
+    "metric":"count_predicted",
+    "value":192.0,
+    "pct":"38.4%",
+    "notes":"Medium Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_1_medium_risk",
+    "metric":"count_reviewed",
+    "value":179.0,
+    "pct":"35.8%",
+    "notes":"Medium Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_1_medium_risk",
+    "metric":"count_heuristic",
+    "value":179.0,
+    "pct":"35.8%",
+    "notes":"Medium Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_2_high_risk",
+    "metric":"count_predicted",
+    "value":258.0,
+    "pct":"51.6%",
+    "notes":"High Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_2_high_risk",
+    "metric":"count_reviewed",
+    "value":271.0,
+    "pct":"54.2%",
+    "notes":"High Risk"
+  },
+  {
+    "section":"1. Label Distribution",
+    "dimension":"label_2_high_risk",
+    "metric":"count_heuristic",
+    "value":271.0,
+    "pct":"54.2%",
+    "notes":"High Risk"
+  },
+  {
+    "section":"2. Agreement",
+    "dimension":"overall",
+    "metric":"agree_count",
+    "value":479.0,
+    "pct":"95.8%",
+    "notes":"reviewed_label == predicted_label"
+  },
+  {
+    "section":"2. Agreement",
+    "dimension":"overall",
+    "metric":"disagree_count",
+    "value":21.0,
+    "pct":"4.2%",
+    "notes":"reviewed_label != predicted_label"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_0_reviewed_0",
+    "metric":"count",
+    "value":50.0,
+    "pct":"10.0%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_0_reviewed_1",
+    "metric":"count",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_0_reviewed_2",
+    "metric":"count",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_1_reviewed_0",
+    "metric":"count",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_1_reviewed_1",
+    "metric":"count",
+    "value":175.0,
+    "pct":"35.0%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_1_reviewed_2",
+    "metric":"count",
+    "value":17.0,
+    "pct":"3.4%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_2_reviewed_0",
+    "metric":"count",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_2_reviewed_1",
+    "metric":"count",
+    "value":4.0,
+    "pct":"0.8%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"3. Confusion Matrix",
+    "dimension":"predicted_2_reviewed_2",
+    "metric":"count",
+    "value":254.0,
+    "pct":"50.8%",
+    "notes":"diagonal=agreement"
+  },
+  {
+    "section":"4. Confidence",
+    "dimension":"high",
+    "metric":"count",
+    "value":200.0,
+    "pct":"40.0%",
+    "notes":null
+  },
+  {
+    "section":"4. Confidence",
+    "dimension":"medium",
+    "metric":"count",
+    "value":141.0,
+    "pct":"28.2%",
+    "notes":null
+  },
+  {
+    "section":"4. Confidence",
+    "dimension":"low",
+    "metric":"count",
+    "value":159.0,
+    "pct":"31.8%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_risk_probability",
+    "metric":"n",
+    "value":200.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_risk_probability",
+    "metric":"label_agreement",
+    "value":1.0,
+    "pct":"100.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_risk_probability",
+    "metric":"high_confidence_rate",
+    "value":1.0,
+    "pct":"100.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_risk_probability",
+    "metric":"avg_explanation_clarity",
+    "value":4.42,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_risk_probability",
+    "metric":"avg_explanation_actionable",
+    "value":4.68,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_uncertainty",
+    "metric":"n",
+    "value":150.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_uncertainty",
+    "metric":"label_agreement",
+    "value":0.8667,
+    "pct":"86.7%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_uncertainty",
+    "metric":"high_confidence_rate",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_uncertainty",
+    "metric":"avg_explanation_clarity",
+    "value":2.05,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"high_uncertainty",
+    "metric":"avg_explanation_actionable",
+    "value":2.97,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_high_risk",
+    "metric":"n",
+    "value":50.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_high_risk",
+    "metric":"label_agreement",
+    "value":0.98,
+    "pct":"98.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_high_risk",
+    "metric":"high_confidence_rate",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_high_risk",
+    "metric":"avg_explanation_clarity",
+    "value":2.96,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_high_risk",
+    "metric":"avg_explanation_actionable",
+    "value":4.68,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_medium_risk",
+    "metric":"n",
+    "value":50.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_medium_risk",
+    "metric":"label_agreement",
+    "value":1.0,
+    "pct":"100.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_medium_risk",
+    "metric":"high_confidence_rate",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_medium_risk",
+    "metric":"avg_explanation_clarity",
+    "value":4.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_medium_risk",
+    "metric":"avg_explanation_actionable",
+    "value":4.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_low_risk",
+    "metric":"n",
+    "value":50.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_low_risk",
+    "metric":"label_agreement",
+    "value":1.0,
+    "pct":"100.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_low_risk",
+    "metric":"high_confidence_rate",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_low_risk",
+    "metric":"avg_explanation_clarity",
+    "value":4.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"5. By Sampling Group",
+    "dimension":"stratified_predicted_low_risk",
+    "metric":"avg_explanation_actionable",
+    "value":4.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_agrees",
+    "metric":"yes",
+    "value":479.0,
+    "pct":"95.8%",
+    "notes":null
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_agrees",
+    "metric":"partial",
+    "value":21.0,
+    "pct":"4.2%",
+    "notes":null
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_agrees",
+    "metric":"no",
+    "value":0.0,
+    "pct":"0.0%",
+    "notes":null
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_clarity",
+    "metric":"mean",
+    "value":3.48,
+    "pct":null,
+    "notes":"scale 1-5"
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_clarity",
+    "metric":"median",
+    "value":4.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_actionable",
+    "metric":"mean",
+    "value":4.03,
+    "pct":null,
+    "notes":"scale 1-5"
+  },
+  {
+    "section":"6. Explanation Quality",
+    "dimension":"explanation_actionable",
+    "metric":"median",
+    "value":4.0,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_buyer_supplier_repeat_count",
+    "metric":"frequency",
+    "value":368.0,
+    "pct":"24.5%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_is_q4",
+    "metric":"frequency",
+    "value":301.0,
+    "pct":"20.1%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_title_length",
+    "metric":"frequency",
+    "value":237.0,
+    "pct":"15.8%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_supplier_recent_90d_award_count",
+    "metric":"frequency",
+    "value":214.0,
+    "pct":"14.3%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_tender_value_log",
+    "metric":"frequency",
+    "value":161.0,
+    "pct":"10.7%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_tender_value_zscore_buyer",
+    "metric":"frequency",
+    "value":150.0,
+    "pct":"10.0%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_price_deviation_ratio",
+    "metric":"frequency",
+    "value":68.0,
+    "pct":"4.5%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"7. Top Factors",
+    "dimension":"f_supplier_hist_win_count",
+    "metric":"frequency",
+    "value":1.0,
+    "pct":"0.1%",
+    "notes":"out of 1500 total factor slots"
+  },
+  {
+    "section":"8. Disagreements",
+    "dimension":"High \u2192 Medium",
+    "metric":"count",
+    "value":4.0,
+    "pct":"0.8%",
+    "notes":"avg_entropy=0.992"
+  },
+  {
+    "section":"8. Disagreements",
+    "dimension":"Medium \u2192 High",
+    "metric":"count",
+    "value":17.0,
+    "pct":"3.4%",
+    "notes":"avg_entropy=1.007"
+  },
+  {
+    "section":"9. Entropy by Label",
+    "dimension":"reviewed_label_0",
+    "metric":"mean_entropy",
+    "value":0.6346,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"9. Entropy by Label",
+    "dimension":"reviewed_label_0",
+    "metric":"mean_probability",
+    "value":0.7782,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"9. Entropy by Label",
+    "dimension":"reviewed_label_1",
+    "metric":"mean_entropy",
+    "value":0.934,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"9. Entropy by Label",
+    "dimension":"reviewed_label_1",
+    "metric":"mean_probability",
+    "value":0.5856,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"9. Entropy by Label",
+    "dimension":"reviewed_label_2",
+    "metric":"mean_entropy",
+    "value":0.5359,
+    "pct":null,
+    "notes":null
+  },
+  {
+    "section":"9. Entropy by Label",
+    "dimension":"reviewed_label_2",
+    "metric":"mean_probability",
+    "value":0.8191,
+    "pct":null,
+    "notes":null
+  }
+]

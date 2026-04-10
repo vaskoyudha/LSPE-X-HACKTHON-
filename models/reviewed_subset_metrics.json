@@ -1,4 +1,53 @@
 {
-  "status": "pending_human_review",
-  "message": "No reviewed benchmark rows with reviewed_label available yet."
+  "status": "available",
+  "partition": "reviewed_subset_summary",
+  "label_type": "manual_review_summary_labels",
+  "reviewed_rows": 500,
+  "accuracy": 0.958,
+  "macro_f1": 0.9679,
+  "weighted_f1": 0.9582,
+  "per_class_precision": {
+    "Low Risk": 1.0,
+    "Medium Risk": 0.9115,
+    "High Risk": 0.9845
+  },
+  "per_class_recall": {
+    "Low Risk": 1.0,
+    "Medium Risk": 0.9777,
+    "High Risk": 0.9373
+  },
+  "per_class_f1": {
+    "Low Risk": 1.0,
+    "Medium Risk": 0.9434,
+    "High Risk": 0.9603
+  },
+  "confusion_matrix": [
+    [
+      50,
+      0,
+      0
+    ],
+    [
+      0,
+      175,
+      4
+    ],
+    [
+      0,
+      17,
+      254
+    ]
+  ],
+  "reviewed_distribution": {
+    "Low Risk": 50,
+    "Medium Risk": 179,
+    "High Risk": 271
+  },
+  "predicted_distribution": {
+    "Low Risk": 50,
+    "Medium Risk": 192,
+    "High Risk": 258
+  },
+  "overall_agreement": 0.958,
+  "source": "manual_review_summary_csv"
 }

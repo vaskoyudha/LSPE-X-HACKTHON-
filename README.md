@@ -39,8 +39,9 @@ New validation-layer artifacts now exist:
 
 Current status:
 - reviewed calibration rows used: **287**
-- review benchmark template rows prepared for human review: **500**
-- explanation/reviewed-subset metrics: **pending human input**
+- manual review summary imported for **500 reviewed rows**
+- reviewed-subset metrics and explanation-validation metrics are now available
+- row-level reviewer annotations themselves are still not stored as a full reviewed sheet in the repo
 
 ## Synthetic vs Real Benchmark Comparison
 
@@ -80,6 +81,25 @@ Current held-out benchmark highlights:
 - Precision@1000 = **1.00**
 
 Interpretation: under the current benchmark target, the top-ranked High Risk queue is extremely concentrated, which is promising for limited-budget review workflows.
+
+## Manual Review Summary
+
+Tracked artifacts:
+- `data/processed/manual_review_summary.csv`
+- `models/reviewed_subset_metrics.json`
+- `models/explanation_validation.json`
+- `models/manual_review_summary.json`
+- `proposal/figures/manual_review_summary.png`
+
+Imported 500-row manual review summary highlights:
+- overall agreement vs model prediction: **95.8%**
+- reviewed-subset Macro-F1: **0.9679**
+- reviewed High Risk F1: **0.9603**
+- explanation agreement: **95.8%**
+- explanation clarity mean: **3.48 / 5**
+- explanation actionability mean: **4.03 / 5**
+
+Interpretation: the model aligns strongly with the manual review summary overall, but the remaining errors concentrate at the **Medium ↔ High** boundary, especially in high-uncertainty rows.
 
 ## External Validation Snapshot
 
