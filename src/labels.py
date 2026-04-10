@@ -461,6 +461,9 @@ RED_FLAG_FUNCTIONS = {
 def compute_red_flags(df: pd.DataFrame) -> pd.DataFrame:
     """Compute all individual red-flag columns.
 
+    ``df`` is expected to be the merged label-input frame that combines
+    raw procurement columns with engineered feature columns.
+
     Returns a DataFrame with boolean columns, one per flag.
     """
     flags = pd.DataFrame(index=df.index)
@@ -484,7 +487,11 @@ def compute_risk_labels(
     Parameters
     ----------
     df : pd.DataFrame
-        Raw data with the required fields.
+        Merged label-input data containing both raw procurement fields and
+        engineered feature columns. Callers should concatenate raw + feature
+        frames before invoking this function; passing raw-only data will omit
+        feature-backed rules such as repeat pair history, supplier surge,
+        and buyer value spike.
     low_max : int
         Max flag count for "low risk" class.
     high_min : int

@@ -3,7 +3,8 @@
 This script:
   1. Loads train_data/raw.parquet
   2. Applies internal dev splits to extract val_calibration
-  3. Computes heuristic labels for val_calibration
+  3. Computes features for val_calibration and merges raw + feature inputs
+  4. Computes heuristic labels for the merged val_calibration frame
   4. Selects 100 stratified samples
   5. Saves as data/processed/calibration_sheet_100.csv
 
@@ -14,12 +15,15 @@ import logging
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.data import PROCESSED_DIR
 from src.split import internal_dev_splits, load_raw_split
+from src.features import compute_all_features
 from src.labels import compute_risk_labels, select_calibration_samples, save_calibration_sheet
 
 logging.basicConfig(
@@ -38,12 +42,20 @@ def main() -> None:
     # Step 2: Extract val_calibration via dev splits
     logger.info("Applying internal dev splits...")
     dev_splits = internal_dev_splits(train_raw)
-    val_cal = dev_splits["val_calibration"]
+    val_cal = dev_splits["val_calibration"].reset_index(drop=True)
     logger.info("val_calibration: %d rows", len(val_cal))
 
-    # Step 3: Compute heuristic labels for val_calibration only
-    logger.info("Computing heuristic labels for val_calibration...")
-    cal_labels = compute_risk_labels(val_cal)
+    # Step 3: Compute features and merged label inputs for val_calibration
+    logger.info("Computing features for val_calibration...")
+    val_cal_features = compute_all_features(val_cal)
+    val_cal_label_inputs = pd.concat(
+        [val_cal.reset_index(drop=True), val_cal_features.reset_index(drop=True)],
+        axis=1,
+    )
+
+    # Step 4: Compute heuristic labels for merged val_calibration inputs
+    logger.info("Computing heuristic labels for merged val_calibration inputs...")
+    cal_labels = compute_risk_labels(val_cal_label_inputs)
     logger.info(
         "Label distribution in val_calibration: Low=%d, Medium=%d, High=%d",
         (cal_labels["risk_label"] == 0).sum(),
@@ -51,11 +63,11 @@ def main() -> None:
         (cal_labels["risk_label"] == 2).sum(),
     )
 
-    # Step 4: Select 100 stratified samples
+    # Step 5: Select 100 stratified samples
     logger.info("Selecting 100 stratified calibration samples...")
     samples = select_calibration_samples(cal_labels, val_cal, n_samples=100)
 
-    # Step 5: Save
+    # Step 6: Save
     sheet_path = save_calibration_sheet(samples)
     logger.info("Calibration sheet saved to: %s", sheet_path)
     logger.info("Columns: %s", list(samples.columns))

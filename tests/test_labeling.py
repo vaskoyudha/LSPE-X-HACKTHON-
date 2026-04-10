@@ -172,8 +172,17 @@ class TestCompositeLabeling:
 
 @pytest.mark.p1
 class TestRedFlagRegistry:
-    def test_eight_flags_registered(self):
-        assert len(RED_FLAG_FUNCTIONS) == 8
+    def test_exact_expected_flags_registered(self):
+        assert set(RED_FLAG_FUNCTIONS.keys()) == {
+            "short_title",
+            "short_description",
+            "q4_timing",
+            "price_deviation",
+            "high_value",
+            "repeat_pair_history",
+            "supplier_recent_surge",
+            "buyer_value_spike",
+        }
 
     def test_all_flags_return_boolean(self, sample_procurement_df):
         for name, func in RED_FLAG_FUNCTIONS.items():
