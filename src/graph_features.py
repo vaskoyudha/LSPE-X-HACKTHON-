@@ -32,6 +32,13 @@ def _ordered_history_view(raw_df: pd.DataFrame) -> pd.DataFrame:
     ).reset_index(drop=True)
 
 
+def _normalize_entity_id(value: object) -> str | None:
+    if pd.isna(value):
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 def build_relationship_features(raw_df: pd.DataFrame) -> pd.DataFrame:
     """Build leakage-safe relationship features using only past rows."""
 
@@ -49,20 +56,33 @@ def build_relationship_features(raw_df: pd.DataFrame) -> pd.DataFrame:
 
     award_values = pd.to_numeric(ordered.get("award_value_amount"), errors="coerce").fillna(0.0)
 
-    for idx, row in ordered.iterrows():
-        buyer_id = str(row.get("buyer_id", "") or "")
-        supplier_id = str(row.get("supplier_id", "") or "")
-        pair_key = (buyer_id, supplier_id)
+    bucket_columns = ["_sort_tender_date", "_sort_award_date"]
+    for _, bucket in ordered.groupby(bucket_columns, dropna=False, sort=False):
+        pending_updates: list[tuple[str, str, float]] = []
+        for idx, row in bucket.iterrows():
+            buyer_id = _normalize_entity_id(row.get("buyer_id"))
+            supplier_id = _normalize_entity_id(row.get("supplier_id"))
 
-        prev_pair_count.append(pair_counts[pair_key])
-        prev_supplier_buyer_count.append(len(supplier_buyers[supplier_id]))
-        prev_buyer_supplier_count.append(len(buyer_suppliers[buyer_id]))
-        prev_pair_award_sum.append(float(pair_award_sums[pair_key]))
+            if buyer_id is None or supplier_id is None:
+                prev_pair_count.append(0)
+                prev_supplier_buyer_count.append(0)
+                prev_buyer_supplier_count.append(0)
+                prev_pair_award_sum.append(0.0)
+                continue
 
-        pair_counts[pair_key] += 1
-        supplier_buyers[supplier_id].add(buyer_id)
-        buyer_suppliers[buyer_id].add(supplier_id)
-        pair_award_sums[pair_key] += float(award_values.iloc[idx])
+            pair_key = (buyer_id, supplier_id)
+            prev_pair_count.append(pair_counts[pair_key])
+            prev_supplier_buyer_count.append(len(supplier_buyers[supplier_id]))
+            prev_buyer_supplier_count.append(len(buyer_suppliers[buyer_id]))
+            prev_pair_award_sum.append(float(pair_award_sums[pair_key]))
+            pending_updates.append((buyer_id, supplier_id, float(award_values.iloc[idx])))
+
+        for buyer_id, supplier_id, award_value in pending_updates:
+            pair_key = (buyer_id, supplier_id)
+            pair_counts[pair_key] += 1
+            supplier_buyers[supplier_id].add(buyer_id)
+            buyer_suppliers[buyer_id].add(supplier_id)
+            pair_award_sums[pair_key] += award_value
 
     features = pd.DataFrame(
         {

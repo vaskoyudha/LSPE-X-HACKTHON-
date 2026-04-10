@@ -127,13 +127,20 @@ def add_evidence_strength(df: pd.DataFrame) -> pd.DataFrame:
     """Attach a simple evidence-strength score by label family."""
 
     weighted = df.copy()
-    weighted["evidence_strength"] = weighted["label_family"].map(
+    families = (
+        weighted["label_family"].fillna("").astype(str).str.strip().str.lower()
+    )
+    weighted["label_family"] = families
+    weighted["evidence_strength"] = families.map(
         {
             "reviewed_risk": 0.5,
             "confirmed_irregularity": 0.8,
             "confirmed_fraud": 1.0,
         }
     )
+    if weighted["evidence_strength"].isna().any():
+        invalid = sorted(families[weighted["evidence_strength"].isna()].unique())
+        raise ValueError(f"Unsupported label_family values for evidence strength: {invalid}")
     return weighted
 
 

@@ -46,3 +46,48 @@ def test_build_relationship_features_restores_original_row_order():
 
     assert feats["g_buyer_supplier_prev_contract_count"].tolist() == [1, 0]
     assert feats["g_pair_prev_award_value_sum"].tolist() == [100.0, 0.0]
+
+
+@pytest.mark.p1
+def test_build_relationship_features_does_not_leak_within_same_timestamp_bucket():
+    raw = pd.DataFrame(
+        {
+            "ocid": ["ocds-1", "ocds-2"],
+            "buyer_id": ["buyer-a", "buyer-a"],
+            "supplier_id": ["sup-1", "sup-1"],
+            "tender_datePublished": pd.to_datetime(
+                ["2023-01-01", "2023-01-01"], utc=True
+            ),
+            "award_date": pd.to_datetime(["2023-01-02", "2023-01-02"], utc=True),
+            "award_value_amount": [100.0, 200.0],
+        }
+    )
+
+    feats = build_relationship_features(raw)
+
+    assert feats["g_buyer_supplier_prev_contract_count"].tolist() == [0, 0]
+    assert feats["g_pair_prev_award_value_sum"].tolist() == [0.0, 0.0]
+
+
+@pytest.mark.p1
+def test_build_relationship_features_ignores_missing_party_ids():
+    raw = pd.DataFrame(
+        {
+            "ocid": ["ocds-1", "ocds-2"],
+            "buyer_id": [None, "buyer-a"],
+            "supplier_id": ["sup-1", None],
+            "tender_datePublished": pd.to_datetime(
+                ["2023-01-01", "2023-02-01"], utc=True
+            ),
+            "award_value_amount": [100.0, 200.0],
+        }
+    )
+
+    feats = build_relationship_features(raw)
+
+    assert feats.to_dict(orient="list") == {
+        "g_buyer_supplier_prev_contract_count": [0, 0],
+        "g_supplier_prev_buyer_count": [0, 0],
+        "g_buyer_prev_supplier_count": [0, 0],
+        "g_pair_prev_award_value_sum": [0.0, 0.0],
+    }
