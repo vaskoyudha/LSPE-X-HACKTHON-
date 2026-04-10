@@ -54,6 +54,7 @@ RETIRED_DEAD_FEATURES = [
 
 REVIEW_BENCHMARK_PATH = Path("data/processed/review_benchmark_500.csv")
 MANUAL_REVIEW_SUMMARY_PATH = Path("data/processed/manual_review_summary.csv")
+ROW_LEVEL_REVIEWED_BENCHMARK_PATH = Path("data/processed/review_benchmark_500_reviewed.csv")
 
 
 def _iso(value) -> str | None:
@@ -240,6 +241,30 @@ def load_reviewed_labels(
         )
         reviewed = reviewed[reviewed["source_row_idx"].notna()].copy()
         reviewed["source_row_idx"] = reviewed["source_row_idx"].astype(int)
+    reviewed["reviewed_label"] = reviewed["reviewed_label"].astype(int)
+    return reviewed
+
+
+def load_row_level_reviewed_benchmark(
+    path: Path = ROW_LEVEL_REVIEWED_BENCHMARK_PATH,
+) -> pd.DataFrame:
+    """Load a standardized row-level reviewed benchmark when available."""
+    if not path.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(path)
+    required = {"source_row_idx", "reviewed_label"}
+    if not required.issubset(df.columns):
+        return pd.DataFrame()
+
+    reviewed = df.copy()
+    reviewed["source_row_idx"] = pd.to_numeric(reviewed["source_row_idx"], errors="coerce")
+    reviewed["reviewed_label"] = pd.to_numeric(reviewed["reviewed_label"], errors="coerce")
+    reviewed = reviewed[
+        reviewed["source_row_idx"].notna()
+        & reviewed["reviewed_label"].isin([0, 1, 2])
+    ].copy()
+    reviewed["source_row_idx"] = reviewed["source_row_idx"].astype(int)
     reviewed["reviewed_label"] = reviewed["reviewed_label"].astype(int)
     return reviewed
 

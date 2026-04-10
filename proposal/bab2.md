@@ -208,3 +208,27 @@ Artefak ini belum mengubah target utama benchmark yang masih heuristik, tetapi m
 - validasi lintas-waktu,
 - validasi manual tingkat ringkasan,
 - dan kesiapan untuk penyimpanan row-level reviewed labels yang lebih lengkap.
+
+## 2.13 Jalur Import Row-Level Reviewed Labels
+
+Repo kini menyediakan jalur eksplisit untuk mengimpor reviewed labels tingkat baris melalui:
+
+- `scripts/import_reviewed_row_level.py`
+- path standar hasil impor: `data/processed/review_benchmark_500_reviewed.csv`
+
+Setelah file row-level tersebut tersedia, `scripts/run_diagnostics.py` akan memprioritaskan bukti row-level di atas summary import. Dengan demikian, transisi dari summary-level evidence ke reviewed benchmark yang lebih kuat dapat dilakukan tanpa mengubah arsitektur pipeline.
+
+## 2.14 Track Validasi Proxy-Reduced
+
+Untuk menegaskan sisi ilmiah evaluasi, repo sekarang juga menyimpan satu track validasi yang lebih ketat:
+
+- `models/proxy_reduced_validation.json`
+- `proposal/figures/proxy_reduced_validation.png`
+
+Track ini menggunakan hasil `proxy_core_removed`, yaitu evaluasi setelah fitur-fitur yang paling dekat dengan aturan labeling dihapus. Hasil saat ini:
+
+- Macro-F1 full model: **0,9833**
+- Macro-F1 proxy-reduced: **0,5215**
+- Delta: **-0,4618**
+
+Maknanya jelas: model operasional sangat kuat, tetapi sebagian besar kekuatan tersebut masih datang dari sinyal yang dekat dengan heuristic rules.

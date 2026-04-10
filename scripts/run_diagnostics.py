@@ -23,6 +23,7 @@ from src.diagnostics import (
     compute_operational_review_metrics,
     load_reviewed_labels,
     load_manual_review_summary,
+    load_row_level_reviewed_benchmark,
     run_circularity_ablation,
     select_reviewed_rows,
     summarize_explanation_validation,
@@ -167,7 +168,28 @@ def main() -> None:
     manual_summary = load_manual_review_summary()
     reviewed_metrics: dict[str, object]
     explanation_validation: dict[str, object]
-    if not manual_summary.empty:
+    row_level_reviewed = load_row_level_reviewed_benchmark()
+    if len(row_level_reviewed) > 0:
+        explanation_validation = summarize_explanation_validation(row_level_reviewed)
+        review_raw, review_X, review_y = select_reviewed_rows(row_level_reviewed, test_raw, test_X)
+        if len(review_X) == 0:
+            reviewed_metrics = {
+                "status": "unmatched_review_rows",
+                "message": "Row-level reviewed rows could not be aligned back to the test benchmark.",
+            }
+        else:
+            reviewed_metrics = evaluate(
+                model,
+                review_X,
+                review_y,
+                partition_name="reviewed_subset_row_level",
+                thresholds=thresholds,
+                label_type="reviewed_risk_labels",
+            )
+            reviewed_metrics["status"] = "available"
+            reviewed_metrics["matched_rows"] = int(len(review_X))
+            reviewed_metrics["source"] = "row_level_reviewed_benchmark"
+    elif not manual_summary.empty:
         reviewed_metrics = build_reviewed_subset_metrics_from_summary(manual_summary)
         explanation_validation = build_explanation_validation_from_summary(manual_summary)
         (MODELS_DIR / "manual_review_summary.json").write_text(

@@ -11,6 +11,7 @@ from src.diagnostics import (
     compute_operational_review_metrics,
     load_reviewed_labels,
     load_manual_review_summary,
+    load_row_level_reviewed_benchmark,
     resolve_proxy_feature_sets,
     select_reviewed_rows,
     summarize_explanation_validation,
@@ -229,3 +230,18 @@ def test_load_manual_review_summary_reads_csv(tmp_path):
     ).to_csv(path, index=False)
     loaded = load_manual_review_summary(path)
     assert len(loaded) == 1
+
+
+@pytest.mark.p1
+def test_load_row_level_reviewed_benchmark_filters_invalid_rows(tmp_path):
+    path = tmp_path / "reviewed.csv"
+    pd.DataFrame(
+        [
+            {"source_row_idx": 0, "reviewed_label": 2},
+            {"source_row_idx": "bad", "reviewed_label": 1},
+            {"source_row_idx": 2, "reviewed_label": 9},
+        ]
+    ).to_csv(path, index=False)
+    loaded = load_row_level_reviewed_benchmark(path)
+    assert loaded["source_row_idx"].tolist() == [0]
+    assert loaded["reviewed_label"].tolist() == [2]

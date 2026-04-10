@@ -41,6 +41,7 @@ Current status:
 - reviewed calibration rows used: **287**
 - manual review summary imported for **500 reviewed rows**
 - reviewed-subset metrics and explanation-validation metrics are now available
+- row-level reviewed-label import path is now available via `scripts/import_reviewed_row_level.py`
 - row-level reviewer annotations themselves are still not stored as a full reviewed sheet in the repo
 
 ## Synthetic vs Real Benchmark Comparison
@@ -101,6 +102,18 @@ Imported 500-row manual review summary highlights:
 
 Interpretation: the model aligns strongly with the manual review summary overall, but the remaining errors concentrate at the **Medium ↔ High** boundary, especially in high-uncertainty rows.
 
+## Row-Level Reviewed Label Import Path
+
+If a full reviewed sheet is available later, import it with:
+
+```bash
+source .venv/bin/activate
+python scripts/import_reviewed_row_level.py /path/to/reviewed_rows.csv
+python scripts/run_diagnostics.py
+```
+
+This will let the repo prefer row-level reviewed evidence over summary-only imports.
+
 ## External Validation Snapshot
 
 Tracked artifacts:
@@ -114,6 +127,19 @@ Current year-holdout summary across **2019–2023**:
 - mean High Risk F1: **0.8972**
 
 Interpretation: generalization is strongest on recent years and weakest on the earliest low-history fold, which is useful evidence about temporal robustness.
+
+## Proxy-Reduced Validation Track
+
+Tracked artifacts:
+- `models/proxy_reduced_validation.json`
+- `proposal/figures/proxy_reduced_validation.png`
+
+Current stricter track:
+- selected track: **proxy_core_removed**
+- Macro-F1: **0.5215**
+- delta vs full model: **-0.4618**
+
+Interpretation: when features nearest to the labeling rules are removed, performance drops sharply. This is the clearest remaining scientific warning sign in the current system.
 
 ## Project Structure
 

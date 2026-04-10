@@ -1,0 +1,38 @@
+{
+  "selected_track": "proxy_core_removed",
+  "selected_track_metrics": {
+    "feature_count": 19,
+    "accuracy": 0.5377,
+    "macro_f1": 0.5215,
+    "weighted_f1": 0.5123,
+    "log_loss": 0.7628,
+    "macro_f1_drop_vs_full": 0.4618,
+    "dropped_features": [
+      "f_tender_value_log",
+      "f_price_deviation_ratio",
+      "f_title_length",
+      "f_description_length",
+      "f_is_q4",
+      "f_is_december",
+      "f_title_token_count",
+      "f_description_token_count",
+      "f_buyer_supplier_repeat_count",
+      "f_tender_value_zscore_buyer",
+      "f_supplier_recent_90d_award_count"
+    ]
+  },
+  "full_track_metrics": {
+    "feature_count": 30,
+    "accuracy": 0.99,
+    "macro_f1": 0.9833,
+    "weighted_f1": 0.99,
+    "log_loss": 0.0582
+  },
+  "delta_vs_full": {
+    "accuracy": 0.4523,
+    "macro_f1": 0.4618,
+    "weighted_f1": 0.4777,
+    "log_loss": 0.7046
+  },
+  "interpretation": "This stricter track removes features closest to the current labeling rules. Its weaker score quantifies the remaining circularity gap."
+}

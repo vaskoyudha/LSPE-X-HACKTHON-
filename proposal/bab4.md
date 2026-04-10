@@ -130,7 +130,18 @@ Temuan penting:
 
 Ini memperkuat klaim bahwa model secara umum selaras dengan penilaian manual, sambil tetap menunjukkan area terlemah yang memang berada pada boundary uncertainty.
 
-## 4.11 Keterbatasan
+## 4.11 What Manual Review Changed
+
+Manual review mengubah posisi ilmiah proyek secara nyata:
+
+1. Validasi tidak lagi hanya bergantung pada metric terhadap heuristic labels.
+2. Kini ada bukti bahwa prediksi model selaras dengan review manual pada **95,8%** kasus.
+3. Area lemah model dapat diidentifikasi dengan lebih spesifik, yaitu boundary **Medium ↔ High** pada baris ber-entropy tinggi.
+4. Explainability tidak hanya tersedia, tetapi juga dinilai cukup membantu, dengan actionability mean **4,03 / 5**.
+
+Dengan kata lain, manual review mengubah klaim proyek dari sekadar “model cocok dengan weak labels” menjadi “model juga cukup konsisten dengan penilaian manual pada sampel audit terbatas”.
+
+## 4.12 Keterbatasan
 
 Walaupun hasil benchmark riil multi-tahun jauh lebih kredibel, ada beberapa keterbatasan penting:
 
@@ -141,7 +152,7 @@ Walaupun hasil benchmark riil multi-tahun jauh lebih kredibel, ada beberapa kete
 5. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
 6. External validation 2019 masih lemah, menandakan adanya sensitivitas pada fold dengan histori sangat pendek.
 
-## 4.12 Kesimpulan Bab
+## 4.13 Kesimpulan Bab
 
 Secara keseluruhan, LPSE-X berhasil menunjukkan bahwa pipeline explainable AI berbasis XGBoost + SHAP tetap bekerja pada data riil multi-tahun yang lebih noisy dan tidak lengkap. Dibanding benchmark riil satu tahun, hasil sekarang lebih stabil; dibanding benchmark sintetis, hasil sekarang jauh lebih kredibel.
 
