@@ -11,6 +11,7 @@ This script:
 SAFETY: Only val_calibration data is used. test_data is never touched.
 """
 
+import argparse
 import logging
 import sys
 from pathlib import Path
@@ -33,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def main(n_samples: int = 100) -> None:
     # Step 1: Load training raw data
     logger.info("Loading train raw data...")
     train_raw = load_raw_split("train")
@@ -63,12 +64,15 @@ def main() -> None:
         (cal_labels["risk_label"] == 2).sum(),
     )
 
-    # Step 5: Select 100 stratified samples
-    logger.info("Selecting 100 stratified calibration samples...")
-    samples = select_calibration_samples(cal_labels, val_cal, n_samples=100)
+    # Step 5: Select stratified samples
+    logger.info("Selecting %d stratified calibration samples...", n_samples)
+    samples = select_calibration_samples(cal_labels, val_cal, n_samples=n_samples)
 
     # Step 6: Save
-    sheet_path = save_calibration_sheet(samples)
+    sheet_path = save_calibration_sheet(
+        samples,
+        path=PROCESSED_DIR / f"calibration_sheet_{n_samples}.csv",
+    )
     logger.info("Calibration sheet saved to: %s", sheet_path)
     logger.info("Columns: %s", list(samples.columns))
     logger.info("Total samples: %d", len(samples))
@@ -81,4 +85,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-samples", type=int, default=100)
+    args = parser.parse_args()
+    main(n_samples=args.n_samples)

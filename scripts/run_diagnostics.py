@@ -14,13 +14,24 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
+import xgboost as xgb
 
 from src.data import PROCESSED_DIR
 from src.diagnostics import (
+    compute_operational_review_metrics,
+    load_reviewed_labels,
     run_circularity_ablation,
+    select_reviewed_rows,
+    summarize_explanation_validation,
     summarize_data_provenance,
     summarize_feature_health,
     summarize_feature_health_overview,
+)
+from src.model import (
+    apply_temperature,
+    evaluate,
+    load_decision_thresholds,
+    load_model,
 )
 
 MODELS_DIR = ROOT / "models"
@@ -115,6 +126,91 @@ def main() -> None:
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "feature_health.png", dpi=150)
     plt.close(fig)
+
+    model = load_model()
+    thresholds = load_decision_thresholds()
+    calibration_path = MODELS_DIR / "calibration.json"
+    calibration = None
+    if calibration_path.exists():
+        calibration = json.loads(calibration_path.read_text())
+
+    dtest = xgb.DMatrix(test_X)
+    probs = model.predict(dtest)
+    if calibration and calibration.get("enabled"):
+        probs = apply_temperature(probs, calibration["temperature"])
+
+    operational = compute_operational_review_metrics(probs, test_y)
+    (MODELS_DIR / "operational_metrics.json").write_text(
+        json.dumps(operational, indent=2),
+        encoding="utf-8",
+    )
+
+    budgets = operational["budgets"]
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x_labels = list(budgets.keys())
+    precision_values = [budgets[key]["precision_at_k"] for key in x_labels]
+    recall_values = [budgets[key]["recall_at_k"] for key in x_labels]
+    ax.plot(x_labels, precision_values, marker="o", label="Precision@k")
+    ax.plot(x_labels, recall_values, marker="o", label="Recall@k")
+    ax.set_ylim(0, 1.05)
+    ax.set_xlabel("Review budget (k rows)")
+    ax.set_ylabel("Score")
+    ax.set_title("Operational Review Metrics on the Current Test Benchmark")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "operational_metrics.png", dpi=150)
+    plt.close(fig)
+
+    reviewed = load_reviewed_labels()
+    explanation_validation = summarize_explanation_validation(reviewed)
+    reviewed_metrics: dict[str, object]
+    if reviewed.empty:
+        reviewed_metrics = {
+            "status": "pending_human_review",
+            "message": "No reviewed benchmark rows with reviewed_label available yet.",
+        }
+    else:
+        review_raw, review_X, review_y = select_reviewed_rows(reviewed, test_raw, test_X)
+        if len(review_X) == 0:
+            reviewed_metrics = {
+                "status": "unmatched_review_rows",
+                "message": "Reviewed rows could not be aligned back to the test benchmark.",
+            }
+        else:
+            reviewed_metrics = evaluate(
+                model,
+                review_X,
+                review_y,
+                partition_name="reviewed_subset",
+                thresholds=thresholds,
+                label_type="reviewed_risk_labels",
+            )
+            reviewed_metrics["status"] = "available"
+            reviewed_metrics["matched_rows"] = int(len(review_X))
+
+    (MODELS_DIR / "reviewed_subset_metrics.json").write_text(
+        json.dumps(reviewed_metrics, indent=2),
+        encoding="utf-8",
+    )
+    (MODELS_DIR / "explanation_validation.json").write_text(
+        json.dumps(explanation_validation, indent=2),
+        encoding="utf-8",
+    )
+
+    (EVIDENCE_DIR / "weakness-diagnostics.json").write_text(
+        json.dumps(
+            {
+                "provenance": provenance,
+                "feature_health_overview": feature_health_overview,
+                "robustness": robustness,
+                "operational_metrics": operational,
+                "reviewed_subset_metrics": reviewed_metrics,
+                "explanation_validation": explanation_validation,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

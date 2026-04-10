@@ -14,6 +14,7 @@ from sklearn.metrics import accuracy_score, f1_score, log_loss
 from src.model import BEST_PARAMS_PATH, compute_sample_weights
 
 SYNTHETIC_OCID_PREFIX = "ocds-synth-"
+CLASS_NAMES = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
 
 # Direct feature proxies to the heuristic risk rules in src.labels.
 PROXY_CORE_FEATURES = [
@@ -50,6 +51,8 @@ RETIRED_DEAD_FEATURES = [
     "f_days_to_contract",
     "f_buyer_method_diversity",
 ]
+
+REVIEW_BENCHMARK_PATH = Path("data/processed/review_benchmark_500.csv")
 
 
 def _iso(value) -> str | None:
@@ -212,3 +215,163 @@ def run_circularity_ablation(
         "an interpretable risk-rule accelerator than a validated real-world anomaly detector."
     )
     return results
+
+
+def load_reviewed_labels(
+    path: Path = REVIEW_BENCHMARK_PATH,
+) -> pd.DataFrame:
+    """Load reviewed benchmark rows with valid reviewed labels (0/1/2)."""
+    if not path.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(path)
+    if "reviewed_label" not in df.columns:
+        return pd.DataFrame()
+
+    reviewed = df.copy()
+    reviewed["reviewed_label"] = pd.to_numeric(
+        reviewed["reviewed_label"], errors="coerce"
+    )
+    reviewed = reviewed[reviewed["reviewed_label"].isin([0, 1, 2])].copy()
+    if "source_row_idx" in reviewed.columns:
+        reviewed["source_row_idx"] = pd.to_numeric(
+            reviewed["source_row_idx"], errors="coerce"
+        )
+        reviewed = reviewed[reviewed["source_row_idx"].notna()].copy()
+        reviewed["source_row_idx"] = reviewed["source_row_idx"].astype(int)
+    reviewed["reviewed_label"] = reviewed["reviewed_label"].astype(int)
+    return reviewed
+
+
+def select_reviewed_rows(
+    reviewed: pd.DataFrame,
+    raw_df: pd.DataFrame,
+    feature_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
+    """Resolve reviewed rows back to raw/features using source_row_idx or OCID."""
+    if reviewed.empty:
+        return raw_df.iloc[0:0].copy(), feature_df.iloc[0:0].copy(), pd.Series(dtype=int)
+
+    if "source_row_idx" in reviewed.columns and reviewed["source_row_idx"].notna().all():
+        idx = reviewed["source_row_idx"].astype(int).to_numpy()
+        idx = idx[(idx >= 0) & (idx < len(raw_df))]
+        raw_subset = raw_df.iloc[idx].reset_index(drop=True)
+        feature_subset = feature_df.iloc[idx].reset_index(drop=True)
+        labels = reviewed.iloc[: len(idx)]["reviewed_label"].reset_index(drop=True)
+        return raw_subset, feature_subset, labels
+
+    if "ocid" in reviewed.columns and "ocid" in raw_df.columns:
+        aligned = raw_df.reset_index(drop=True).reset_index().merge(
+            reviewed,
+            on="ocid",
+            how="inner",
+        )
+        idx = aligned["index"].astype(int).to_numpy()
+        raw_subset = raw_df.iloc[idx].reset_index(drop=True)
+        feature_subset = feature_df.iloc[idx].reset_index(drop=True)
+        labels = aligned["reviewed_label"].astype(int).reset_index(drop=True)
+        return raw_subset, feature_subset, labels
+
+    return raw_df.iloc[0:0].copy(), feature_df.iloc[0:0].copy(), pd.Series(dtype=int)
+
+
+def compute_operational_review_metrics(
+    probs: np.ndarray,
+    y_true: pd.Series | np.ndarray,
+    *,
+    budgets: Iterable[int] = (50, 100, 250, 500, 1000),
+    positive_class: int = 2,
+) -> dict[str, object]:
+    """Compute review-budget metrics using the positive-class score for ranking."""
+    y_true_array = pd.Series(y_true).astype(int).to_numpy()
+    if probs.ndim != 2:
+        raise ValueError("Expected probability matrix with shape (n_samples, n_classes)")
+
+    scores = np.asarray(probs[:, positive_class], dtype=float)
+    order = np.argsort(scores)[::-1]
+    positives = y_true_array == positive_class
+    total_positives = int(positives.sum())
+    prevalence = float(total_positives / len(y_true_array)) if len(y_true_array) else 0.0
+
+    metrics: dict[str, object] = {
+        "positive_class": CLASS_NAMES.get(positive_class, str(positive_class)),
+        "positive_prevalence": round(prevalence, 6),
+        "total_samples": int(len(y_true_array)),
+        "total_positive": total_positives,
+        "budgets": {},
+    }
+
+    for budget in budgets:
+        k = min(int(budget), len(order))
+        if k <= 0:
+            continue
+        top_idx = order[:k]
+        hits = int(positives[top_idx].sum())
+        precision = hits / k
+        recall = hits / total_positives if total_positives else 0.0
+        lift = (precision / prevalence) if prevalence > 0 else None
+        metrics["budgets"][str(int(budget))] = {
+            "review_count": k,
+            "captured_positive": hits,
+            "precision_at_k": round(float(precision), 4),
+            "recall_at_k": round(float(recall), 4),
+            "lift_vs_base_rate": round(float(lift), 4) if lift is not None else None,
+            "score_threshold_min": round(float(scores[top_idx].min()), 6),
+        }
+
+    return metrics
+
+
+def summarize_explanation_validation(review_df: pd.DataFrame) -> dict[str, object]:
+    """Summarize human explanation-review fields when available."""
+    if review_df.empty:
+        return {
+            "status": "pending_human_review",
+            "reviewed_rows": 0,
+            "message": "No reviewed explanation rows available yet.",
+        }
+
+    result: dict[str, object] = {
+        "status": "pending_human_review",
+        "reviewed_rows": int(len(review_df)),
+    }
+
+    if "explanation_agrees" in review_df.columns:
+        agrees = (
+            review_df["explanation_agrees"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .map({"yes": 1, "true": 1, "1": 1, "no": 0, "false": 0, "0": 0})
+        )
+        valid = agrees.dropna()
+        if len(valid) > 0:
+            result["status"] = "available"
+            result["agreement_rate"] = round(float(valid.mean()), 4)
+            result["agreement_count"] = int(valid.sum())
+            result["agreement_total"] = int(len(valid))
+
+    if "explanation_actionable" in review_df.columns:
+        actionable = (
+            review_df["explanation_actionable"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .map({"yes": 1, "true": 1, "1": 1, "no": 0, "false": 0, "0": 0})
+        )
+        valid = actionable.dropna()
+        if len(valid) > 0:
+            result["status"] = "available"
+            result["actionable_rate"] = round(float(valid.mean()), 4)
+
+    if "explanation_clarity" in review_df.columns:
+        clarity = pd.to_numeric(review_df["explanation_clarity"], errors="coerce").dropna()
+        if len(clarity) > 0:
+            result["status"] = "available"
+            result["clarity_mean"] = round(float(clarity.mean()), 4)
+            result["clarity_count"] = int(len(clarity))
+
+    if result["status"] == "pending_human_review":
+        result["message"] = "Review sheet exists but explanation-review columns are not filled yet."
+
+    return result

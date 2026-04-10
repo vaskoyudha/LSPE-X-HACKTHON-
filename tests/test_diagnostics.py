@@ -6,7 +6,11 @@ import pytest
 from src.diagnostics import (
     PROXY_BROAD_FEATURES,
     PROXY_CORE_FEATURES,
+    compute_operational_review_metrics,
+    load_reviewed_labels,
     resolve_proxy_feature_sets,
+    select_reviewed_rows,
+    summarize_explanation_validation,
     summarize_feature_health,
     summarize_feature_health_overview,
     summarize_data_provenance,
@@ -100,3 +104,68 @@ def test_real_calibration_artifacts_are_not_synthetic():
     clean = pd.read_csv(processed / "clean_labels_100.csv")
     assert float(sheet["ocid"].astype(str).str.startswith("ocds-synth-").mean()) == 0.0
     assert float(clean["ocid"].astype(str).str.startswith("ocds-synth-").mean()) == 0.0
+
+
+@pytest.mark.p1
+def test_compute_operational_review_metrics_reports_precision_and_recall():
+    probs = np.array(
+        [
+            [0.1, 0.2, 0.7],
+            [0.2, 0.3, 0.5],
+            [0.8, 0.1, 0.1],
+            [0.1, 0.2, 0.7],
+        ]
+    )
+    y_true = pd.Series([2, 1, 0, 2])
+    metrics = compute_operational_review_metrics(probs, y_true, budgets=[1, 2])
+    assert metrics["total_positive"] == 2
+    assert metrics["budgets"]["1"]["precision_at_k"] == 1.0
+    assert metrics["budgets"]["2"]["recall_at_k"] == 1.0
+
+
+@pytest.mark.p1
+def test_select_reviewed_rows_prefers_source_row_idx_alignment():
+    reviewed = pd.DataFrame(
+        {
+            "source_row_idx": [2, 0],
+            "reviewed_label": [1, 2],
+        }
+    )
+    raw = pd.DataFrame({"ocid": ["a", "b", "c"]})
+    features = pd.DataFrame({"f_x": [10, 20, 30]})
+    raw_subset, feature_subset, labels = select_reviewed_rows(reviewed, raw, features)
+    assert raw_subset["ocid"].tolist() == ["c", "a"]
+    assert feature_subset["f_x"].tolist() == [30, 10]
+    assert labels.tolist() == [1, 2]
+
+
+@pytest.mark.p1
+def test_load_reviewed_labels_filters_invalid_rows(tmp_path):
+    path = tmp_path / "review.csv"
+    pd.DataFrame(
+        {
+            "source_row_idx": [0, 1, 2],
+            "reviewed_label": ["2", "bad", ""],
+            "explanation_agrees": ["yes", "", ""],
+        }
+    ).to_csv(path, index=False)
+    reviewed = load_reviewed_labels(path)
+    assert reviewed["reviewed_label"].tolist() == [2]
+    assert reviewed["source_row_idx"].tolist() == [0]
+
+
+@pytest.mark.p1
+def test_summarize_explanation_validation_uses_filled_review_fields():
+    review_df = pd.DataFrame(
+        {
+            "reviewed_label": [2, 1],
+            "explanation_agrees": ["yes", "no"],
+            "explanation_actionable": ["yes", "yes"],
+            "explanation_clarity": [4, 5],
+        }
+    )
+    summary = summarize_explanation_validation(review_df)
+    assert summary["status"] == "available"
+    assert summary["agreement_rate"] == 0.5
+    assert summary["actionable_rate"] == 1.0
+    assert summary["clarity_mean"] == 4.5

@@ -1,4 +1,4 @@
-"""Generate the clean_labels_100.csv — simulated clean-label review.
+"""Generate clean-label review files from a calibration sheet.
 
 In a production setting, a human would review the calibration_sheet_100.csv.
 For this hackathon workflow, we simulate the review by:
@@ -11,6 +11,7 @@ The protocol in clean_labels_protocol.md defines the 80-row minimum
 for enabling temperature scaling.
 """
 
+import argparse
 import logging
 import sys
 from pathlib import Path
@@ -93,7 +94,11 @@ def simulate_review(sheet_path=None, seed=RANDOM_SEED):
     logger.info("  Meets 80-row threshold: %s", filled >= 80)
 
     # Save
-    out_path = PROCESSED_DIR / "clean_labels_100.csv"
+    if sheet_path is None:
+        sheet_path = PROCESSED_DIR / "calibration_sheet_100.csv"
+    sheet_path = Path(sheet_path)
+    suffix = sheet_path.stem.replace("calibration_sheet_", "")
+    out_path = PROCESSED_DIR / f"clean_labels_{suffix}.csv"
     df.to_csv(out_path, index=False, encoding="utf-8-sig")
     logger.info("Saved to %s", out_path)
 
@@ -101,4 +106,10 @@ def simulate_review(sheet_path=None, seed=RANDOM_SEED):
 
 
 if __name__ == "__main__":
-    simulate_review()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--sheet-path",
+        default=str(PROCESSED_DIR / "calibration_sheet_100.csv"),
+    )
+    args = parser.parse_args()
+    simulate_review(sheet_path=args.sheet_path)

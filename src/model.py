@@ -903,6 +903,7 @@ def _build_metrics(
     preds: np.ndarray,
     partition_name: str,
     thresholds: dict[str, float] | None = None,
+    label_type: str = "heuristic_risk_labels",
 ) -> dict:
     """Build the canonical metrics structure from probabilities and predictions."""
     labels = list(range(N_CLASSES))
@@ -928,7 +929,7 @@ def _build_metrics(
 
     metrics = {
         "partition": partition_name,
-        "label_type": "heuristic_risk_labels",
+        "label_type": label_type,
         "accuracy": round(acc, 4),
         "macro_f1": round(macro_f1, 4),
         "weighted_f1": round(weighted_f1, 4),
@@ -957,6 +958,7 @@ def evaluate(
     y: pd.Series,
     partition_name: str = "test",
     thresholds: dict[str, float] | None = None,
+    label_type: str = "heuristic_risk_labels",
 ) -> dict:
     """Evaluate model and return metrics dict.
 
@@ -969,7 +971,26 @@ def evaluate(
         if thresholds is not None
         else np.argmax(probs, axis=1)
     )
-    return _build_metrics(y, probs, preds, partition_name, thresholds=thresholds)
+    return _build_metrics(
+        y,
+        probs,
+        preds,
+        partition_name,
+        thresholds=thresholds,
+        label_type=label_type,
+    )
+
+
+def predict_probabilities(
+    model: xgb.Booster,
+    X: pd.DataFrame,
+    calibration: dict | None = None,
+) -> np.ndarray:
+    """Predict class probabilities, optionally applying temperature scaling."""
+    probs = model.predict(xgb.DMatrix(X))
+    if calibration and calibration.get("enabled"):
+        probs = apply_temperature(probs, calibration["temperature"])
+    return probs
 
 
 def tune_decision_thresholds(
@@ -1043,7 +1064,11 @@ def apply_temperature(probs: np.ndarray, temperature: float) -> np.ndarray:
 
 def load_clean_labels() -> pd.DataFrame:
     """Load clean_labels_100.csv and filter to high-confidence rows."""
-    path = PROCESSED_DIR / "clean_labels_100.csv"
+    candidates = sorted(
+        PROCESSED_DIR.glob("clean_labels_*.csv"),
+        key=lambda p: int("".join(ch for ch in p.stem if ch.isdigit()) or 0),
+    )
+    path = candidates[-1] if candidates else (PROCESSED_DIR / "clean_labels_100.csv")
     if not path.exists():
         logger.warning("clean_labels_100.csv not found, calibration disabled")
         return pd.DataFrame()
@@ -1107,7 +1132,15 @@ def run_calibration(model: xgb.Booster, train_features: pd.DataFrame) -> dict:
     # We need to match clean label rows to their position in cal_features
     # The clean labels were sampled from val_calibration, so we use
     # positional alignment based on the original calibration sheet indices
-    cal_sheet_path = PROCESSED_DIR / "calibration_sheet_100.csv"
+    sheet_candidates = sorted(
+        PROCESSED_DIR.glob("calibration_sheet_*.csv"),
+        key=lambda p: int("".join(ch for ch in p.stem if ch.isdigit()) or 0),
+    )
+    cal_sheet_path = (
+        sheet_candidates[-1]
+        if sheet_candidates
+        else (PROCESSED_DIR / "calibration_sheet_100.csv")
+    )
     if cal_sheet_path.exists():
         cal_sheet = pd.read_csv(cal_sheet_path)
     else:
