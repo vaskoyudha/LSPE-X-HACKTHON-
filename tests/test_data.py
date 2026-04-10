@@ -259,4 +259,7 @@ class TestQualityReport:
         assert "# Data Quality Report" in report
         assert "Total rows" in report
         assert "Field Coverage" in report
+        assert "tender_mainProcurementCategory" in report
+        assert "tender_items_count" in report
+        assert "award_items_count" in report
         assert output.exists()
