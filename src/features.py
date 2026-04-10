@@ -11,6 +11,7 @@ Feature catalog:
 
 from __future__ import annotations
 
+from collections import deque
 import logging
 from pathlib import Path
 
@@ -190,26 +191,38 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     def _expanding_group_stat(group_col, value_col, stat="mean"):
         """Compute expanding-window stat per group using past-only data."""
         result = pd.Series(np.nan, index=range(n))
-        group_history: dict[str, list[float]] = {}
+        group_count: dict[str, int] = {}
+        group_sum: dict[str, float] = {}
+        group_sumsq: dict[str, float] = {}
+        group_max: dict[str, float] = {}
 
         for i in range(n):
             g = group_col.iloc[i]
             v = value_col.iloc[i]
 
-            if g and g in group_history and len(group_history[g]) > 0:
-                hist = group_history[g]
+            count = group_count.get(g, 0) if g else 0
+            if g and count > 0:
                 if stat == "mean":
-                    result.iloc[i] = np.nanmean(hist)
+                    result.iloc[i] = group_sum[g] / count
                 elif stat == "std":
-                    result.iloc[i] = np.nanstd(hist) if len(hist) > 1 else 0
+                    if count > 1:
+                        mean = group_sum[g] / count
+                        variance = max((group_sumsq[g] / count) - (mean**2), 0.0)
+                        result.iloc[i] = float(np.sqrt(variance))
+                    else:
+                        result.iloc[i] = 0
                 elif stat == "count":
-                    result.iloc[i] = len(hist)
+                    result.iloc[i] = count
                 elif stat == "max":
-                    result.iloc[i] = np.nanmax(hist)
+                    result.iloc[i] = group_max[g]
 
             # Add current value to history AFTER computing (past-only)
             if g and pd.notna(v):
-                group_history.setdefault(g, []).append(v)
+                v_float = float(v)
+                group_count[g] = count + 1
+                group_sum[g] = group_sum.get(g, 0.0) + v_float
+                group_sumsq[g] = group_sumsq.get(g, 0.0) + (v_float * v_float)
+                group_max[g] = max(group_max.get(g, v_float), v_float)
 
         return result
 
@@ -246,18 +259,24 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # 22. Tender value z-score vs buyer history
     feats_sorted_22 = pd.Series(np.nan, index=range(n))
-    buyer_history_vals: dict[str, list[float]] = {}
+    buyer_hist_count: dict[str, int] = {}
+    buyer_hist_sum: dict[str, float] = {}
+    buyer_hist_sumsq: dict[str, float] = {}
     for i in range(n):
         b = buyer_sorted.iloc[i]
         v = tender_val_sorted.iloc[i]
-        if b and b in buyer_history_vals and len(buyer_history_vals[b]) > 1:
-            hist = buyer_history_vals[b]
-            mean_h = np.nanmean(hist)
-            std_h = np.nanstd(hist)
+        count = buyer_hist_count.get(b, 0) if b else 0
+        if b and count > 1 and pd.notna(v):
+            mean_h = buyer_hist_sum[b] / count
+            variance_h = max((buyer_hist_sumsq[b] / count) - (mean_h**2), 0.0)
+            std_h = float(np.sqrt(variance_h))
             if std_h > 0 and pd.notna(v):
                 feats_sorted_22.iloc[i] = (v - mean_h) / std_h
         if b and pd.notna(v):
-            buyer_history_vals.setdefault(b, []).append(v)
+            v_float = float(v)
+            buyer_hist_count[b] = count + 1
+            buyer_hist_sum[b] = buyer_hist_sum.get(b, 0.0) + v_float
+            buyer_hist_sumsq[b] = buyer_hist_sumsq.get(b, 0.0) + (v_float * v_float)
 
     # 23. Days since buyer's last tender
     feats_sorted_23 = pd.Series(np.nan, index=range(n))
@@ -273,17 +292,17 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # 24. Buyer recent 30-day tender count
     feats_sorted_24 = pd.Series(0.0, index=range(n))
-    buyer_recent_dates: dict[str, list[pd.Timestamp]] = {}
+    buyer_recent_dates: dict[str, deque[pd.Timestamp]] = {}
     for i in range(n):
         b = buyer_sorted.iloc[i]
         d = dates_sorted.iloc[i]
         if b and pd.notna(d):
-            history = buyer_recent_dates.get(b, [])
+            history = buyer_recent_dates.setdefault(b, deque())
             cutoff = d - pd.Timedelta(days=30)
-            history = [past_d for past_d in history if past_d >= cutoff]
+            while history and history[0] < cutoff:
+                history.popleft()
             feats_sorted_24.iloc[i] = float(len(history))
             history.append(d)
-            buyer_recent_dates[b] = history
 
     # 25. Supplier distinct buyer count (how many unique buyers this supplier has served)
     feats_sorted_25 = pd.Series(np.nan, index=range(n))
@@ -299,16 +318,19 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # 26. Value growth rate for buyer (current / historical mean)
     feats_sorted_26 = pd.Series(np.nan, index=range(n))
-    buyer_val_hist: dict[str, list[float]] = {}
+    buyer_val_count: dict[str, int] = {}
+    buyer_val_sum: dict[str, float] = {}
     for i in range(n):
         b = buyer_sorted.iloc[i]
         v = tender_val_sorted.iloc[i]
-        if b and b in buyer_val_hist and len(buyer_val_hist[b]) > 0 and pd.notna(v):
-            hist_mean = np.nanmean(buyer_val_hist[b])
+        count = buyer_val_count.get(b, 0) if b else 0
+        if b and count > 0 and pd.notna(v):
+            hist_mean = buyer_val_sum[b] / count
             if hist_mean > 0:
                 feats_sorted_26.iloc[i] = v / hist_mean
         if b and pd.notna(v):
-            buyer_val_hist.setdefault(b, []).append(v)
+            buyer_val_count[b] = count + 1
+            buyer_val_sum[b] = buyer_val_sum.get(b, 0.0) + float(v)
 
     # 27. Supplier capacity ratio (current award / historical max)
     feats_sorted_27 = pd.Series(np.nan, index=range(n))
