@@ -9,7 +9,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.metrics import accuracy_score, f1_score, log_loss
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, log_loss
 
 from src.model import BEST_PARAMS_PATH, compute_sample_weights
 
@@ -53,6 +53,7 @@ RETIRED_DEAD_FEATURES = [
 ]
 
 REVIEW_BENCHMARK_PATH = Path("data/processed/review_benchmark_500.csv")
+MANUAL_REVIEW_SUMMARY_PATH = Path("data/processed/manual_review_summary.csv")
 
 
 def _iso(value) -> str | None:
@@ -375,3 +376,265 @@ def summarize_explanation_validation(review_df: pd.DataFrame) -> dict[str, objec
         result["message"] = "Review sheet exists but explanation-review columns are not filled yet."
 
     return result
+
+
+def load_manual_review_summary(
+    path: Path = MANUAL_REVIEW_SUMMARY_PATH,
+) -> pd.DataFrame:
+    """Load the imported manual review summary CSV if available."""
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def _summary_lookup(
+    summary_df: pd.DataFrame,
+    section: str,
+    dimension: str,
+    metric: str,
+    *,
+    field: str = "value",
+    default: float | str | None = None,
+):
+    mask = (
+        (summary_df["section"] == section)
+        & (summary_df["dimension"] == dimension)
+        & (summary_df["metric"] == metric)
+    )
+    if not mask.any():
+        return default
+    value = summary_df.loc[mask, field].iloc[0]
+    return value if pd.notna(value) else default
+
+
+def _manual_review_confusion_true_rows(summary_df: pd.DataFrame) -> list[list[int]]:
+    """Build a true-row/pred-col confusion matrix from the summary CSV."""
+    predicted_reviewed = np.zeros((3, 3), dtype=int)
+    for pred in range(3):
+        for reviewed in range(3):
+            value = _summary_lookup(
+                summary_df,
+                "3. Confusion Matrix",
+                f"predicted_{pred}_reviewed_{reviewed}",
+                "count",
+                default=0,
+            )
+            predicted_reviewed[pred, reviewed] = int(float(value or 0))
+    return predicted_reviewed.T.tolist()
+
+
+def build_reviewed_subset_metrics_from_summary(
+    summary_df: pd.DataFrame,
+) -> dict[str, object]:
+    """Build reviewed-benchmark metrics from the imported summary CSV."""
+    if summary_df.empty:
+        return {
+            "status": "missing_manual_review_summary",
+            "message": "manual_review_summary.csv not found.",
+        }
+
+    cm = np.array(_manual_review_confusion_true_rows(summary_df), dtype=int)
+    y_true: list[int] = []
+    y_pred: list[int] = []
+    for true_label in range(3):
+        for pred_label in range(3):
+            count = int(cm[true_label, pred_label])
+            y_true.extend([true_label] * count)
+            y_pred.extend([pred_label] * count)
+
+    supports = cm.sum(axis=1)
+    per_class_precision = []
+    per_class_recall = []
+    per_class_f1 = []
+    for cls in range(3):
+        tp = cm[cls, cls]
+        fp = cm[:, cls].sum() - tp
+        fn = cm[cls, :].sum() - tp
+        precision = tp / (tp + fp) if (tp + fp) else 0.0
+        recall = tp / (tp + fn) if (tp + fn) else 0.0
+        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+        per_class_precision.append(precision)
+        per_class_recall.append(recall)
+        per_class_f1.append(f1)
+
+    accuracy = float(np.mean(np.array(y_true) == np.array(y_pred))) if y_true else 0.0
+    macro_f1 = float(np.mean(per_class_f1)) if per_class_f1 else 0.0
+    weighted_f1 = float(np.average(per_class_f1, weights=supports)) if supports.sum() else 0.0
+
+    return {
+        "status": "available",
+        "partition": "reviewed_subset_summary",
+        "label_type": "manual_review_summary_labels",
+        "reviewed_rows": int(len(y_true)),
+        "accuracy": round(accuracy, 4),
+        "macro_f1": round(macro_f1, 4),
+        "weighted_f1": round(weighted_f1, 4),
+        "per_class_precision": {
+            CLASS_NAMES[i]: round(float(v), 4) for i, v in enumerate(per_class_precision)
+        },
+        "per_class_recall": {
+            CLASS_NAMES[i]: round(float(v), 4) for i, v in enumerate(per_class_recall)
+        },
+        "per_class_f1": {
+            CLASS_NAMES[i]: round(float(v), 4) for i, v in enumerate(per_class_f1)
+        },
+        "confusion_matrix": cm.tolist(),
+        "reviewed_distribution": {
+            CLASS_NAMES[0]: int(cm[0, :].sum()),
+            CLASS_NAMES[1]: int(cm[1, :].sum()),
+            CLASS_NAMES[2]: int(cm[2, :].sum()),
+        },
+        "predicted_distribution": {
+            CLASS_NAMES[0]: int(cm[:, 0].sum()),
+            CLASS_NAMES[1]: int(cm[:, 1].sum()),
+            CLASS_NAMES[2]: int(cm[:, 2].sum()),
+        },
+        "overall_agreement": round(
+            float(
+                _summary_lookup(
+                    summary_df,
+                    "2. Agreement",
+                    "overall",
+                    "agree_count",
+                    field="pct",
+                    default="0%",
+                ).strip("%")
+            )
+            / 100,
+            4,
+        ),
+        "source": "manual_review_summary_csv",
+    }
+
+
+def build_explanation_validation_from_summary(
+    summary_df: pd.DataFrame,
+) -> dict[str, object]:
+    """Build explanation-validation metrics from the imported summary CSV."""
+    if summary_df.empty:
+        return {
+            "status": "missing_manual_review_summary",
+            "message": "manual_review_summary.csv not found.",
+        }
+
+    yes_count = float(
+        _summary_lookup(
+            summary_df,
+            "6. Explanation Quality",
+            "explanation_agrees",
+            "yes",
+            default=0,
+        )
+        or 0
+    )
+    partial_count = float(
+        _summary_lookup(
+            summary_df,
+            "6. Explanation Quality",
+            "explanation_agrees",
+            "partial",
+            default=0,
+        )
+        or 0
+    )
+    no_count = float(
+        _summary_lookup(
+            summary_df,
+            "6. Explanation Quality",
+            "explanation_agrees",
+            "no",
+            default=0,
+        )
+        or 0
+    )
+    reviewed_rows = int(yes_count + partial_count + no_count)
+
+    group_rows = summary_df[summary_df["section"] == "5. By Sampling Group"]
+    by_group: dict[str, dict[str, float | int]] = {}
+    for group_name in group_rows["dimension"].dropna().unique():
+        group_metrics = group_rows[group_rows["dimension"] == group_name]
+        entry: dict[str, float | int] = {}
+        for _, row in group_metrics.iterrows():
+            value = row["value"]
+            try:
+                parsed: float | int = float(value)
+                if parsed.is_integer():
+                    parsed = int(parsed)
+            except Exception:
+                continue
+            entry[str(row["metric"])] = parsed
+        by_group[str(group_name)] = entry
+
+    top_factor_rows = summary_df[summary_df["section"] == "7. Top Factors"]
+    top_factors = [
+        {
+            "feature": str(row["dimension"]),
+            "count": int(float(row["value"])),
+            "share_pct": str(row["pct"]),
+            "notes": str(row["notes"]),
+        }
+        for _, row in top_factor_rows.iterrows()
+    ]
+
+    return {
+        "status": "available",
+        "reviewed_rows": reviewed_rows,
+        "agreement_yes_rate": round(yes_count / reviewed_rows, 4) if reviewed_rows else 0.0,
+        "agreement_partial_rate": round(partial_count / reviewed_rows, 4) if reviewed_rows else 0.0,
+        "agreement_no_rate": round(no_count / reviewed_rows, 4) if reviewed_rows else 0.0,
+        "clarity_mean": round(
+            float(
+                _summary_lookup(
+                    summary_df,
+                    "6. Explanation Quality",
+                    "explanation_clarity",
+                    "mean",
+                    default=0,
+                )
+                or 0
+            ),
+            4,
+        ),
+        "clarity_median": round(
+            float(
+                _summary_lookup(
+                    summary_df,
+                    "6. Explanation Quality",
+                    "explanation_clarity",
+                    "median",
+                    default=0,
+                )
+                or 0
+            ),
+            4,
+        ),
+        "actionable_mean": round(
+            float(
+                _summary_lookup(
+                    summary_df,
+                    "6. Explanation Quality",
+                    "explanation_actionable",
+                    "mean",
+                    default=0,
+                )
+                or 0
+            ),
+            4,
+        ),
+        "actionable_median": round(
+            float(
+                _summary_lookup(
+                    summary_df,
+                    "6. Explanation Quality",
+                    "explanation_actionable",
+                    "median",
+                    default=0,
+                )
+                or 0
+            ),
+            4,
+        ),
+        "by_sampling_group": by_group,
+        "top_factors": top_factors,
+        "source": "manual_review_summary_csv",
+    }

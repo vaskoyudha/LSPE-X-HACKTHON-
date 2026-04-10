@@ -6,8 +6,11 @@ import pytest
 from src.diagnostics import (
     PROXY_BROAD_FEATURES,
     PROXY_CORE_FEATURES,
+    build_explanation_validation_from_summary,
+    build_reviewed_subset_metrics_from_summary,
     compute_operational_review_metrics,
     load_reviewed_labels,
+    load_manual_review_summary,
     resolve_proxy_feature_sets,
     select_reviewed_rows,
     summarize_explanation_validation,
@@ -169,3 +172,60 @@ def test_summarize_explanation_validation_uses_filled_review_fields():
     assert summary["agreement_rate"] == 0.5
     assert summary["actionable_rate"] == 1.0
     assert summary["clarity_mean"] == 4.5
+
+
+@pytest.mark.p1
+def test_build_reviewed_subset_metrics_from_summary_uses_confusion_counts():
+    summary = pd.DataFrame(
+        [
+            {"section": "2. Agreement", "dimension": "overall", "metric": "agree_count", "value": 4, "pct": "80%"},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_0_reviewed_0", "metric": "count", "value": 1},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_0_reviewed_1", "metric": "count", "value": 0},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_0_reviewed_2", "metric": "count", "value": 0},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_1_reviewed_0", "metric": "count", "value": 0},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_1_reviewed_1", "metric": "count", "value": 1},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_1_reviewed_2", "metric": "count", "value": 1},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_2_reviewed_0", "metric": "count", "value": 0},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_2_reviewed_1", "metric": "count", "value": 0},
+            {"section": "3. Confusion Matrix", "dimension": "predicted_2_reviewed_2", "metric": "count", "value": 2},
+        ]
+    )
+    metrics = build_reviewed_subset_metrics_from_summary(summary)
+    assert metrics["status"] == "available"
+    assert metrics["reviewed_rows"] == 5
+    assert metrics["accuracy"] == 0.8
+    assert metrics["confusion_matrix"] == [[1, 0, 0], [0, 1, 0], [0, 1, 2]]
+
+
+@pytest.mark.p1
+def test_build_explanation_validation_from_summary_reads_summary_scores():
+    summary = pd.DataFrame(
+        [
+            {"section": "6. Explanation Quality", "dimension": "explanation_agrees", "metric": "yes", "value": 8},
+            {"section": "6. Explanation Quality", "dimension": "explanation_agrees", "metric": "partial", "value": 2},
+            {"section": "6. Explanation Quality", "dimension": "explanation_agrees", "metric": "no", "value": 0},
+            {"section": "6. Explanation Quality", "dimension": "explanation_clarity", "metric": "mean", "value": 3.5},
+            {"section": "6. Explanation Quality", "dimension": "explanation_clarity", "metric": "median", "value": 4.0},
+            {"section": "6. Explanation Quality", "dimension": "explanation_actionable", "metric": "mean", "value": 4.2},
+            {"section": "6. Explanation Quality", "dimension": "explanation_actionable", "metric": "median", "value": 4.0},
+            {"section": "5. By Sampling Group", "dimension": "high_uncertainty", "metric": "avg_explanation_clarity", "value": 2.0},
+            {"section": "7. Top Factors", "dimension": "f_is_q4", "metric": "frequency", "value": 10, "pct": "10%", "notes": "demo"},
+        ]
+    )
+    metrics = build_explanation_validation_from_summary(summary)
+    assert metrics["status"] == "available"
+    assert metrics["agreement_yes_rate"] == 0.8
+    assert metrics["clarity_mean"] == 3.5
+    assert metrics["actionable_mean"] == 4.2
+    assert metrics["by_sampling_group"]["high_uncertainty"]["avg_explanation_clarity"] == 2
+    assert metrics["top_factors"][0]["feature"] == "f_is_q4"
+
+
+@pytest.mark.p1
+def test_load_manual_review_summary_reads_csv(tmp_path):
+    path = tmp_path / "manual_review_summary.csv"
+    pd.DataFrame(
+        [{"section": "x", "dimension": "y", "metric": "z", "value": 1}]
+    ).to_csv(path, index=False)
+    loaded = load_manual_review_summary(path)
+    assert len(loaded) == 1

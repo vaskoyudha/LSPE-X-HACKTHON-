@@ -18,8 +18,11 @@ import xgboost as xgb
 
 from src.data import PROCESSED_DIR
 from src.diagnostics import (
+    build_explanation_validation_from_summary,
+    build_reviewed_subset_metrics_from_summary,
     compute_operational_review_metrics,
     load_reviewed_labels,
+    load_manual_review_summary,
     run_circularity_ablation,
     select_reviewed_rows,
     summarize_explanation_validation,
@@ -161,32 +164,42 @@ def main() -> None:
     fig.savefig(FIGURES_DIR / "operational_metrics.png", dpi=150)
     plt.close(fig)
 
-    reviewed = load_reviewed_labels()
-    explanation_validation = summarize_explanation_validation(reviewed)
+    manual_summary = load_manual_review_summary()
     reviewed_metrics: dict[str, object]
-    if reviewed.empty:
-        reviewed_metrics = {
-            "status": "pending_human_review",
-            "message": "No reviewed benchmark rows with reviewed_label available yet.",
-        }
+    explanation_validation: dict[str, object]
+    if not manual_summary.empty:
+        reviewed_metrics = build_reviewed_subset_metrics_from_summary(manual_summary)
+        explanation_validation = build_explanation_validation_from_summary(manual_summary)
+        (MODELS_DIR / "manual_review_summary.json").write_text(
+            manual_summary.to_json(orient="records", indent=2),
+            encoding="utf-8",
+        )
     else:
-        review_raw, review_X, review_y = select_reviewed_rows(reviewed, test_raw, test_X)
-        if len(review_X) == 0:
+        reviewed = load_reviewed_labels()
+        explanation_validation = summarize_explanation_validation(reviewed)
+        if reviewed.empty:
             reviewed_metrics = {
-                "status": "unmatched_review_rows",
-                "message": "Reviewed rows could not be aligned back to the test benchmark.",
+                "status": "pending_human_review",
+                "message": "No reviewed benchmark rows with reviewed_label available yet.",
             }
         else:
-            reviewed_metrics = evaluate(
-                model,
-                review_X,
-                review_y,
-                partition_name="reviewed_subset",
-                thresholds=thresholds,
-                label_type="reviewed_risk_labels",
-            )
-            reviewed_metrics["status"] = "available"
-            reviewed_metrics["matched_rows"] = int(len(review_X))
+            review_raw, review_X, review_y = select_reviewed_rows(reviewed, test_raw, test_X)
+            if len(review_X) == 0:
+                reviewed_metrics = {
+                    "status": "unmatched_review_rows",
+                    "message": "Reviewed rows could not be aligned back to the test benchmark.",
+                }
+            else:
+                reviewed_metrics = evaluate(
+                    model,
+                    review_X,
+                    review_y,
+                    partition_name="reviewed_subset",
+                    thresholds=thresholds,
+                    label_type="reviewed_risk_labels",
+                )
+                reviewed_metrics["status"] = "available"
+                reviewed_metrics["matched_rows"] = int(len(review_X))
 
     (MODELS_DIR / "reviewed_subset_metrics.json").write_text(
         json.dumps(reviewed_metrics, indent=2),
