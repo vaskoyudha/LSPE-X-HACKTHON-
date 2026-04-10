@@ -182,6 +182,34 @@ class TestFlattenRelease:
         assert row["tender_description"] == "Pengadaan Alat Laboratorium"
         assert row["buyer_name"] == "Kementerian Contoh"
 
+    def test_extracts_category_and_item_counts_from_realish_record(self):
+        record = {
+            "ocid": "ocds-test-real-001",
+            "buyer": {"id": "buyer-1", "name": "Kementerian Contoh"},
+            "tender": {
+                "id": "T-REAL-1",
+                "title": "Pengadaan Jasa Konsultansi",
+                "description": None,
+                "value": {"currency": "IDR"},
+                "minValue": {"amount": 125000000, "currency": "IDR"},
+                "mainProcurementCategory": "services",
+                "items": [{"id": "1"}, {"id": "2"}],
+            },
+            "awards": [
+                {
+                    "id": "A-REAL-1",
+                    "value": {"amount": 118000000, "currency": "IDR"},
+                    "items": [{"id": "1"}],
+                    "suppliers": [{"id": "sup-1", "name": "PT Contoh"}],
+                }
+            ],
+        }
+        row = _flatten_release(record)[0]
+        assert row["tender_value_amount"] == 125000000
+        assert row["tender_mainProcurementCategory"] == "services"
+        assert row["tender_items_count"] == 2
+        assert row["award_items_count"] == 1
+
 
 @pytest.mark.p1
 class TestFlattenJsonlGz:

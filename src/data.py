@@ -46,6 +46,8 @@ REQUIRED_FIELDS = [
     "tender_procurementMethod",
     "tender_value_amount",
     "tender_value_currency",
+    "tender_mainProcurementCategory",
+    "tender_items_count",
     "tender_tenderPeriod_startDate",
     "tender_tenderPeriod_endDate",
     "tender_numberOfTenderers",
@@ -56,6 +58,7 @@ REQUIRED_FIELDS = [
     "award_date",
     "award_value_amount",
     "award_value_currency",
+    "award_items_count",
     "supplier_id",
     "supplier_name",
     "contract_id",
@@ -185,6 +188,10 @@ def _flatten_release(record: dict) -> list[dict]:
         ),
         "tender_value_amount": tender_value.get("amount", tender_min_value.get("amount")),
         "tender_value_currency": tender_value.get("currency", tender_min_value.get("currency", "IDR")),
+        "tender_mainProcurementCategory": tender.get(
+            "mainProcurementCategory", ""
+        ),
+        "tender_items_count": len(tender.get("items", []) or []),
         "tender_tenderPeriod_startDate": _safe_get(
             tender, "tenderPeriod", "startDate"
         ),
@@ -209,6 +216,7 @@ def _flatten_release(record: dict) -> list[dict]:
                 "award_date": None,
                 "award_value_amount": None,
                 "award_value_currency": None,
+                "award_items_count": None,
                 "supplier_id": None,
                 "supplier_name": None,
                 "contract_id": None,
@@ -239,6 +247,7 @@ def _flatten_release(record: dict) -> list[dict]:
                 "award_value_currency": _safe_get(
                     award, "value", "currency", default="IDR"
                 ),
+                "award_items_count": len(award.get("items", []) or []),
                 "supplier_id": first_supplier.get("id", ""),
                 "supplier_name": first_supplier.get("name", ""),
                 "contract_id": contract.get("id", ""),
