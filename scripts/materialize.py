@@ -246,8 +246,16 @@ def materialize(use_synthetic: bool = False, n_synthetic: int = 5000) -> dict:
 
     # Step 5: Compute labels per partition
     logger.info("--- Computing labels ---")
-    train_labels = compute_risk_labels(train_raw)
-    test_labels = compute_risk_labels(test_raw)
+    train_label_inputs = pd.concat(
+        [train_raw.reset_index(drop=True), train_features.reset_index(drop=True)],
+        axis=1,
+    )
+    test_label_inputs = pd.concat(
+        [test_raw.reset_index(drop=True), test_features.reset_index(drop=True)],
+        axis=1,
+    )
+    train_labels = compute_risk_labels(train_label_inputs)
+    test_labels = compute_risk_labels(test_label_inputs)
     save_labels(train_labels, "train")
     save_labels(test_labels, "test")
 

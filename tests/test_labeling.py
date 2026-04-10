@@ -12,6 +12,9 @@ from src.labels import (
     flag_q4_timing,
     flag_price_deviation,
     flag_high_value,
+    flag_repeat_pair_history,
+    flag_supplier_recent_surge,
+    flag_buyer_value_spike,
     flag_direct_procurement,
     compute_red_flags,
     compute_risk_labels,
@@ -103,6 +106,39 @@ class TestIndividualFlags:
         assert result.iloc[1] is np.False_  # "open"
         assert result.iloc[2] is np.True_   # "limited"
 
+    def test_repeat_pair_history(self):
+        df = pd.DataFrame(
+            {
+                "f_buyer_supplier_repeat_count": [0, 1, 2, 3, np.nan],
+            }
+        )
+
+        result = flag_repeat_pair_history(df)
+
+        assert result.tolist() == [False, False, True, True, False]
+
+    def test_supplier_recent_surge(self):
+        df = pd.DataFrame(
+            {
+                "f_supplier_recent_90d_award_count": [0, 2, 3, 5, np.nan],
+            }
+        )
+
+        result = flag_supplier_recent_surge(df)
+
+        assert result.tolist() == [False, False, True, True, False]
+
+    def test_buyer_value_spike(self):
+        df = pd.DataFrame(
+            {
+                "f_tender_value_zscore_buyer": [0.5, 1.9, 2.0, 4.2, np.nan],
+            }
+        )
+
+        result = flag_buyer_value_spike(df)
+
+        assert result.tolist() == [False, False, True, True, False]
+
 
 @pytest.mark.p0
 class TestCompositeLabeling:
@@ -136,8 +172,8 @@ class TestCompositeLabeling:
 
 @pytest.mark.p1
 class TestRedFlagRegistry:
-    def test_seven_flags_registered(self):
-        assert len(RED_FLAG_FUNCTIONS) == 7
+    def test_eight_flags_registered(self):
+        assert len(RED_FLAG_FUNCTIONS) == 8
 
     def test_all_flags_return_boolean(self, sample_procurement_df):
         for name, func in RED_FLAG_FUNCTIONS.items():

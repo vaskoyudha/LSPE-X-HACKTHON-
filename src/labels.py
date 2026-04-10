@@ -397,6 +397,39 @@ def flag_high_value(df: pd.DataFrame, percentile: float = 0.9) -> pd.Series:
     return (val >= threshold).fillna(False).astype(bool)
 
 
+def flag_repeat_pair_history(df: pd.DataFrame, min_repeat: int = 2) -> pd.Series:
+    """Red flag: buyer-supplier pair has repeated historical interactions."""
+    col = "f_buyer_supplier_repeat_count"
+    if col not in df.columns:
+        return pd.Series(False, index=df.index, dtype=bool)
+
+    repeat_count = pd.to_numeric(df[col], errors="coerce")
+    return (repeat_count >= min_repeat).fillna(False).astype(bool)
+
+
+def flag_supplier_recent_surge(
+    df: pd.DataFrame,
+    min_recent_awards: int = 3,
+) -> pd.Series:
+    """Red flag: supplier has a recent surge in 90-day award activity."""
+    col = "f_supplier_recent_90d_award_count"
+    if col not in df.columns:
+        return pd.Series(False, index=df.index, dtype=bool)
+
+    recent_awards = pd.to_numeric(df[col], errors="coerce")
+    return (recent_awards >= min_recent_awards).fillna(False).astype(bool)
+
+
+def flag_buyer_value_spike(df: pd.DataFrame, z_threshold: float = 2.0) -> pd.Series:
+    """Red flag: tender value is an unusually large spike for the buyer."""
+    col = "f_tender_value_zscore_buyer"
+    if col not in df.columns:
+        return pd.Series(False, index=df.index, dtype=bool)
+
+    buyer_zscore = pd.to_numeric(df[col], errors="coerce")
+    return (buyer_zscore >= z_threshold).fillna(False).astype(bool)
+
+
 def flag_direct_procurement(df: pd.DataFrame) -> pd.Series:
     """Red flag: non-competitive procurement method.
 
@@ -414,13 +447,14 @@ def flag_direct_procurement(df: pd.DataFrame) -> pd.Series:
 
 # All available red-flag functions
 RED_FLAG_FUNCTIONS = {
-    "single_bidder": flag_single_bidder,
     "short_title": flag_short_title,
     "short_description": flag_short_description,
     "q4_timing": flag_q4_timing,
     "price_deviation": flag_price_deviation,
     "high_value": flag_high_value,
-    "direct_procurement": flag_direct_procurement,
+    "repeat_pair_history": flag_repeat_pair_history,
+    "supplier_recent_surge": flag_supplier_recent_surge,
+    "buyer_value_spike": flag_buyer_value_spike,
 }
 
 
