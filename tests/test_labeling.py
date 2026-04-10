@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from src.labels import (
+    CALIBRATION_SOURCE_INDEX_COL,
     flag_single_bidder,
     flag_short_title,
     flag_short_description,
@@ -15,6 +16,7 @@ from src.labels import (
     compute_red_flags,
     compute_risk_labels,
     RED_FLAG_FUNCTIONS,
+    select_calibration_samples,
 )
 
 
@@ -141,3 +143,12 @@ class TestRedFlagRegistry:
         for name, func in RED_FLAG_FUNCTIONS.items():
             result = func(sample_procurement_df)
             assert result.dtype == bool, f"Flag '{name}' returned dtype={result.dtype}"
+
+
+@pytest.mark.p1
+class TestCalibrationSampling:
+    def test_calibration_samples_keep_source_row_index(self, sample_procurement_df):
+        labels = compute_risk_labels(sample_procurement_df)
+        samples = select_calibration_samples(labels, sample_procurement_df, n_samples=4, seed=42)
+        assert CALIBRATION_SOURCE_INDEX_COL in samples.columns
+        assert samples[CALIBRATION_SOURCE_INDEX_COL].between(0, len(sample_procurement_df) - 1).all()

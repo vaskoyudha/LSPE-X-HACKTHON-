@@ -33,6 +33,7 @@ TEST_DIR = PROJECT_ROOT / "test_data"
 # ---------------------------------------------------------------------------
  
 LABEL_NAMES = {0: "Rendah", 1: "Sedang", 2: "Tinggi"}
+CALIBRATION_SOURCE_INDEX_COL = "source_row_idx"
  
 _DEV_MANIFEST = Path("data/processed/dev_split_manifest.json")
 
@@ -539,6 +540,7 @@ def select_calibration_samples(
 
     # Build combined table with reviewer context
     combined = labels_reset.copy()
+    combined[CALIBRATION_SOURCE_INDEX_COL] = combined.index
 
     # Context columns from raw data
     context_cols = [
@@ -574,7 +576,7 @@ def select_calibration_samples(
     review_cols = ["verified_label", "confidence", "notes"]
     meta_cols = ["risk_label"]
     context_present = [c for c in context_cols if c in samples.columns]
-    ordered = context_present + flag_cols + meta_cols + review_cols
+    ordered = [CALIBRATION_SOURCE_INDEX_COL] + context_present + flag_cols + meta_cols + review_cols
     remaining = [c for c in samples.columns if c not in ordered]
     samples = samples[ordered + remaining]
 

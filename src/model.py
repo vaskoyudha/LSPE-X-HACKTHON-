@@ -37,6 +37,7 @@ from sklearn.metrics import (
 from src import RANDOM_SEED
 from src.data import PROJECT_ROOT, PROCESSED_DIR
 from src.split import TRAIN_DIR, TEST_DIR
+from src.labels import CALIBRATION_SOURCE_INDEX_COL
 
 logger = logging.getLogger(__name__)
 
@@ -928,6 +929,28 @@ def load_clean_labels() -> pd.DataFrame:
     return usable
 
 
+def _select_calibration_subset(
+    cal_probs: np.ndarray,
+    clean: pd.DataFrame,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Resolve reviewed calibration rows back to their sampled source rows."""
+    labels = clean["verified_label"].astype(int).to_numpy()
+
+    if CALIBRATION_SOURCE_INDEX_COL in clean.columns:
+        source_idx = pd.to_numeric(clean[CALIBRATION_SOURCE_INDEX_COL], errors="coerce")
+        valid = source_idx.notna().to_numpy()
+        source_idx = source_idx[valid].astype(int).to_numpy()
+        labels = labels[valid]
+        in_range = (source_idx >= 0) & (source_idx < len(cal_probs))
+        source_idx = source_idx[in_range]
+        labels = labels[in_range]
+        if len(source_idx) > 0:
+            return cal_probs[source_idx], labels
+
+    n_usable = min(len(clean), len(cal_probs))
+    return cal_probs[:n_usable], labels[:n_usable]
+
+
 def run_calibration(model: xgb.Booster, train_features: pd.DataFrame) -> dict:
     """Run temperature scaling calibration.
 
@@ -956,19 +979,6 @@ def run_calibration(model: xgb.Booster, train_features: pd.DataFrame) -> dict:
     else:
         return {"enabled": False, "reason": "calibration_sheet_100.csv not found"}
 
-    # Since clean_labels_100 is the reviewed version of calibration_sheet_100
-    # and both share the same row ordering, we can use the indices directly
-    # But we need to filter to only usable (high-confidence) rows
-    usable_mask = (
-        clean["verified_label"].notna()
-        & clean["confidence"].isin(["high", "medium"])
-    )
-    usable_indices = clean.index[usable_mask] if not usable_mask.all() else clean.index
-
-    # Get features for the sampled calibration rows
-    # The calibration sheet rows correspond to sampled positions from val_calibration
-    # We use a simpler approach: just use ALL val_calibration features with the
-    # matching subset
     n_cal = len(cal_features)
     if n_cal == 0:
         return {"enabled": False, "reason": "No calibration features available"}
@@ -977,12 +987,8 @@ def run_calibration(model: xgb.Booster, train_features: pd.DataFrame) -> dict:
     dmatrix = xgb.DMatrix(cal_features)
     cal_probs = model.predict(dmatrix)
 
-    # For temperature scaling, we want the SAMPLED rows only
-    # The clean labels have verified_label for the sampled subset
-    # Use the first n usable rows from cal_probs (since sampling was from cal_features)
-    n_usable = min(len(clean), n_cal)
-    sample_probs = cal_probs[:n_usable]
-    sample_labels = clean["verified_label"].values[:n_usable]
+    sample_probs, sample_labels = _select_calibration_subset(cal_probs, clean)
+    n_usable = len(sample_labels)
 
     # Find optimal temperature
     temperature = find_temperature(sample_probs, sample_labels)

@@ -10,6 +10,7 @@ import xgboost as xgb
 import onnxmltools
 
 from src.model import (
+    _select_calibration_subset,
     compute_class_weights,
     compute_sample_weights,
     run_hpo,
@@ -195,3 +196,23 @@ class TestEvaluation:
         metrics = evaluate(model, X_hpo, y_hpo, "val_hpo_missing_class")
         assert set(metrics["per_class_f1"].keys()) == {"Low Risk", "Medium Risk", "High Risk"}
         assert len(metrics["confusion_matrix"]) == 3
+
+    def test_calibration_subset_uses_source_indices_when_present(self):
+        cal_probs = np.array(
+            [
+                [0.7, 0.2, 0.1],
+                [0.2, 0.6, 0.2],
+                [0.1, 0.3, 0.6],
+                [0.05, 0.1, 0.85],
+            ]
+        )
+        clean = pd.DataFrame(
+            {
+                "verified_label": [2, 1],
+                "confidence": ["high", "high"],
+                "source_row_idx": [3, 1],
+            }
+        )
+        sample_probs, sample_labels = _select_calibration_subset(cal_probs, clean)
+        np.testing.assert_array_equal(sample_probs, cal_probs[[3, 1]])
+        np.testing.assert_array_equal(sample_labels, np.array([2, 1]))
