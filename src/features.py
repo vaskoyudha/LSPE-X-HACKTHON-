@@ -53,6 +53,13 @@ def _safe_len(series: pd.Series) -> pd.Series:
     return series.fillna("").astype(str).str.len()
 
 
+def _safe_token_count(series: pd.Series | None) -> pd.Series:
+    """Whitespace token count, handling NaN and missing series."""
+    if series is None:
+        return pd.Series(dtype="float64")
+    return series.fillna("").astype(str).str.split().str.len().astype(float)
+
+
 def _parse_dates(series: pd.Series) -> pd.Series:
     """Parse dates to datetime, coercing errors."""
     return pd.to_datetime(series, errors="coerce", utc=True)
@@ -77,26 +84,38 @@ def tier1_features(df: pd.DataFrame) -> pd.DataFrame:
     feats["f_award_value_log"] = _safe_log1p(df.get("award_value_amount"))
 
     # 3. Price deviation ratio (award / tender estimate)
-    tender_val = _to_numeric(df.get("tender_value_amount"))
-    award_val = _to_numeric(df.get("award_value_amount"))
+    tender_val = _to_numeric(
+        df.get("tender_value_amount", pd.Series(np.nan, index=df.index))
+    )
+    award_val = _to_numeric(
+        df.get("award_value_amount", pd.Series(np.nan, index=df.index))
+    )
     feats["f_price_deviation_ratio"] = award_val / tender_val.replace(0, np.nan)
 
-    # 4. Tender duration (days between period start and end)
-    start = _parse_dates(df.get("tender_tenderPeriod_startDate"))
-    end = _parse_dates(df.get("tender_tenderPeriod_endDate"))
-    feats["f_tender_duration_days"] = (end - start).dt.total_seconds() / 86400
+    # 4. Main procurement category (encoded: goods=0, services=1, works=2)
+    feats["f_main_procurement_category_enc"] = (
+        df.get("tender_mainProcurementCategory", pd.Series("", index=df.index))
+        .fillna("")
+        .str.lower()
+        .map({"goods": 0, "services": 1, "works": 2})
+        .fillna(-1)
+        .astype(float)
+    )
 
     # 5. Award duration (days from tender start to award)
+    start = _parse_dates(df.get("tender_tenderPeriod_startDate"))
     award_date = _parse_dates(df.get("award_date"))
     feats["f_award_duration_days"] = (award_date - start).dt.total_seconds() / 86400
 
-    # 6. Number of tenderers
-    feats["f_num_tenderers"] = _to_numeric(df.get("tender_numberOfTenderers"))
+    # 6. Tender items count
+    feats["f_tender_items_count"] = _to_numeric(
+        df.get("tender_items_count", pd.Series(np.nan, index=df.index))
+    ).fillna(0)
 
-    # 7. Single bidder flag (binary)
-    feats["f_single_bidder"] = (
-        _to_numeric(df.get("tender_numberOfTenderers")).fillna(-1) == 1
-    ).astype(float)
+    # 7. Award items count
+    feats["f_award_items_count"] = _to_numeric(
+        df.get("award_items_count", pd.Series(np.nan, index=df.index))
+    ).fillna(0)
 
     # 8. Title length
     feats["f_title_length"] = _safe_len(df.get("tender_title")).astype(float)
@@ -106,11 +125,8 @@ def tier1_features(df: pd.DataFrame) -> pd.DataFrame:
         df.get("tender_description")
     ).astype(float)
 
-    # 10. Procurement method (encoded: open=0, selective/limited=1, direct=2)
-    method = df.get("tender_procurementMethod", pd.Series("", index=df.index))
-    method_lower = method.fillna("").str.lower()
-    method_map = {"open": 0, "selective": 1, "limited": 1, "direct": 2}
-    feats["f_procurement_method_enc"] = method_lower.map(method_map).fillna(-1).astype(float)
+    # 10. Tender value missingness flag
+    feats["f_tender_value_missing"] = tender_val.isna().astype(float)
 
     # 11. Is Q4 (October-December)
     pub_date = _parse_dates(df.get("tender_datePublished"))
@@ -119,17 +135,15 @@ def tier1_features(df: pd.DataFrame) -> pd.DataFrame:
     # 12. Is December specifically
     feats["f_is_december"] = (pub_date.dt.month == 12).astype(float)
 
-    # 13. Contract value (log-scaled)
-    feats["f_contract_value_log"] = _safe_log1p(df.get("contract_value_amount"))
+    # 13. Award value missingness flag
+    feats["f_award_value_missing"] = award_val.isna().astype(float)
 
-    # 14. Contract-to-award ratio
-    contract_val = _to_numeric(df.get("contract_value_amount"))
-    feats["f_contract_award_ratio"] = contract_val / award_val.replace(0, np.nan)
+    # 14. Title token count
+    feats["f_title_token_count"] = _safe_token_count(df.get("tender_title"))
 
-    # 15. Days to contract signing (from award)
-    contract_date = _parse_dates(df.get("contract_dateSigned"))
-    feats["f_days_to_contract"] = (
-        (contract_date - award_date).dt.total_seconds() / 86400
+    # 15. Description token count
+    feats["f_description_token_count"] = _safe_token_count(
+        df.get("tender_description")
     )
 
     return feats
@@ -257,21 +271,19 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
         if b and pd.notna(d):
             buyer_last_date[b] = d
 
-    # 24. Buyer historical procurement method diversity (unique methods / count)
-    feats_sorted_24 = pd.Series(np.nan, index=range(n))
-    method_col = df_sorted.get(
-        "tender_procurementMethod", pd.Series("", index=df_sorted.index)
-    ).fillna("")
-    buyer_methods: dict[str, list[str]] = {}
+    # 24. Buyer recent 30-day tender count
+    feats_sorted_24 = pd.Series(0.0, index=range(n))
+    buyer_recent_dates: dict[str, list[pd.Timestamp]] = {}
     for i in range(n):
         b = buyer_sorted.iloc[i]
-        m = method_col.iloc[i]
-        if b and b in buyer_methods and len(buyer_methods[b]) > 0:
-            unique = len(set(buyer_methods[b]))
-            total = len(buyer_methods[b])
-            feats_sorted_24.iloc[i] = unique / total
-        if b and m:
-            buyer_methods.setdefault(b, []).append(m)
+        d = dates_sorted.iloc[i]
+        if b and pd.notna(d):
+            history = buyer_recent_dates.get(b, [])
+            cutoff = d - pd.Timedelta(days=30)
+            history = [past_d for past_d in history if past_d >= cutoff]
+            feats_sorted_24.iloc[i] = float(len(history))
+            history.append(d)
+            buyer_recent_dates[b] = history
 
     # 25. Supplier distinct buyer count (how many unique buyers this supplier has served)
     feats_sorted_25 = pd.Series(np.nan, index=range(n))
@@ -328,7 +340,7 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     feats["f_supplier_hist_max_award"] = feats_sorted_21.values[inverse_idx]
     feats["f_tender_value_zscore_buyer"] = feats_sorted_22.values[inverse_idx]
     feats["f_days_since_last_buyer_tender"] = feats_sorted_23.values[inverse_idx]
-    feats["f_buyer_method_diversity"] = feats_sorted_24.values[inverse_idx]
+    feats["f_buyer_recent_30d_tender_count"] = feats_sorted_24.values[inverse_idx]
     feats["f_supplier_unique_buyers"] = feats_sorted_25.values[inverse_idx]
     feats["f_buyer_value_growth_rate"] = feats_sorted_26.values[inverse_idx]
     feats["f_supplier_capacity_ratio"] = feats_sorted_27.values[inverse_idx]

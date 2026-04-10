@@ -71,19 +71,28 @@ class TestTier1Features:
 
     def test_log_values_non_negative(self, sample_raw_df):
         feats = tier1_features(sample_raw_df)
-        for col in ["f_tender_value_log", "f_award_value_log", "f_contract_value_log"]:
+        for col in ["f_tender_value_log", "f_award_value_log"]:
             valid = feats[col].dropna()
             assert (valid >= 0).all(), f"{col} has negative values after log1p"
 
-    def test_single_bidder_binary(self, sample_raw_df):
+    def test_main_procurement_category_encoded(self, sample_raw_df):
+        sample_raw_df["tender_mainProcurementCategory"] = [
+            "goods",
+            "services",
+            "works",
+            None,
+        ] * 5
         feats = tier1_features(sample_raw_df)
-        valid = feats["f_single_bidder"].dropna()
-        assert set(valid.unique()).issubset({0.0, 1.0})
-
-    def test_procurement_method_encoded(self, sample_raw_df):
-        feats = tier1_features(sample_raw_df)
-        valid = feats["f_procurement_method_enc"].dropna()
+        valid = feats["f_main_procurement_category_enc"].dropna()
         assert set(valid.unique()).issubset({-1.0, 0.0, 1.0, 2.0})
+
+    def test_missing_value_flags_binary(self, sample_raw_df):
+        sample_raw_df.loc[0, "tender_value_amount"] = np.nan
+        sample_raw_df.loc[1, "award_value_amount"] = np.nan
+        feats = tier1_features(sample_raw_df)
+        for col in ["f_tender_value_missing", "f_award_value_missing"]:
+            valid = feats[col].dropna()
+            assert set(valid.unique()).issubset({0.0, 1.0})
 
 
 @pytest.mark.p0
@@ -122,6 +131,29 @@ class TestTier2Features:
 class TestCombinedFeatures:
     def test_30_total_features(self, sample_raw_df):
         feats = compute_all_features(sample_raw_df)
+        assert len(feats.columns) == 30
+
+    def test_real_supported_replacement_features_exist(self, sample_raw_df):
+        sample_raw_df["tender_mainProcurementCategory"] = ["services"] * len(
+            sample_raw_df
+        )
+        sample_raw_df["tender_items_count"] = [2] * len(sample_raw_df)
+        sample_raw_df["award_items_count"] = [1] * len(sample_raw_df)
+
+        feats = compute_all_features(sample_raw_df)
+
+        expected = {
+            "f_main_procurement_category_enc",
+            "f_tender_items_count",
+            "f_award_items_count",
+            "f_tender_value_missing",
+            "f_award_value_missing",
+            "f_buyer_recent_30d_tender_count",
+            "f_title_token_count",
+            "f_description_token_count",
+        }
+
+        assert expected.issubset(set(feats.columns))
         assert len(feats.columns) == 30
 
     def test_all_numeric_onnx_safe(self, sample_raw_df):
