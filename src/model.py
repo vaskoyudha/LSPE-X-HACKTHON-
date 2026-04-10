@@ -1447,6 +1447,7 @@ def run_training_pipeline(
     # Save canonical metrics
     full_metrics = {
         "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+        "decision_thresholds": thresholds,
         "internal_validation": val_metrics,
         "internal_validation_thresholded": val_metrics_thresholded,
         "final_test": test_metrics,
@@ -1543,6 +1544,7 @@ def run_evaluation_pipeline() -> dict:
     # Step 6: Build and save final metrics
     full_metrics = {
         "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+        "decision_thresholds": thresholds,
         "final_test": test_metrics_raw,
         "final_test_thresholded": test_metrics_thresholded,
         "calibration": calibration,

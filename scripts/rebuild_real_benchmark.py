@@ -216,6 +216,7 @@ def _train_and_evaluate_current_split() -> None:
 
     full_metrics = {
         "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+        "decision_thresholds": thresholds,
         "internal_validation": val_metrics,
         "internal_validation_thresholded": val_metrics_thresholded,
         "final_test": test_metrics,
