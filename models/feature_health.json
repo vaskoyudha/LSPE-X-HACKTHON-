@@ -1,0 +1,212 @@
+{
+  "f_tender_value_log": {
+    "missing_pct": 47.78,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 194347,
+    "unique_non_null": 156399
+  },
+  "f_award_value_log": {
+    "missing_pct": 47.69,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 194676,
+    "unique_non_null": 182196
+  },
+  "f_price_deviation_ratio": {
+    "missing_pct": 47.78,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 194347,
+    "unique_non_null": 183997
+  },
+  "f_main_procurement_category_enc": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 4
+  },
+  "f_award_duration_days": {
+    "missing_pct": 47.78,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 194347,
+    "unique_non_null": 265
+  },
+  "f_tender_items_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2
+  },
+  "f_award_items_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2
+  },
+  "f_title_length": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 546
+  },
+  "f_description_length": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 546
+  },
+  "f_tender_value_missing": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2
+  },
+  "f_is_q4": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2
+  },
+  "f_is_december": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2
+  },
+  "f_award_value_missing": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2
+  },
+  "f_title_token_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 115
+  },
+  "f_description_token_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 115
+  },
+  "f_buyer_hist_avg_value": {
+    "missing_pct": 2.18,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 364032,
+    "unique_non_null": 193498
+  },
+  "f_buyer_hist_value_std": {
+    "missing_pct": 2.18,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 364032,
+    "unique_non_null": 192905
+  },
+  "f_supplier_hist_win_count": {
+    "missing_pct": 62.27,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 140400,
+    "unique_non_null": 163
+  },
+  "f_buyer_supplier_repeat_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 68
+  },
+  "f_buyer_hist_tender_count": {
+    "missing_pct": 2.18,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 364032,
+    "unique_non_null": 10093
+  },
+  "f_supplier_hist_max_award": {
+    "missing_pct": 62.27,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 140400,
+    "unique_non_null": 60761
+  },
+  "f_tender_value_zscore_buyer": {
+    "missing_pct": 48.24,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 192642,
+    "unique_non_null": 192634
+  },
+  "f_days_since_last_buyer_tender": {
+    "missing_pct": 0.3,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 371019,
+    "unique_non_null": 69727
+  },
+  "f_buyer_recent_30d_tender_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 2488
+  },
+  "f_supplier_recent_90d_award_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 46
+  },
+  "f_buyer_value_growth_rate": {
+    "missing_pct": 48.07,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 193264,
+    "unique_non_null": 193249
+  },
+  "f_supplier_capacity_ratio": {
+    "missing_pct": 62.27,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 140400,
+    "unique_non_null": 139455
+  },
+  "f_buyer_hist_avg_award": {
+    "missing_pct": 2.18,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 364032,
+    "unique_non_null": 193807
+  },
+  "f_buyer_hist_award_std": {
+    "missing_pct": 2.18,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 364032,
+    "unique_non_null": 193200
+  },
+  "f_supplier_hist_avg_award": {
+    "missing_pct": 62.27,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 140400,
+    "unique_non_null": 139309
+  }
+}

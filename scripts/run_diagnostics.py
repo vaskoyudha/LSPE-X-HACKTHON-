@@ -16,7 +16,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from src.data import PROCESSED_DIR
-from src.diagnostics import run_circularity_ablation, summarize_data_provenance
+from src.diagnostics import (
+    run_circularity_ablation,
+    summarize_data_provenance,
+    summarize_feature_health,
+    summarize_feature_health_overview,
+)
 
 MODELS_DIR = ROOT / "models"
 FIGURES_DIR = ROOT / "proposal" / "figures"
@@ -39,10 +44,24 @@ def main() -> None:
     provenance = summarize_data_provenance(train_raw, test_raw)
     (PROCESSED_DIR / "data_provenance.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
 
+    feature_health = summarize_feature_health(train_X)
+    feature_health_overview = summarize_feature_health_overview(feature_health)
+    (MODELS_DIR / "feature_health.json").write_text(
+        json.dumps(feature_health, indent=2),
+        encoding="utf-8",
+    )
+
     robustness = run_circularity_ablation(train_X, train_y, test_X, test_y)
     (MODELS_DIR / "robustness.json").write_text(json.dumps(robustness, indent=2), encoding="utf-8")
     (EVIDENCE_DIR / "weakness-diagnostics.json").write_text(
-        json.dumps({"provenance": provenance, "robustness": robustness}, indent=2),
+        json.dumps(
+            {
+                "provenance": provenance,
+                "feature_health_overview": feature_health_overview,
+                "robustness": robustness,
+            },
+            indent=2,
+        ),
         encoding="utf-8",
     )
 
@@ -61,6 +80,40 @@ def main() -> None:
         ax.text(bar.get_x() + bar.get_width() / 2, value + 0.02, f"{value:.4f}", ha="center", va="bottom")
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "robustness_ablation.png", dpi=150)
+    plt.close(fig)
+
+    missing_pairs = sorted(
+        (
+            (feature, stats["missing_pct"])
+            for feature, stats in feature_health.items()
+        ),
+        key=lambda item: (-item[1], item[0]),
+    )
+    top_missing = missing_pairs[:10]
+    fig, ax = plt.subplots(figsize=(9, 5))
+    labels_missing = [name for name, _ in top_missing]
+    values_missing = [value for _, value in top_missing]
+    colors = [
+        "#d62728"
+        if feature in feature_health_overview["active_dead_features"]
+        else "#1f77b4"
+        for feature in labels_missing
+    ]
+    ax.barh(labels_missing, values_missing, color=colors)
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("Missing percentage")
+    ax.set_title("Feature Health: Highest Missingness in Active Real-Benchmark Features")
+    ax.invert_yaxis()
+    for idx, value in enumerate(values_missing):
+        ax.text(value + 1, idx, f"{value:.2f}%", va="center", fontsize=9)
+    summary_text = (
+        f"Active dead features: {feature_health_overview['active_dead_feature_count']} | "
+        f"Retired slots removed: {len(feature_health_overview['retired_dead_features_removed'])}/"
+        f"{len(feature_health_overview['retired_dead_features_removed']) + len(feature_health_overview['retired_dead_features_present'])}"
+    )
+    fig.text(0.02, 0.01, summary_text, fontsize=9)
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "feature_health.png", dpi=150)
     plt.close(fig)
 
 

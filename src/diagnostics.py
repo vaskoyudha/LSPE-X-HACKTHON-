@@ -21,11 +21,16 @@ PROXY_CORE_FEATURES = [
     "f_num_tenderers",
     "f_title_length",
     "f_description_length",
+    "f_title_token_count",
+    "f_description_token_count",
     "f_is_q4",
     "f_is_december",
     "f_price_deviation_ratio",
     "f_tender_value_log",
     "f_procurement_method_enc",
+    "f_buyer_supplier_repeat_count",
+    "f_supplier_recent_90d_award_count",
+    "f_tender_value_zscore_buyer",
 ]
 
 # Broader set including near-proxies tied to value and contract amounts.
@@ -33,6 +38,20 @@ PROXY_BROAD_FEATURES = PROXY_CORE_FEATURES + [
     "f_award_value_log",
     "f_contract_value_log",
     "f_contract_award_ratio",
+    "f_buyer_recent_30d_tender_count",
+    "f_buyer_hist_avg_value",
+    "f_supplier_hist_max_award",
+]
+
+RETIRED_DEAD_FEATURES = [
+    "f_tender_duration_days",
+    "f_num_tenderers",
+    "f_single_bidder",
+    "f_procurement_method_enc",
+    "f_contract_value_log",
+    "f_contract_award_ratio",
+    "f_days_to_contract",
+    "f_buyer_method_diversity",
 ]
 
 
@@ -73,6 +92,50 @@ def summarize_data_provenance(train_raw: pd.DataFrame, test_raw: pd.DataFrame) -
             if is_synthetic
             else "Dataset provenance does not appear fully synthetic from OCID prefixes."
         ),
+    }
+
+
+def summarize_feature_health(features: pd.DataFrame) -> dict[str, dict[str, float | bool | int]]:
+    """Summarize missingness and degeneracy for each feature column."""
+    report: dict[str, dict[str, float | bool | int]] = {}
+    for col in features.columns:
+        series = features[col]
+        non_null = series.dropna()
+        nunique = int(non_null.nunique())
+        report[col] = {
+            "missing_pct": round(float(series.isna().mean() * 100), 2),
+            "all_nan": bool(series.isna().all()),
+            "constant": bool(len(non_null) > 0 and nunique <= 1),
+            "non_null_count": int(non_null.shape[0]),
+            "unique_non_null": nunique,
+        }
+    return report
+
+
+def summarize_feature_health_overview(
+    feature_health: dict[str, dict[str, float | bool | int]],
+    *,
+    retired_features: Iterable[str] = RETIRED_DEAD_FEATURES,
+) -> dict[str, object]:
+    """Summarize whether any active features remain degenerate."""
+    active_dead = sorted(
+        feature
+        for feature, stats in feature_health.items()
+        if bool(stats["all_nan"]) or bool(stats["constant"])
+    )
+    retired_features = list(retired_features)
+    still_present_retired = sorted(
+        feature for feature in retired_features if feature in feature_health
+    )
+    removed_retired = sorted(
+        feature for feature in retired_features if feature not in feature_health
+    )
+    return {
+        "feature_count": len(feature_health),
+        "active_dead_feature_count": len(active_dead),
+        "active_dead_features": active_dead,
+        "retired_dead_features_present": still_present_retired,
+        "retired_dead_features_removed": removed_retired,
     }
 
 
