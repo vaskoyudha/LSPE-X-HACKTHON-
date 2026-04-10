@@ -25,7 +25,7 @@
     "f_tender_value_zscore_buyer",
     "f_days_since_last_buyer_tender",
     "f_buyer_recent_30d_tender_count",
-    "f_supplier_unique_buyers",
+    "f_supplier_recent_90d_award_count",
     "f_buyer_value_growth_rate",
     "f_supplier_capacity_ratio",
     "f_buyer_hist_avg_award",

@@ -304,17 +304,19 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
             feats_sorted_24.iloc[i] = float(len(history))
             history.append(d)
 
-    # 25. Supplier distinct buyer count (how many unique buyers this supplier has served)
-    feats_sorted_25 = pd.Series(np.nan, index=range(n))
-    supplier_buyer_sets: dict[str, set[str]] = {}
+    # 25. Supplier recent 90-day award count
+    feats_sorted_25 = pd.Series(0.0, index=range(n))
+    supplier_recent_dates: dict[str, deque[pd.Timestamp]] = {}
     for i in range(n):
         s = supplier_sorted.iloc[i]
-        b = buyer_sorted.iloc[i]
-        if s and s in supplier_buyer_sets and len(supplier_buyer_sets[s]) > 0:
-            feats_sorted_25.iloc[i] = len(supplier_buyer_sets[s])
-        # Add current buyer AFTER computing (past-only)
-        if s and b:
-            supplier_buyer_sets.setdefault(s, set()).add(b)
+        d = dates_sorted.iloc[i]
+        if s and pd.notna(d):
+            history = supplier_recent_dates.setdefault(s, deque())
+            cutoff = d - pd.Timedelta(days=90)
+            while history and history[0] < cutoff:
+                history.popleft()
+            feats_sorted_25.iloc[i] = float(len(history))
+            history.append(d)
 
     # 26. Value growth rate for buyer (current / historical mean)
     feats_sorted_26 = pd.Series(np.nan, index=range(n))
@@ -363,7 +365,7 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     feats["f_tender_value_zscore_buyer"] = feats_sorted_22.values[inverse_idx]
     feats["f_days_since_last_buyer_tender"] = feats_sorted_23.values[inverse_idx]
     feats["f_buyer_recent_30d_tender_count"] = feats_sorted_24.values[inverse_idx]
-    feats["f_supplier_unique_buyers"] = feats_sorted_25.values[inverse_idx]
+    feats["f_supplier_recent_90d_award_count"] = feats_sorted_25.values[inverse_idx]
     feats["f_buyer_value_growth_rate"] = feats_sorted_26.values[inverse_idx]
     feats["f_supplier_capacity_ratio"] = feats_sorted_27.values[inverse_idx]
     feats["f_buyer_hist_avg_award"] = feats_sorted_28.values[inverse_idx]

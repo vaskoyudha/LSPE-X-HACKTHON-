@@ -149,12 +149,14 @@ class TestCombinedFeatures:
             "f_tender_value_missing",
             "f_award_value_missing",
             "f_buyer_recent_30d_tender_count",
+            "f_supplier_recent_90d_award_count",
             "f_title_token_count",
             "f_description_token_count",
         }
 
         assert expected.issubset(set(feats.columns))
         assert len(feats.columns) == 30
+        assert "f_supplier_unique_buyers" not in feats.columns
 
     def test_all_numeric_onnx_safe(self, sample_raw_df):
         feats = compute_all_features(sample_raw_df)
