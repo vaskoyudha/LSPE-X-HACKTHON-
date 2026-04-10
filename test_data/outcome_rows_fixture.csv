@@ -1,0 +1,3 @@
+ocid,outcome_label,source_record_id,decision_date,confidence_score,review_notes
+ocds-20h3g7-3440597,fraud,case-1,2025-10-03,0.95,Linked confirmed fraud case
+ocds-20h3g7-9615290,irregularity,case-2,2025-10-04,0.80,Linked confirmed irregularity case

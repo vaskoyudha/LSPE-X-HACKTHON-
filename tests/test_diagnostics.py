@@ -9,12 +9,15 @@ from src.diagnostics import (
     build_explanation_validation_from_summary,
     build_reviewed_subset_metrics_from_summary,
     compute_operational_review_metrics,
+    load_canonical_reviewed_labels,
+    load_confirmed_outcome_labels,
     load_reviewed_labels,
     load_manual_review_summary,
     load_row_level_reviewed_benchmark,
     resolve_proxy_feature_sets,
     select_reviewed_rows,
     summarize_explanation_validation,
+    summarize_evidence_label_coverage,
     summarize_feature_health,
     summarize_feature_health_overview,
     summarize_data_provenance,
@@ -245,3 +248,69 @@ def test_load_row_level_reviewed_benchmark_filters_invalid_rows(tmp_path):
     loaded = load_row_level_reviewed_benchmark(path)
     assert loaded["source_row_idx"].tolist() == [0]
     assert loaded["reviewed_label"].tolist() == [2]
+
+
+@pytest.mark.p1
+def test_summarize_evidence_label_coverage_counts_rows_per_family():
+    reviewed = pd.DataFrame(
+        [{"ocid": "ocds-1", "label_family": "reviewed_risk", "label_value": "high"}]
+    )
+    outcomes = pd.DataFrame(
+        [{"ocid": "ocds-2", "label_family": "confirmed_fraud", "label_value": "fraud"}]
+    )
+
+    summary = summarize_evidence_label_coverage(reviewed, outcomes)
+    assert summary["reviewed_rows"] == 1
+    assert summary["confirmed_outcome_rows"] == 1
+    assert summary["families"] == {
+        "reviewed_risk": 1,
+        "confirmed_fraud": 1,
+    }
+
+
+@pytest.mark.p1
+def test_load_canonical_reviewed_labels_validates_parquet(tmp_path):
+    path = tmp_path / "reviewed.parquet"
+    pd.DataFrame(
+        [
+            {
+                "ocid": "ocds-1",
+                "label_family": "reviewed_risk",
+                "label_value": "high",
+                "source_name": "manual_review_round_1",
+                "source_type": "human_review",
+                "source_record_id": "row-1",
+                "decision_date": "2026-04-10",
+                "confidence_score": 0.9,
+                "review_notes": "",
+                "reviewer_id": "",
+                "ingested_at": "2026-04-10T12:00:00Z",
+            }
+        ]
+    ).to_parquet(path, index=False)
+    loaded = load_canonical_reviewed_labels(path)
+    assert loaded["label_family"].tolist() == ["reviewed_risk"]
+
+
+@pytest.mark.p1
+def test_load_confirmed_outcome_labels_validates_parquet(tmp_path):
+    path = tmp_path / "outcomes.parquet"
+    pd.DataFrame(
+        [
+            {
+                "ocid": "ocds-2",
+                "label_family": "confirmed_fraud",
+                "label_value": "fraud",
+                "source_name": "court_fixture",
+                "source_type": "court",
+                "source_record_id": "case-1",
+                "decision_date": "2025-10-03",
+                "confidence_score": 1.0,
+                "review_notes": "",
+                "reviewer_id": "",
+                "ingested_at": "2026-04-10T12:00:00Z",
+            }
+        ]
+    ).to_parquet(path, index=False)
+    loaded = load_confirmed_outcome_labels(path)
+    assert loaded["label_family"].tolist() == ["confirmed_fraud"]

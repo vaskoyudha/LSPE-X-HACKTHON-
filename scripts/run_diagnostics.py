@@ -21,6 +21,8 @@ from src.diagnostics import (
     build_explanation_validation_from_summary,
     build_reviewed_subset_metrics_from_summary,
     compute_operational_review_metrics,
+    load_canonical_reviewed_labels,
+    load_confirmed_outcome_labels,
     load_reviewed_labels,
     load_manual_review_summary,
     load_row_level_reviewed_benchmark,
@@ -28,6 +30,7 @@ from src.diagnostics import (
     select_reviewed_rows,
     summarize_explanation_validation,
     summarize_data_provenance,
+    summarize_evidence_label_coverage,
     summarize_feature_health,
     summarize_feature_health_overview,
 )
@@ -56,6 +59,16 @@ def main() -> None:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
+    reviewed_evidence = load_canonical_reviewed_labels()
+    confirmed_outcomes = load_confirmed_outcome_labels()
+    evidence_coverage = summarize_evidence_label_coverage(
+        reviewed_evidence, confirmed_outcomes
+    )
+    (MODELS_DIR / "evidence_label_coverage.json").write_text(
+        json.dumps(evidence_coverage, indent=2),
+        encoding="utf-8",
+    )
+
     provenance = summarize_data_provenance(train_raw, test_raw)
     (PROCESSED_DIR / "data_provenance.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
 
@@ -72,6 +85,7 @@ def main() -> None:
         json.dumps(
             {
                 "provenance": provenance,
+                "evidence_label_coverage": evidence_coverage,
                 "feature_health_overview": feature_health_overview,
                 "robustness": robustness,
             },
@@ -236,6 +250,7 @@ def main() -> None:
         json.dumps(
             {
                 "provenance": provenance,
+                "evidence_label_coverage": evidence_coverage,
                 "feature_health_overview": feature_health_overview,
                 "robustness": robustness,
                 "operational_metrics": operational,

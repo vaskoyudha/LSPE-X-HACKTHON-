@@ -1,0 +1,3 @@
+source_row_idx,reviewed_label,review_confidence,review_notes,reviewer_id
+57926,2,5,Fixture review marks the row as high risk,fixture-reviewer
+81081,1,4,Fixture review marks the row as medium risk,fixture-reviewer

@@ -12,6 +12,7 @@ import xgboost as xgb
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, log_loss
 
 from src.model import BEST_PARAMS_PATH, compute_sample_weights
+from src.outcomes import CONFIRMED_OUTCOMES_PATH, REVIEWED_LABELS_PATH, validate_evidence_labels
 
 SYNTHETIC_OCID_PREFIX = "ocds-synth-"
 CLASS_NAMES = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
@@ -267,6 +268,44 @@ def load_row_level_reviewed_benchmark(
     reviewed["source_row_idx"] = reviewed["source_row_idx"].astype(int)
     reviewed["reviewed_label"] = reviewed["reviewed_label"].astype(int)
     return reviewed
+
+
+def load_canonical_reviewed_labels(path: Path = REVIEWED_LABELS_PATH) -> pd.DataFrame:
+    """Load canonical row-level reviewed labels when available."""
+    if not path.exists():
+        return pd.DataFrame(columns=["ocid", "label_family", "label_value"])
+    return validate_evidence_labels(pd.read_parquet(path))
+
+
+def load_confirmed_outcome_labels(path: Path = CONFIRMED_OUTCOMES_PATH) -> pd.DataFrame:
+    """Load canonical confirmed-outcome labels when available."""
+    if not path.exists():
+        return pd.DataFrame(columns=["ocid", "label_family", "label_value"])
+    return validate_evidence_labels(pd.read_parquet(path))
+
+
+def summarize_evidence_label_coverage(
+    reviewed: pd.DataFrame,
+    outcomes: pd.DataFrame,
+) -> dict[str, object]:
+    """Summarize the amount of canonical evidence currently available."""
+    frames = [df for df in (reviewed, outcomes) if not df.empty]
+    combined = (
+        pd.concat(frames, ignore_index=True)
+        if frames
+        else pd.DataFrame(columns=["ocid", "label_family"])
+    )
+    family_counts = combined.get("label_family", pd.Series(dtype="object")).value_counts().to_dict()
+    return {
+        "reviewed_rows": int(len(reviewed)),
+        "confirmed_outcome_rows": int(len(outcomes)),
+        "unique_ocids_with_evidence": int(
+            combined.get("ocid", pd.Series(dtype="object")).nunique()
+        )
+        if len(combined)
+        else 0,
+        "families": family_counts,
+    }
 
 
 def select_reviewed_rows(

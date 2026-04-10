@@ -114,6 +114,16 @@ python scripts/run_diagnostics.py
 
 This will let the repo prefer row-level reviewed evidence over summary-only imports.
 
+## Canonical Evidence-Label Artifacts
+
+The repo now supports separate stronger evidence-label artifacts beside the baseline heuristic benchmark:
+
+- `data/processed/reviewed_row_labels.parquet` — canonical row-level reviewed labels with provenance
+- `data/processed/fraud_outcomes.parquet` — canonical confirmed-outcome labels with provenance
+- `models/evidence_label_coverage.json` — current evidence coverage summary across reviewed and confirmed-outcome artifacts
+
+These artifacts do not replace `train_data/labels.parquet` or `test_data/labels.parquet`. They are used to measure how much stronger, row-level evidence exists for future fraud-evidence evaluation.
+
 ## External Validation Snapshot
 
 Tracked artifacts:
