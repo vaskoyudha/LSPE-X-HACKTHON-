@@ -1,8 +1,7 @@
-import pandas as pd
-import pytest
 import numpy as np
 from pathlib import Path
-from pathlib import Path
+import pandas as pd
+import pytest
 
 from src.diagnostics import (
     PROXY_BROAD_FEATURES,
@@ -17,16 +16,18 @@ from src.diagnostics import (
 @pytest.mark.p1
 def test_resolve_proxy_feature_sets_removes_expected_columns():
     features = [
-        "f_single_bidder",
-        "f_num_tenderers",
         "f_title_length",
+        "f_buyer_supplier_repeat_count",
         "f_supplier_hist_avg_award",
     ]
     resolved = resolve_proxy_feature_sets(features)
     assert resolved["full"] == features
-    assert "f_single_bidder" not in resolved["proxy_core_removed"]
+    assert "f_title_length" not in resolved["proxy_core_removed"]
+    assert "f_buyer_supplier_repeat_count" not in resolved["proxy_core_removed"]
     assert "f_supplier_hist_avg_award" in resolved["proxy_core_removed"]
-    assert set(PROXY_CORE_FEATURES).issuperset({"f_single_bidder", "f_num_tenderers"})
+    assert set(PROXY_CORE_FEATURES).issuperset(
+        {"f_title_length", "f_buyer_supplier_repeat_count"}
+    )
     assert set(PROXY_BROAD_FEATURES).issuperset(set(PROXY_CORE_FEATURES))
 
 
@@ -97,13 +98,5 @@ def test_real_calibration_artifacts_are_not_synthetic():
     processed = Path("data/processed")
     sheet = pd.read_csv(processed / "calibration_sheet_100.csv")
     clean = pd.read_csv(processed / "clean_labels_100.csv")
-    assert float(sheet["ocid"].astype(str).str.startswith("ocds-synth-").mean()) == 0.0
-    assert float(clean["ocid"].astype(str).str.startswith("ocds-synth-").mean()) == 0.0
-
-
-@pytest.mark.p1
-def test_real_calibration_artifacts_are_not_synthetic():
-    sheet = pd.read_csv(Path("data/processed/calibration_sheet_100.csv"))
-    clean = pd.read_csv(Path("data/processed/clean_labels_100.csv"))
     assert float(sheet["ocid"].astype(str).str.startswith("ocds-synth-").mean()) == 0.0
     assert float(clean["ocid"].astype(str).str.startswith("ocds-synth-").mean()) == 0.0

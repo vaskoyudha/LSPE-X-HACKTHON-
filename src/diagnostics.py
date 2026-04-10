@@ -17,8 +17,6 @@ SYNTHETIC_OCID_PREFIX = "ocds-synth-"
 
 # Direct feature proxies to the heuristic risk rules in src.labels.
 PROXY_CORE_FEATURES = [
-    "f_single_bidder",
-    "f_num_tenderers",
     "f_title_length",
     "f_description_length",
     "f_title_token_count",
@@ -27,7 +25,6 @@ PROXY_CORE_FEATURES = [
     "f_is_december",
     "f_price_deviation_ratio",
     "f_tender_value_log",
-    "f_procurement_method_enc",
     "f_buyer_supplier_repeat_count",
     "f_supplier_recent_90d_award_count",
     "f_tender_value_zscore_buyer",
@@ -36,8 +33,8 @@ PROXY_CORE_FEATURES = [
 # Broader set including near-proxies tied to value and contract amounts.
 PROXY_BROAD_FEATURES = PROXY_CORE_FEATURES + [
     "f_award_value_log",
-    "f_contract_value_log",
-    "f_contract_award_ratio",
+    "f_tender_value_missing",
+    "f_award_value_missing",
     "f_buyer_recent_30d_tender_count",
     "f_buyer_hist_avg_value",
     "f_supplier_hist_max_award",
