@@ -14,5 +14,6 @@ def test_src_importable():
 def test_readme_mentions_evidence_label_coverage_artifact():
     readme = Path("README.md").read_text(encoding="utf-8")
     assert "models/evidence_label_coverage.json" in readme
+    assert "models/evaluation_lanes.json" in readme
     assert "reviewed_row_labels.parquet" in readme
     assert "fraud_outcomes.parquet" in readme

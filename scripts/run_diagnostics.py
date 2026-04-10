@@ -23,6 +23,7 @@ from src.diagnostics import (
     compute_operational_review_metrics,
     load_canonical_reviewed_labels,
     load_confirmed_outcome_labels,
+    load_metrics_artifact,
     load_reviewed_labels,
     load_manual_review_summary,
     load_row_level_reviewed_benchmark,
@@ -31,6 +32,8 @@ from src.diagnostics import (
     summarize_explanation_validation,
     summarize_data_provenance,
     summarize_evidence_label_coverage,
+    summarize_confirmed_outcome_alignment,
+    summarize_evaluation_lanes,
     summarize_feature_health,
     summarize_feature_health_overview,
 )
@@ -39,11 +42,13 @@ from src.model import (
     evaluate,
     load_decision_thresholds,
     load_model,
+    predict_with_thresholds,
 )
 
 MODELS_DIR = ROOT / "models"
 FIGURES_DIR = ROOT / "proposal" / "figures"
 EVIDENCE_DIR = ROOT / ".sisyphus" / "evidence"
+EVALUATION_LANES_PATH = MODELS_DIR / "evaluation_lanes.json"
 
 
 def main() -> None:
@@ -156,6 +161,7 @@ def main() -> None:
     probs = model.predict(dtest)
     if calibration and calibration.get("enabled"):
         probs = apply_temperature(probs, calibration["temperature"])
+    preds = predict_with_thresholds(probs, thresholds)
 
     operational = compute_operational_review_metrics(probs, test_y)
     (MODELS_DIR / "operational_metrics.json").write_text(
@@ -245,12 +251,31 @@ def main() -> None:
         json.dumps(explanation_validation, indent=2),
         encoding="utf-8",
     )
+    heuristic_metrics = load_metrics_artifact()
+    confirmed_outcome_alignment = summarize_confirmed_outcome_alignment(
+        confirmed_outcomes,
+        test_raw,
+        probs,
+        preds,
+    )
+    evaluation_lanes = summarize_evaluation_lanes(
+        heuristic_metrics,
+        reviewed_metrics,
+        explanation_validation,
+        evidence_coverage,
+        confirmed_outcome_alignment,
+    )
+    EVALUATION_LANES_PATH.write_text(
+        json.dumps(evaluation_lanes, indent=2),
+        encoding="utf-8",
+    )
 
     (EVIDENCE_DIR / "weakness-diagnostics.json").write_text(
         json.dumps(
             {
                 "provenance": provenance,
                 "evidence_label_coverage": evidence_coverage,
+                "evaluation_lanes": evaluation_lanes,
                 "feature_health_overview": feature_health_overview,
                 "robustness": robustness,
                 "operational_metrics": operational,

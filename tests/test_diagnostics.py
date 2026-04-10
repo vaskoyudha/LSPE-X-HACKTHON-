@@ -11,13 +11,16 @@ from src.diagnostics import (
     compute_operational_review_metrics,
     load_canonical_reviewed_labels,
     load_confirmed_outcome_labels,
+    load_metrics_artifact,
     load_reviewed_labels,
     load_manual_review_summary,
     load_row_level_reviewed_benchmark,
     resolve_proxy_feature_sets,
     select_reviewed_rows,
+    summarize_confirmed_outcome_alignment,
     summarize_explanation_validation,
     summarize_evidence_label_coverage,
+    summarize_evaluation_lanes,
     summarize_feature_health,
     summarize_feature_health_overview,
     summarize_data_provenance,
@@ -314,3 +317,84 @@ def test_load_confirmed_outcome_labels_validates_parquet(tmp_path):
     ).to_parquet(path, index=False)
     loaded = load_confirmed_outcome_labels(path)
     assert loaded["label_family"].tolist() == ["confirmed_fraud"]
+
+
+@pytest.mark.p1
+def test_summarize_confirmed_outcome_alignment_reports_descriptive_stats():
+    outcomes = pd.DataFrame(
+        [
+            {
+                "ocid": "ocds-1",
+                "label_family": "confirmed_fraud",
+                "label_value": "fraud",
+            },
+            {
+                "ocid": "ocds-missing",
+                "label_family": "confirmed_irregularity",
+                "label_value": "irregularity",
+            },
+        ]
+    )
+    raw = pd.DataFrame({"ocid": ["ocds-1", "ocds-2"]})
+    probs = np.array([[0.05, 0.1, 0.85], [0.7, 0.2, 0.1]])
+    preds = np.array([2, 0])
+
+    summary = summarize_confirmed_outcome_alignment(outcomes, raw, probs, preds)
+
+    assert summary["status"] == "descriptive_only"
+    assert summary["matched_rows"] == 1
+    assert summary["unmatched_rows"] == 1
+    assert summary["predicted_label_distribution"] == {"High Risk": 1}
+    assert summary["label_family_distribution"] == {"confirmed_fraud": 1}
+    assert summary["high_risk_probability_mean"] == 0.85
+
+
+@pytest.mark.p1
+def test_summarize_evaluation_lanes_separates_families():
+    heuristic_metrics = {
+        "final_test_thresholded": {
+            "partition": "test_thresholded",
+            "label_type": "heuristic_risk_labels",
+            "n_samples": 10,
+            "accuracy": 0.9,
+            "macro_f1": 0.8,
+            "weighted_f1": 0.85,
+        }
+    }
+    reviewed_metrics = {
+        "status": "available",
+        "source": "row_level_reviewed_benchmark",
+        "reviewed_rows": 2,
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "weighted_f1": 1.0,
+    }
+    explanation_validation = {
+        "status": "available",
+        "agreement_rate": 1.0,
+        "clarity_mean": 4.5,
+    }
+    evidence_coverage = {"reviewed_rows": 2, "confirmed_outcome_rows": 1}
+    confirmed_alignment = {
+        "status": "descriptive_only",
+        "matched_rows": 1,
+        "matched_unique_ocids": 1,
+        "predicted_label_distribution": {"High Risk": 1},
+        "label_family_distribution": {"confirmed_fraud": 1},
+        "high_risk_probability_mean": 0.9,
+        "message": "descriptive only",
+    }
+
+    summary = summarize_evaluation_lanes(
+        heuristic_metrics,
+        reviewed_metrics,
+        explanation_validation,
+        evidence_coverage,
+        confirmed_alignment,
+    )
+
+    assert summary["heuristic_risk_lane"]["label_family"] == "heuristic_risk"
+    assert summary["reviewed_risk_lane"]["label_family"] == "reviewed_risk"
+    assert summary["confirmed_outcome_lane"]["label_family"] == "confirmed_outcome"
+    assert summary["lane_separation_checks"]["heuristic_lane_uses_heuristic_metrics"] is True
+    assert summary["lane_separation_checks"]["confirmed_outcomes_descriptive_only"] is True

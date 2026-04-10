@@ -1,0 +1,42 @@
+{
+  "heuristic_risk_lane": {
+    "status": "available",
+    "label_family": "heuristic_risk",
+    "source": "models/metrics.json",
+    "partition": "test_thresholded",
+    "label_type": "heuristic_risk_labels",
+    "n_samples": 93034,
+    "accuracy": 0.99,
+    "macro_f1": 0.9833,
+    "weighted_f1": 0.99
+  },
+  "reviewed_risk_lane": {
+    "status": "available",
+    "label_family": "reviewed_risk",
+    "source": "manual_review_summary_csv",
+    "reviewed_rows": 500,
+    "accuracy": 0.958,
+    "macro_f1": 0.9679,
+    "weighted_f1": 0.9582,
+    "explanation_validation_status": "available",
+    "explanation_agreement_rate": 0.958,
+    "explanation_clarity_mean": 3.48
+  },
+  "confirmed_outcome_lane": {
+    "status": "pending_confirmed_outcomes",
+    "label_family": "confirmed_outcome",
+    "source": "/home/vascosera/.config/superpowers/worktrees/LSPE-X-HACKTHON-/gold-label-foundation/data/processed/fraud_outcomes.parquet",
+    "confirmed_outcome_rows": 0,
+    "matched_rows": 0,
+    "matched_unique_ocids": 0,
+    "prediction_distribution": {},
+    "family_distribution": {},
+    "high_risk_probability_mean": null,
+    "note": "No confirmed-outcome evidence rows available yet."
+  },
+  "lane_separation_checks": {
+    "heuristic_lane_uses_heuristic_metrics": true,
+    "reviewed_lane_source": "manual_review_summary_csv",
+    "confirmed_outcomes_descriptive_only": true
+  }
+}

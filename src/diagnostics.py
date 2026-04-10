@@ -56,6 +56,7 @@ RETIRED_DEAD_FEATURES = [
 REVIEW_BENCHMARK_PATH = Path("data/processed/review_benchmark_500.csv")
 MANUAL_REVIEW_SUMMARY_PATH = Path("data/processed/manual_review_summary.csv")
 ROW_LEVEL_REVIEWED_BENCHMARK_PATH = Path("data/processed/review_benchmark_500_reviewed.csv")
+METRICS_PATH = Path("models/metrics.json")
 
 
 def _iso(value) -> str | None:
@@ -305,6 +306,154 @@ def summarize_evidence_label_coverage(
         if len(combined)
         else 0,
         "families": family_counts,
+    }
+
+
+def load_metrics_artifact(path: Path = METRICS_PATH) -> dict[str, object]:
+    """Load the canonical heuristic metrics artifact when available."""
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
+def summarize_confirmed_outcome_alignment(
+    outcomes: pd.DataFrame,
+    raw_df: pd.DataFrame,
+    probs: np.ndarray,
+    preds: np.ndarray,
+) -> dict[str, object]:
+    """Describe how confirmed-outcome rows align to the current heuristic test set.
+
+    This is intentionally descriptive-only. Confirmed-outcome labels are not the
+    same target family as the heuristic three-class benchmark.
+    """
+
+    if outcomes.empty:
+        return {
+            "status": "pending_confirmed_outcomes",
+            "message": "No confirmed-outcome evidence rows available yet.",
+            "matched_rows": 0,
+            "unmatched_rows": 0,
+        }
+
+    if "ocid" not in raw_df.columns:
+        return {
+            "status": "unmatched_confirmed_outcomes",
+            "message": "Raw benchmark rows do not expose ocid for outcome alignment.",
+            "matched_rows": 0,
+            "unmatched_rows": int(len(outcomes)),
+        }
+
+    aligned = (
+        raw_df.reset_index(drop=True)
+        .reset_index()
+        .merge(outcomes, on="ocid", how="inner")
+    )
+    if aligned.empty:
+        return {
+            "status": "unmatched_confirmed_outcomes",
+            "message": "Confirmed-outcome rows did not align to the current heuristic benchmark.",
+            "matched_rows": 0,
+            "unmatched_rows": int(len(outcomes)),
+        }
+
+    idx = aligned["index"].astype(int).to_numpy()
+    matched_probs = np.asarray(probs[idx, 2], dtype=float)
+    matched_preds = np.asarray(preds[idx], dtype=int)
+    pred_names = pd.Series(matched_preds).map(CLASS_NAMES).value_counts().to_dict()
+
+    return {
+        "status": "descriptive_only",
+        "message": (
+            "Confirmed outcomes are reported as a separate descriptive lane until a dedicated "
+            "fraud-evidence model exists."
+        ),
+        "matched_rows": int(len(aligned)),
+        "matched_unique_ocids": int(aligned["ocid"].nunique()),
+        "unmatched_rows": int(len(outcomes) - len(aligned)),
+        "label_family_distribution": aligned["label_family"].value_counts().to_dict(),
+        "label_value_distribution": aligned["label_value"].value_counts().to_dict(),
+        "predicted_label_distribution": pred_names,
+        "high_risk_probability_mean": round(float(matched_probs.mean()), 4),
+        "high_risk_probability_median": round(float(np.median(matched_probs)), 4),
+        "high_risk_probability_max": round(float(matched_probs.max()), 4),
+        "high_risk_share_at_0_5": round(float((matched_probs >= 0.5).mean()), 4),
+    }
+
+
+def summarize_evaluation_lanes(
+    heuristic_metrics: dict[str, object],
+    reviewed_metrics: dict[str, object],
+    explanation_validation: dict[str, object],
+    evidence_coverage: dict[str, object],
+    confirmed_outcome_alignment: dict[str, object],
+) -> dict[str, object]:
+    """Build a single artifact describing each evaluation lane separately."""
+
+    heuristic_lane = (
+        heuristic_metrics.get("final_test_thresholded")
+        or heuristic_metrics.get("final_test_calibrated")
+        or heuristic_metrics.get("final_test")
+        or {}
+    )
+    reviewed_source = (
+        reviewed_metrics.get("source")
+        or reviewed_metrics.get("label_type")
+        or "reviewed_risk_labels"
+    )
+
+    return {
+        "heuristic_risk_lane": {
+            "status": "available" if heuristic_lane else "missing_metrics",
+            "label_family": "heuristic_risk",
+            "source": "models/metrics.json",
+            "partition": heuristic_lane.get("partition"),
+            "label_type": heuristic_lane.get("label_type"),
+            "n_samples": heuristic_lane.get("n_samples"),
+            "accuracy": heuristic_lane.get("accuracy"),
+            "macro_f1": heuristic_lane.get("macro_f1"),
+            "weighted_f1": heuristic_lane.get("weighted_f1"),
+        },
+        "reviewed_risk_lane": {
+            "status": reviewed_metrics.get("status", "pending_human_review"),
+            "label_family": "reviewed_risk",
+            "source": reviewed_source,
+            "reviewed_rows": reviewed_metrics.get("reviewed_rows")
+            or reviewed_metrics.get("matched_rows")
+            or evidence_coverage.get("reviewed_rows", 0),
+            "accuracy": reviewed_metrics.get("accuracy"),
+            "macro_f1": reviewed_metrics.get("macro_f1"),
+            "weighted_f1": reviewed_metrics.get("weighted_f1"),
+            "explanation_validation_status": explanation_validation.get("status"),
+            "explanation_agreement_rate": explanation_validation.get("agreement_rate")
+            or explanation_validation.get("agreement_yes_rate"),
+            "explanation_clarity_mean": explanation_validation.get("clarity_mean"),
+        },
+        "confirmed_outcome_lane": {
+            "status": confirmed_outcome_alignment.get("status", "pending_confirmed_outcomes"),
+            "label_family": "confirmed_outcome",
+            "source": str(CONFIRMED_OUTCOMES_PATH),
+            "confirmed_outcome_rows": evidence_coverage.get("confirmed_outcome_rows", 0),
+            "matched_rows": confirmed_outcome_alignment.get("matched_rows", 0),
+            "matched_unique_ocids": confirmed_outcome_alignment.get("matched_unique_ocids", 0),
+            "prediction_distribution": confirmed_outcome_alignment.get(
+                "predicted_label_distribution", {}
+            ),
+            "family_distribution": confirmed_outcome_alignment.get(
+                "label_family_distribution", {}
+            ),
+            "high_risk_probability_mean": confirmed_outcome_alignment.get(
+                "high_risk_probability_mean"
+            ),
+            "note": confirmed_outcome_alignment.get("message"),
+        },
+        "lane_separation_checks": {
+            "heuristic_lane_uses_heuristic_metrics": heuristic_lane.get("label_type")
+            == "heuristic_risk_labels",
+            "reviewed_lane_source": reviewed_source,
+            "confirmed_outcomes_descriptive_only": confirmed_outcome_alignment.get("status")
+            in {"descriptive_only", "pending_confirmed_outcomes", "unmatched_confirmed_outcomes"},
+        },
     }
 
 

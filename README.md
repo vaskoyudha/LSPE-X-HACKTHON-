@@ -121,6 +121,7 @@ The repo now supports separate stronger evidence-label artifacts beside the base
 - `data/processed/reviewed_row_labels.parquet` — canonical row-level reviewed labels with provenance
 - `data/processed/fraud_outcomes.parquet` — canonical confirmed-outcome labels with provenance
 - `models/evidence_label_coverage.json` — current evidence coverage summary across reviewed and confirmed-outcome artifacts
+- `models/evaluation_lanes.json` — lane-by-lane summary separating heuristic-risk, reviewed-risk, and confirmed-outcome reporting
 
 These artifacts do not replace `train_data/labels.parquet` or `test_data/labels.parquet`. They are used to measure how much stronger, row-level evidence exists for future fraud-evidence evaluation.
 
