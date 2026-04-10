@@ -168,73 +168,277 @@
   "real_after": {
     "metrics": {
       "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
-      "final_test": {
-        "partition": "test_uncalibrated",
+      "decision_thresholds": {
+        "high_risk": 0.5,
+        "low_risk": 0.5
+      },
+      "internal_validation": {
+        "partition": "val_hpo",
         "label_type": "heuristic_risk_labels",
-        "accuracy": 0.991,
-        "macro_f1": 0.9432,
-        "weighted_f1": 0.9909,
+        "accuracy": 0.9989,
+        "macro_f1": 0.9983,
+        "weighted_f1": 0.9989,
         "per_class_f1": {
-          "Low Risk": 0.9912,
-          "Medium Risk": 0.9916,
-          "High Risk": 0.8468
+          "Low Risk": 0.9997,
+          "Medium Risk": 0.9992,
+          "High Risk": 0.9959
         },
-        "log_loss": 0.0735,
+        "log_loss": 0.0028,
         "confusion_matrix": [
           [
-            42612,
-            4,
+            9429,
+            1,
             0
           ],
           [
-            751,
-            49347,
-            2
+            4,
+            39190,
+            59
           ],
           [
             0,
-            83,
-            235
+            0,
+            7140
           ]
         ],
         "classification_report": {
           "Low Risk": {
-            "precision": 0.9826810875631299,
-            "recall": 0.9999061385395157,
-            "f1-score": 0.9912187859826237,
-            "support": 42616.0
+            "precision": 0.9995759567475883,
+            "recall": 0.9998939554612938,
+            "f1-score": 0.9997349308169432,
+            "support": 9430.0
           },
           "Medium Risk": {
-            "precision": 0.99824007767933,
-            "recall": 0.9849700598802396,
-            "f1-score": 0.9915606727349449,
-            "support": 50100.0
+            "precision": 0.9999744839376388,
+            "recall": 0.9983950271316842,
+            "f1-score": 0.9991841313548518,
+            "support": 39253.0
           },
           "High Risk": {
-            "precision": 0.9915611814345991,
-            "recall": 0.7389937106918238,
-            "f1-score": 0.8468468468468469,
-            "support": 318.0
+            "precision": 0.9918044172801778,
+            "recall": 1.0,
+            "f1-score": 0.9958853476532533,
+            "support": 7140.0
           },
-          "accuracy": 0.9909710428445515,
+          "accuracy": 0.9988535191587696,
           "macro avg": {
-            "precision": 0.990827448892353,
-            "recall": 0.9079566363705264,
-            "f1-score": 0.943208768521472,
+            "precision": 0.9971182859884683,
+            "recall": 0.999429660864326,
+            "f1-score": 0.9982681366083495,
+            "support": 55823.0
+          },
+          "weighted avg": {
+            "precision": 0.9988621756178342,
+            "recall": 0.9988535191587696,
+            "f1-score": 0.9988552476205149,
+            "support": 55823.0
+          }
+        },
+        "n_samples": 55823
+      },
+      "internal_validation_thresholded": {
+        "partition": "val_hpo_thresholded",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.9989,
+        "macro_f1": 0.9983,
+        "weighted_f1": 0.9989,
+        "per_class_f1": {
+          "Low Risk": 0.9997,
+          "Medium Risk": 0.9992,
+          "High Risk": 0.9959
+        },
+        "log_loss": 0.0028,
+        "confusion_matrix": [
+          [
+            9429,
+            1,
+            0
+          ],
+          [
+            4,
+            39190,
+            59
+          ],
+          [
+            0,
+            0,
+            7140
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9995759567475883,
+            "recall": 0.9998939554612938,
+            "f1-score": 0.9997349308169432,
+            "support": 9430.0
+          },
+          "Medium Risk": {
+            "precision": 0.9999744839376388,
+            "recall": 0.9983950271316842,
+            "f1-score": 0.9991841313548518,
+            "support": 39253.0
+          },
+          "High Risk": {
+            "precision": 0.9918044172801778,
+            "recall": 1.0,
+            "f1-score": 0.9958853476532533,
+            "support": 7140.0
+          },
+          "accuracy": 0.9988535191587696,
+          "macro avg": {
+            "precision": 0.9971182859884683,
+            "recall": 0.999429660864326,
+            "f1-score": 0.9982681366083495,
+            "support": 55823.0
+          },
+          "weighted avg": {
+            "precision": 0.9988621756178342,
+            "recall": 0.9988535191587696,
+            "f1-score": 0.9988552476205149,
+            "support": 55823.0
+          }
+        },
+        "n_samples": 55823,
+        "decision_thresholds": {
+          "high_risk": 0.5,
+          "low_risk": 0.5
+        }
+      },
+      "final_test": {
+        "partition": "test_uncalibrated",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.99,
+        "macro_f1": 0.9833,
+        "weighted_f1": 0.9899,
+        "per_class_f1": {
+          "Low Risk": 0.9921,
+          "Medium Risk": 0.9911,
+          "High Risk": 0.9668
+        },
+        "log_loss": 0.0584,
+        "confusion_matrix": [
+          [
+            34802,
+            4,
+            0
+          ],
+          [
+            552,
+            51848,
+            27
+          ],
+          [
+            0,
+            348,
+            5453
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9843864909204051,
+            "recall": 0.9998850772855254,
+            "f1-score": 0.9920752565564425,
+            "support": 34806.0
+          },
+          "Medium Risk": {
+            "precision": 0.993256704980843,
+            "recall": 0.9889560722528468,
+            "f1-score": 0.9911017232645493,
+            "support": 52427.0
+          },
+          "High Risk": {
+            "precision": 0.9950729927007299,
+            "recall": 0.9400103430443028,
+            "f1-score": 0.9667582661111603,
+            "support": 5801.0
+          },
+          "accuracy": 0.9899929058193778,
+          "macro avg": {
+            "precision": 0.9909053962006594,
+            "recall": 0.9762838308608917,
+            "f1-score": 0.9833117486440507,
             "support": 93034.0
           },
           "weighted avg": {
-            "precision": 0.9910901560184553,
-            "recall": 0.9909710428445515,
-            "f1-score": 0.9909094178983331,
+            "precision": 0.9900514210467486,
+            "recall": 0.9899929058193778,
+            "f1-score": 0.9899480418664671,
             "support": 93034.0
           }
         },
         "n_samples": 93034
       },
+      "final_test_thresholded": {
+        "partition": "test_thresholded",
+        "label_type": "heuristic_risk_labels",
+        "accuracy": 0.99,
+        "macro_f1": 0.9833,
+        "weighted_f1": 0.9899,
+        "per_class_f1": {
+          "Low Risk": 0.9921,
+          "Medium Risk": 0.9911,
+          "High Risk": 0.9668
+        },
+        "log_loss": 0.0584,
+        "confusion_matrix": [
+          [
+            34802,
+            4,
+            0
+          ],
+          [
+            552,
+            51848,
+            27
+          ],
+          [
+            0,
+            348,
+            5453
+          ]
+        ],
+        "classification_report": {
+          "Low Risk": {
+            "precision": 0.9843864909204051,
+            "recall": 0.9998850772855254,
+            "f1-score": 0.9920752565564425,
+            "support": 34806.0
+          },
+          "Medium Risk": {
+            "precision": 0.993256704980843,
+            "recall": 0.9889560722528468,
+            "f1-score": 0.9911017232645493,
+            "support": 52427.0
+          },
+          "High Risk": {
+            "precision": 0.9950729927007299,
+            "recall": 0.9400103430443028,
+            "f1-score": 0.9667582661111603,
+            "support": 5801.0
+          },
+          "accuracy": 0.9899929058193778,
+          "macro avg": {
+            "precision": 0.9909053962006594,
+            "recall": 0.9762838308608917,
+            "f1-score": 0.9833117486440507,
+            "support": 93034.0
+          },
+          "weighted avg": {
+            "precision": 0.9900514210467486,
+            "recall": 0.9899929058193778,
+            "f1-score": 0.9899480418664671,
+            "support": 93034.0
+          }
+        },
+        "n_samples": 93034,
+        "decision_thresholds": {
+          "high_risk": 0.5,
+          "low_risk": 0.5
+        }
+      },
       "calibration": {
         "enabled": true,
-        "temperature": 4.799534,
+        "temperature": 5.669949,
         "n_calibration_samples": 96,
         "n_high_confidence": 95,
         "method": "temperature_scaling"
@@ -242,16 +446,16 @@
       "final_test_calibrated": {
         "partition": "test_calibrated",
         "label_type": "heuristic_risk_labels",
-        "accuracy": 0.991,
-        "macro_f1": 0.9432,
-        "weighted_f1": 0.9909,
+        "accuracy": 0.99,
+        "macro_f1": 0.9833,
+        "weighted_f1": 0.9899,
         "per_class_f1": {
-          "Low Risk": 0.9912,
-          "Medium Risk": 0.9916,
-          "High Risk": 0.8468
+          "Low Risk": 0.9921,
+          "Medium Risk": 0.9911,
+          "High Risk": 0.9668
         },
         "n_samples": 93034,
-        "temperature": 4.799534
+        "temperature": 5.669949
       }
     },
     "provenance": {
@@ -279,50 +483,57 @@
     "robustness": {
       "full": {
         "feature_count": 30,
-        "accuracy": 0.991,
-        "macro_f1": 0.9432,
-        "weighted_f1": 0.9909,
-        "log_loss": 0.0735
+        "accuracy": 0.99,
+        "macro_f1": 0.9833,
+        "weighted_f1": 0.99,
+        "log_loss": 0.0582
       },
       "proxy_core_removed": {
-        "feature_count": 21,
-        "accuracy": 0.5426,
-        "macro_f1": 0.3854,
-        "weighted_f1": 0.5367,
-        "log_loss": 0.7363,
-        "macro_f1_drop_vs_full": 0.5578,
+        "feature_count": 19,
+        "accuracy": 0.5377,
+        "macro_f1": 0.5215,
+        "weighted_f1": 0.5123,
+        "log_loss": 0.7628,
+        "macro_f1_drop_vs_full": 0.4618,
         "dropped_features": [
           "f_tender_value_log",
           "f_price_deviation_ratio",
-          "f_num_tenderers",
-          "f_single_bidder",
           "f_title_length",
           "f_description_length",
-          "f_procurement_method_enc",
           "f_is_q4",
-          "f_is_december"
+          "f_is_december",
+          "f_title_token_count",
+          "f_description_token_count",
+          "f_buyer_supplier_repeat_count",
+          "f_tender_value_zscore_buyer",
+          "f_supplier_recent_90d_award_count"
         ]
       },
       "proxy_broad_removed": {
-        "feature_count": 18,
-        "accuracy": 0.5373,
-        "macro_f1": 0.3781,
-        "weighted_f1": 0.5306,
-        "log_loss": 0.747,
-        "macro_f1_drop_vs_full": 0.5651,
+        "feature_count": 13,
+        "accuracy": 0.539,
+        "macro_f1": 0.5204,
+        "weighted_f1": 0.5137,
+        "log_loss": 0.764,
+        "macro_f1_drop_vs_full": 0.4629,
         "dropped_features": [
           "f_tender_value_log",
           "f_award_value_log",
           "f_price_deviation_ratio",
-          "f_num_tenderers",
-          "f_single_bidder",
           "f_title_length",
           "f_description_length",
-          "f_procurement_method_enc",
+          "f_tender_value_missing",
           "f_is_q4",
           "f_is_december",
-          "f_contract_value_log",
-          "f_contract_award_ratio"
+          "f_award_value_missing",
+          "f_title_token_count",
+          "f_description_token_count",
+          "f_buyer_hist_avg_value",
+          "f_buyer_supplier_repeat_count",
+          "f_supplier_hist_max_award",
+          "f_tender_value_zscore_buyer",
+          "f_buyer_recent_30d_tender_count",
+          "f_supplier_recent_90d_award_count"
         ]
       },
       "interpretation": "Large performance drops after removing direct heuristic proxies indicate the current benchmark acts more as an interpretable risk-rule accelerator than a validated real-world anomaly detector."
@@ -340,18 +551,21 @@
         "data/raw/2022.jsonl.gz",
         "data/raw/2023.jsonl.gz"
       ],
-      "generated_at_utc": "2026-04-09T18:29:42.423182+00:00",
+      "generated_at_utc": "2026-04-10T05:51:49.259370+00:00",
       "note": "This benchmark intentionally uses a recent multi-year real data slice to improve external validity while keeping the repo runnable. It should be compared against the earlier synthetic benchmark in models/benchmark_comparison.json."
     },
     "onnx": {
       "ubj_path": "models/xgb_model.ubj",
-      "onnx_path": "models/xgb_model.onnx"
+      "onnx_path": "models/xgb_model.onnx",
+      "onnx_mean_abs_diff_head64": 6.4942575761506305e-09
     }
   },
   "summary": {
     "synthetic_macro_f1": 0.995,
-    "real_macro_f1": 0.9432,
-    "macro_f1_delta_real_minus_synthetic": -0.0518,
+    "real_macro_f1": 0.9833,
+    "macro_f1_delta_real_minus_synthetic": -0.0117,
+    "synthetic_metric_partition": "final_test",
+    "real_metric_partition": "final_test_thresholded",
     "synthetic_data_kind": "synthetic_structured_benchmark",
     "real_data_kind": "real_or_mixed_ocds"
   }

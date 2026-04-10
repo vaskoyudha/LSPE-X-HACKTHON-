@@ -36,14 +36,14 @@
   "test_rows": 93034,
   "label_distribution": {
     "train": {
-      "low_risk": 154848,
-      "medium_risk": 213640,
-      "high_risk": 3662
+      "low_risk": 124351,
+      "medium_risk": 223427,
+      "high_risk": 24372
     },
     "test": {
-      "low_risk": 42616,
-      "medium_risk": 50100,
-      "high_risk": 318
+      "low_risk": 34806,
+      "medium_risk": 52427,
+      "high_risk": 5801
     }
   }
 }

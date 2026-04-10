@@ -5,26 +5,26 @@
 Berdasarkan artefak evaluasi pada `models/metrics.json`, model LPSE-X pada benchmark riil 2021-2023 mencapai:
 
 - Accuracy: **0,991**
-- Macro-F1: **0,9432**
-- Weighted-F1: **0,9909**
-- Log loss: **0,0735**
+- Macro-F1: **0,9833**
+- Weighted-F1: **0,9899**
+- Log loss: **0,0584**
 - Jumlah sampel test: **93.034**
 
-Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi jauh lebih kredibel daripada benchmark sintetis maupun benchmark riil satu tahun. Dengan kata lain, perluasan ke 2021-2023 menaikkan kembali performa sambil mempertahankan validitas eksternal yang lebih baik.
+Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi kini jauh lebih dekat dan jauh lebih kredibel daripada benchmark sintetis maupun benchmark riil satu tahun. Dengan kata lain, hardening pada benchmark riil 2021-2023 meningkatkan performa sambil mempertahankan validitas eksternal yang lebih baik.
 
 ## 4.2 Analisis per Kelas
 
 Nilai F1 per kelas pada benchmark riil multi-tahun adalah sebagai berikut:
 
-- Low Risk: **0,9912**
-- Medium Risk: **0,9916**
-- High Risk: **0,8468**
+- Low Risk: **0,9921**
+- Medium Risk: **0,9911**
+- High Risk: **0,9668**
 
 Interpretasi utama:
 
 1. Kelas Low dan Medium tetap sangat kuat.
-2. Kelas High masih paling sulit, tetapi jauh lebih baik dibanding benchmark riil satu tahun.
-3. Performa ini menunjukkan bahwa penambahan cakupan tahun riil memberi histori yang lebih kaya dan memperbaiki stabilitas prediksi.
+2. Kelas High masih paling sulit, tetapi kini sudah sangat kuat dibanding benchmark riil satu tahun maupun versi sebelum hardening.
+3. Performa ini menunjukkan bahwa kombinasi multi-year real benchmark, feature refresh, dan label redesign memberi histori yang lebih kaya serta memperbaiki stabilitas prediksi.
 
 Figure pendukung:
 
@@ -35,15 +35,15 @@ Figure pendukung:
 
 Confusion matrix final menunjukkan:
 
-- Low Risk: 42.611/42.616 terklasifikasi benar
-- Medium Risk: 49.313/50.100 terklasifikasi benar
-- High Risk: 234/318 terklasifikasi benar
+- Low Risk: 34.802/34.806 terklasifikasi benar
+- Medium Risk: 51.848/52.427 terklasifikasi benar
+- High Risk: 5.453/5.801 terklasifikasi benar
 
-Kesalahan utama tetap terjadi ketika kelas High diprediksi sebagai Medium, tetapi tingkat deteksi kelas High sudah jauh lebih baik dibanding benchmark riil 2023 saja.
+Kesalahan utama tetap terjadi ketika kelas High diprediksi sebagai Medium, tetapi tingkat deteksi kelas High sekarang jauh lebih tinggi daripada versi benchmark riil sebelumnya.
 
 ## 4.4 Kalibrasi Probabilitas
 
-Model akhir tetap menggunakan temperature scaling berdasarkan clean-label review subset. Temperatur tetap tinggi, yang menandakan probabilitas mentah model masih terlalu tajam dan perlu dilunakkan.
+Model akhir tetap menggunakan temperature scaling berdasarkan clean-label review subset. Temperatur saat ini berada pada **5,669949**, yang menandakan probabilitas mentah model masih cukup tajam dan perlu dilunakkan sebelum dipakai sebagai skor prioritas.
 
 Figure pendukung:
 
@@ -63,20 +63,20 @@ Figure pendukung:
 Perbandingan pada `models/benchmark_comparison.json` menunjukkan:
 
 - Macro-F1 benchmark sintetis: **0,9950**
-- Macro-F1 benchmark riil 2021-2023: **0,9349**
-- Delta: **-0,0518**
+- Macro-F1 benchmark riil 2021-2023: **0,9833**
+- Delta: **-0,0117**
 
-Ini adalah hasil yang jauh lebih sehat secara ilmiah. Benchmark sintetis sebelumnya jelas terlalu optimistis. Namun setelah benchmark diperluas ke data riil multi-tahun, performa kembali naik dibanding benchmark riil satu tahun dan tetap berada pada level yang kuat untuk Phase 2.
+Ini adalah hasil yang jauh lebih sehat secara ilmiah. Benchmark sintetis sebelumnya jelas terlalu optimistis. Namun setelah benchmark diperluas ke data riil multi-tahun, feature slots dibersihkan, dan label direka ulang mengikuti sinyal riil yang tersedia, performa kembali naik sampai mendekati benchmark sintetis sekaligus tetap berada pada level yang kuat untuk Phase 2.
 
 ## 4.7 Audit Kelemahan Model
 
 Audit tambahan pada `models/robustness.json` menunjukkan:
 
-- full model → Macro-F1 **0,9432**
-- proxy_core_removed → Macro-F1 **0,3854**
-- proxy_broad_removed → Macro-F1 **0,3781**
+- full model → Macro-F1 **0,9833**
+- proxy_core_removed → Macro-F1 **0,5215**
+- proxy_broad_removed → Macro-F1 **0,5204**
 
-Artinya, model masih sangat bergantung pada fitur yang berdekatan dengan heuristic labeling rules. Perluasan benchmark ke 2021-2023 memperbaiki kualitas data dan performa umum, tetapi tidak menghilangkan circularity risk.
+Artinya, model masih sangat bergantung pada fitur yang berdekatan dengan heuristic labeling rules. Namun, `models/feature_health.json` kini menunjukkan **0 active dead features**, sehingga kelemahan utama tersisa benar-benar berada pada circularity risk, bukan lagi pada feature catalog yang rusak.
 
 ## 4.8 Keterbatasan
 

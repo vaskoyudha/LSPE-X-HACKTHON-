@@ -164,11 +164,11 @@ Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkunga
 
 Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
 
-- **baseline_all_features (30 fitur)** → Macro-F1 0,9432
-- **proxy_core_removed (21 fitur)** → Macro-F1 0,3854
-- **proxy_broad_removed (18 fitur)** → Macro-F1 0,3781
+- **baseline_all_features (30 fitur)** → Macro-F1 0,9833
+- **proxy_core_removed (19 fitur)** → Macro-F1 0,5215
+- **proxy_broad_removed (13 fitur)** → Macro-F1 0,5204
 
-Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung tetap kuat, bahkan setelah benchmark diperluas menjadi multi-tahun. Jadi, migrasi ke data riil multi-tahun memperbaiki kredibilitas eksternal, tetapi tidak menghapus circularity risk.
+Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung tetap kuat, bahkan setelah benchmark diperluas menjadi multi-tahun dan dead feature slots dibersihkan. Jadi, migrasi ke data riil multi-tahun memperbaiki kredibilitas eksternal dan kualitas feature space, tetapi tidak menghapus circularity risk.
 
 ## 2.11 Perbandingan Benchmark Sintetis vs Riil
 
@@ -177,7 +177,7 @@ Artefak `models/benchmark_comparison.json` membandingkan benchmark sintetis sebe
 Ringkasan utama:
 
 - Macro-F1 sintetis: 0,9950
-- Macro-F1 riil 2021-2023: 0,9349
-- Delta: -0,0518
+- Macro-F1 riil 2021-2023: 0,9833
+- Delta: -0,0117
 
-Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun menunjukkan bahwa pipeline mentransfer lebih baik daripada benchmark riil satu tahun yang sebelumnya dipakai. Ini memperkuat validitas Phase 2 tanpa kembali ke klaim yang berlebihan.
+Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun yang sudah di-hardening kini mendekati performa sintetis tanpa kehilangan validitas eksternal. Ini memperkuat posisi Phase 2 jauh lebih kuat daripada benchmark riil satu tahun maupun pipeline pra-hardening.

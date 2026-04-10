@@ -33,21 +33,21 @@ Tracked comparison artifact:
 
 Current comparison:
 - synthetic benchmark Macro-F1: **0.9950**
-- real 2021–2023 benchmark Macro-F1: **0.9432**
-- delta: **-0.0518**
+- real 2021–2023 benchmark Macro-F1: **0.9833**
+- delta: **-0.0117**
 
-Interpretation: the previous synthetic benchmark overstated performance. The 2021–2023 real-data run is a much stronger Phase 2 signal because it keeps the full offline/XAI pipeline while forcing the model to operate on noisier, incomplete procurement fields over a broader period.
+Interpretation: the previous synthetic benchmark still overstates performance, but the hardened 2021–2023 real-data run now transfers much better after replacing dead features, redesigning heuristic labels around real-supported signals, and re-running real calibration.
 
 ## Robustness Snapshot
 
 The repository includes a circularity audit at `models/robustness.json` and `proposal/figures/robustness_ablation.png`.
 
 Current real-benchmark findings:
-- full model (30 features): Macro-F1 **0.9432**
-- core-proxy removed (21 features): Macro-F1 **0.3854**
-- broad-proxy removed (18 features): Macro-F1 **0.3781**
+- full model (30 features): Macro-F1 **0.9833**
+- core-proxy removed (19 features): Macro-F1 **0.5215**
+- broad-proxy removed (13 features): Macro-F1 **0.5204**
 
-Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but that weakness is now measured on a broader real data slice instead of only on synthetic data.
+Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but the feature-health audit now shows **0 active dead features** in the tracked real benchmark, so the current weakness is circularity rather than stale feature slots.
 
 ## Project Structure
 

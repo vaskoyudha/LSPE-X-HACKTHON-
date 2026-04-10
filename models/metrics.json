@@ -1,72 +1,144 @@
 {
   "note": "Metrics against heuristic risk labels, NOT confirmed fraud outcomes",
+  "decision_thresholds": {
+    "high_risk": 0.5,
+    "low_risk": 0.5
+  },
   "final_test": {
     "partition": "test_uncalibrated",
     "label_type": "heuristic_risk_labels",
-    "accuracy": 0.991,
-    "macro_f1": 0.9432,
-    "weighted_f1": 0.9909,
+    "accuracy": 0.99,
+    "macro_f1": 0.9833,
+    "weighted_f1": 0.99,
     "per_class_f1": {
-      "Low Risk": 0.9912,
-      "Medium Risk": 0.9916,
-      "High Risk": 0.8468
+      "Low Risk": 0.9921,
+      "Medium Risk": 0.9911,
+      "High Risk": 0.9668
     },
-    "log_loss": 0.0735,
+    "log_loss": 0.0582,
     "confusion_matrix": [
       [
-        42612,
-        4,
+        34801,
+        5,
         0
       ],
       [
-        751,
-        49347,
-        2
+        549,
+        51844,
+        34
       ],
       [
         0,
-        83,
-        235
+        341,
+        5460
       ]
     ],
     "classification_report": {
       "Low Risk": {
-        "precision": 0.9826810875631299,
-        "recall": 0.9999061385395157,
-        "f1-score": 0.9912187859826237,
-        "support": 42616.0
+        "precision": 0.9844695898161244,
+        "recall": 0.9998563466069068,
+        "f1-score": 0.9921033126175951,
+        "support": 34806.0
       },
       "Medium Risk": {
-        "precision": 0.99824007767933,
-        "recall": 0.9849700598802396,
-        "f1-score": 0.9915606727349449,
-        "support": 50100.0
+        "precision": 0.9933703774669477,
+        "recall": 0.9888797756880996,
+        "f1-score": 0.991119990058977,
+        "support": 52427.0
       },
       "High Risk": {
-        "precision": 0.9915611814345991,
-        "recall": 0.7389937106918238,
-        "f1-score": 0.8468468468468469,
-        "support": 318.0
+        "precision": 0.9938114306516199,
+        "recall": 0.9412170315462851,
+        "f1-score": 0.9667994687915007,
+        "support": 5801.0
       },
-      "accuracy": 0.9909710428445515,
+      "accuracy": 0.9900144033364147,
       "macro avg": {
-        "precision": 0.990827448892353,
-        "recall": 0.9079566363705264,
-        "f1-score": 0.943208768521472,
+        "precision": 0.9905504659782306,
+        "recall": 0.9766510512804305,
+        "f1-score": 0.9833409238226909,
         "support": 93034.0
       },
       "weighted avg": {
-        "precision": 0.9910901560184553,
-        "recall": 0.9909710428445515,
-        "f1-score": 0.9909094178983331,
+        "precision": 0.9900679045489794,
+        "recall": 0.9900144033364147,
+        "f1-score": 0.9899714011678472,
         "support": 93034.0
       }
     },
     "n_samples": 93034
   },
+  "final_test_thresholded": {
+    "partition": "test_thresholded",
+    "label_type": "heuristic_risk_labels",
+    "accuracy": 0.99,
+    "macro_f1": 0.9833,
+    "weighted_f1": 0.99,
+    "per_class_f1": {
+      "Low Risk": 0.9921,
+      "Medium Risk": 0.9911,
+      "High Risk": 0.9668
+    },
+    "log_loss": 0.0582,
+    "confusion_matrix": [
+      [
+        34801,
+        5,
+        0
+      ],
+      [
+        549,
+        51844,
+        34
+      ],
+      [
+        0,
+        341,
+        5460
+      ]
+    ],
+    "classification_report": {
+      "Low Risk": {
+        "precision": 0.9844695898161244,
+        "recall": 0.9998563466069068,
+        "f1-score": 0.9921033126175951,
+        "support": 34806.0
+      },
+      "Medium Risk": {
+        "precision": 0.9933703774669477,
+        "recall": 0.9888797756880996,
+        "f1-score": 0.991119990058977,
+        "support": 52427.0
+      },
+      "High Risk": {
+        "precision": 0.9938114306516199,
+        "recall": 0.9412170315462851,
+        "f1-score": 0.9667994687915007,
+        "support": 5801.0
+      },
+      "accuracy": 0.9900144033364147,
+      "macro avg": {
+        "precision": 0.9905504659782306,
+        "recall": 0.9766510512804305,
+        "f1-score": 0.9833409238226909,
+        "support": 93034.0
+      },
+      "weighted avg": {
+        "precision": 0.9900679045489794,
+        "recall": 0.9900144033364147,
+        "f1-score": 0.9899714011678472,
+        "support": 93034.0
+      }
+    },
+    "n_samples": 93034,
+    "decision_thresholds": {
+      "high_risk": 0.5,
+      "low_risk": 0.5
+    }
+  },
   "calibration": {
     "enabled": true,
-    "temperature": 4.799534,
+    "temperature": 7.435806,
     "n_calibration_samples": 96,
     "n_high_confidence": 95,
     "method": "temperature_scaling"
@@ -74,15 +146,15 @@
   "final_test_calibrated": {
     "partition": "test_calibrated",
     "label_type": "heuristic_risk_labels",
-    "accuracy": 0.991,
-    "macro_f1": 0.9432,
-    "weighted_f1": 0.9909,
+    "accuracy": 0.99,
+    "macro_f1": 0.9833,
+    "weighted_f1": 0.99,
     "per_class_f1": {
-      "Low Risk": 0.9912,
-      "Medium Risk": 0.9916,
-      "High Risk": 0.8468
+      "Low Risk": 0.9921,
+      "Medium Risk": 0.9911,
+      "High Risk": 0.9668
     },
     "n_samples": 93034,
-    "temperature": 4.799534
+    "temperature": 7.435806
   }
 }

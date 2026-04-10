@@ -240,9 +240,9 @@ Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkunga
 
 Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
 
-- **baseline_all_features (30 fitur)** → Macro-F1 0,9432
-- **proxy_core_removed (21 fitur)** → Macro-F1 0,3854
-- **proxy_broad_removed (18 fitur)** → Macro-F1 0,3781
+- **baseline_all_features (30 fitur)** → Macro-F1 0,9833
+- **proxy_core_removed (19 fitur)** → Macro-F1 0,5215
+- **proxy_broad_removed (13 fitur)** → Macro-F1 0,5204
 
 Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung tetap kuat, bahkan setelah benchmark diperluas menjadi multi-tahun. Jadi, migrasi ke data riil multi-tahun memperbaiki kredibilitas eksternal, tetapi tidak menghapus circularity risk.
 
@@ -253,8 +253,8 @@ Artefak `models/benchmark_comparison.json` membandingkan benchmark sintetis sebe
 Ringkasan utama:
 
 - Macro-F1 sintetis: 0,9950
-- Macro-F1 riil 2021-2023: 0,9349
-- Delta: -0,0518
+- Macro-F1 riil 2021-2023: 0,9833
+- Delta: -0,0117
 
 Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun menunjukkan bahwa pipeline mentransfer lebih baik daripada benchmark riil satu tahun yang sebelumnya dipakai. Ini memperkuat validitas Phase 2 tanpa kembali ke klaim yang berlebihan.
 
@@ -429,10 +429,10 @@ Karena itu, kontribusi utama LPSE-X pada tahap ini adalah **pembuktian arsitektu
 
 Berdasarkan artefak evaluasi pada `models/metrics.json`, model LPSE-X pada benchmark riil 2021-2023 mencapai:
 
-- Accuracy: **0,991**
-- Macro-F1: **0,9432**
-- Weighted-F1: **0,9909**
-- Log loss: **0,0735**
+- Accuracy: **0,9900**
+- Macro-F1: **0,9833**
+- Weighted-F1: **0,9899**
+- Log loss: **0,0584**
 - Jumlah sampel test: **93.034**
 
 Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi jauh lebih kredibel daripada benchmark sintetis maupun benchmark riil satu tahun. Dengan kata lain, perluasan ke 2021-2023 menaikkan kembali performa sambil mempertahankan validitas eksternal yang lebih baik.
@@ -441,9 +441,9 @@ Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi jau
 
 Nilai F1 per kelas pada benchmark riil multi-tahun adalah sebagai berikut:
 
-- Low Risk: **0,9912**
-- Medium Risk: **0,9916**
-- High Risk: **0,8468**
+- Low Risk: **0,9921**
+- Medium Risk: **0,9911**
+- High Risk: **0,9668**
 
 Interpretasi utama:
 
@@ -460,9 +460,9 @@ Figure pendukung:
 
 Confusion matrix final menunjukkan:
 
-- Low Risk: 42.611/42.616 terklasifikasi benar
-- Medium Risk: 49.313/50.100 terklasifikasi benar
-- High Risk: 234/318 terklasifikasi benar
+- Low Risk: 34.802/34.806 terklasifikasi benar
+- Medium Risk: 51.848/52.427 terklasifikasi benar
+- High Risk: 5.453/5.801 terklasifikasi benar
 
 Kesalahan utama tetap terjadi ketika kelas High diprediksi sebagai Medium, tetapi tingkat deteksi kelas High sudah jauh lebih baik dibanding benchmark riil 2023 saja.
 
@@ -488,8 +488,8 @@ Figure pendukung:
 Perbandingan pada `models/benchmark_comparison.json` menunjukkan:
 
 - Macro-F1 benchmark sintetis: **0,9950**
-- Macro-F1 benchmark riil 2021-2023: **0,9349**
-- Delta: **-0,0518**
+- Macro-F1 benchmark riil 2021-2023: **0,9833**
+- Delta: **-0,0117**
 
 Ini adalah hasil yang jauh lebih sehat secara ilmiah. Benchmark sintetis sebelumnya jelas terlalu optimistis. Namun setelah benchmark diperluas ke data riil multi-tahun, performa kembali naik dibanding benchmark riil satu tahun dan tetap berada pada level yang kuat untuk Phase 2.
 
@@ -497,9 +497,9 @@ Ini adalah hasil yang jauh lebih sehat secara ilmiah. Benchmark sintetis sebelum
 
 Audit tambahan pada `models/robustness.json` menunjukkan:
 
-- full model → Macro-F1 **0,9432**
-- proxy_core_removed → Macro-F1 **0,3854**
-- proxy_broad_removed → Macro-F1 **0,3781**
+- full model → Macro-F1 **0,9833**
+- proxy_core_removed → Macro-F1 **0,5215**
+- proxy_broad_removed → Macro-F1 **0,5204**
 
 Artinya, model masih sangat bergantung pada fitur yang berdekatan dengan heuristic labeling rules. Perluasan benchmark ke 2021-2023 memperbaiki kualitas data dan performa umum, tetapi tidak menghilangkan circularity risk.
 

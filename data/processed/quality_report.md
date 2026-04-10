@@ -3,7 +3,7 @@
 ## Overview
 
 - **Total rows**: 465,393
-- **Total columns**: 26
+- **Total columns**: 29
 - **Unique OCIDs**: 465,393
 - **Date range**: 2015-07-09 00:00:00+00:00 → 2023-12-20 23:00:00+00:00
 
@@ -20,6 +20,8 @@
 | `tender_procurementMethod` | 465,393 | 100.0% | 1 |
 | `tender_value_amount` | 257,551 | 55.3% | 200811 |
 | `tender_value_currency` | 465,393 | 100.0% | 1 |
+| `tender_mainProcurementCategory` | 465,393 | 100.0% | 4 |
+| `tender_items_count` | 465,393 | 100.0% | 2 |
 | `tender_tenderPeriod_startDate` | 257,342 | 55.3% | 1240 |
 | `tender_tenderPeriod_endDate` | 0 | 0.0% | 0 |
 | `tender_numberOfTenderers` | 0 | 0.0% | 0 |
@@ -30,6 +32,7 @@
 | `award_date` | 257,880 | 55.4% | 1175 |
 | `award_value_amount` | 257,880 | 55.4% | 239656 |
 | `award_value_currency` | 257,880 | 55.4% | 1 |
+| `award_items_count` | 257,880 | 55.4% | 1 |
 | `supplier_id` | 257,880 | 55.4% | 60993 |
 | `supplier_name` | 257,880 | 55.4% | 55505 |
 | `contract_id` | 257,880 | 55.4% | 1 |
@@ -49,6 +52,7 @@
 - `award_date`: 44.6% missing
 - `award_value_amount`: 44.6% missing
 - `award_value_currency`: 44.6% missing
+- `award_items_count`: 44.6% missing
 - `supplier_id`: 44.6% missing
 - `supplier_name`: 44.6% missing
 - `contract_id`: 44.6% missing
