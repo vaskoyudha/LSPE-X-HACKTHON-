@@ -57,6 +57,7 @@ REVIEW_BENCHMARK_PATH = Path("data/processed/review_benchmark_500.csv")
 MANUAL_REVIEW_SUMMARY_PATH = Path("data/processed/manual_review_summary.csv")
 ROW_LEVEL_REVIEWED_BENCHMARK_PATH = Path("data/processed/review_benchmark_500_reviewed.csv")
 METRICS_PATH = Path("models/metrics.json")
+FRAUD_EVIDENCE_METRICS_PATH = Path("models/fraud_evidence_metrics.json")
 
 
 def _iso(value) -> str | None:
@@ -316,6 +317,35 @@ def load_metrics_artifact(path: Path = METRICS_PATH) -> dict[str, object]:
     return json.loads(path.read_text())
 
 
+def summarize_fraud_evidence_lane(metrics: dict[str, object]) -> dict[str, object]:
+    """Summarize the separate fraud-evidence lane metrics."""
+
+    if not metrics:
+        return {
+            "status": "pending_fraud_evidence_metrics",
+            "label_family": "fraud_evidence",
+            "label_type": "fraud_evidence_positive_unlabeled",
+            "source": str(FRAUD_EVIDENCE_METRICS_PATH),
+            "message": (
+                "fraud_evidence_metrics.json is missing, so the fraud-evidence lane "
+                "remains pending until separate lane training runs."
+            ),
+        }
+
+    return {
+        "status": "available",
+        "label_family": "fraud_evidence",
+        "label_type": metrics.get("label_type"),
+        "source": str(FRAUD_EVIDENCE_METRICS_PATH),
+        "n_samples": metrics.get("n_samples"),
+        "n_positive": metrics.get("n_positive"),
+        "average_precision": metrics.get("average_precision"),
+        "roc_auc": metrics.get("roc_auc"),
+        "precision_at_10pct": metrics.get("precision_at_10pct"),
+        "feature_count": metrics.get("feature_count"),
+    }
+
+
 def summarize_confirmed_outcome_alignment(
     outcomes: pd.DataFrame,
     raw_df: pd.DataFrame,
@@ -387,6 +417,7 @@ def summarize_evaluation_lanes(
     explanation_validation: dict[str, object],
     evidence_coverage: dict[str, object],
     confirmed_outcome_alignment: dict[str, object],
+    fraud_evidence_lane: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Build a single artifact describing each evaluation lane separately."""
 
@@ -401,6 +432,7 @@ def summarize_evaluation_lanes(
         or reviewed_metrics.get("label_type")
         or "reviewed_risk_labels"
     )
+    fraud_evidence_summary = fraud_evidence_lane or summarize_fraud_evidence_lane({})
 
     return {
         "heuristic_risk_lane": {
@@ -447,12 +479,18 @@ def summarize_evaluation_lanes(
             ),
             "note": confirmed_outcome_alignment.get("message"),
         },
+        "fraud_evidence_lane": fraud_evidence_summary,
         "lane_separation_checks": {
             "heuristic_lane_uses_heuristic_metrics": heuristic_lane.get("label_type")
             == "heuristic_risk_labels",
             "reviewed_lane_source": reviewed_source,
             "confirmed_outcomes_descriptive_only": confirmed_outcome_alignment.get("status")
             in {"descriptive_only", "pending_confirmed_outcomes", "unmatched_confirmed_outcomes"},
+            "fraud_evidence_lane_separate": (
+                fraud_evidence_summary.get("label_family") == "fraud_evidence"
+                and fraud_evidence_summary.get("label_type")
+                != heuristic_lane.get("label_type")
+            ),
         },
     }
 

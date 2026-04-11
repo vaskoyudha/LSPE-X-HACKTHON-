@@ -122,8 +122,16 @@ The repo now supports separate stronger evidence-label artifacts beside the base
 - `data/processed/fraud_outcomes.parquet` — canonical confirmed-outcome labels with provenance
 - `models/evidence_label_coverage.json` — current evidence coverage summary across reviewed and confirmed-outcome artifacts
 - `models/evaluation_lanes.json` — lane-by-lane summary separating heuristic-risk, reviewed-risk, and confirmed-outcome reporting
+- `models/fraud_evidence_metrics.json` — binary fraud-evidence lane metrics using positive-unlabeled style labels
+- `models/fraud_evidence_model.ubj` — separate fraud-evidence model artifact
 
 These artifacts do not replace `train_data/labels.parquet` or `test_data/labels.parquet`. They are used to measure how much stronger, row-level evidence exists for future fraud-evidence evaluation.
+
+Separate fraud-evidence lane artifacts:
+- `models/fraud_evidence_metrics.json` — binary fraud-evidence lane metrics using positive-unlabeled style labels
+- `models/fraud_evidence_model.ubj` — separate fraud-evidence model artifact
+
+If `models/fraud_evidence_metrics.json` is still missing, diagnostics now report the fraud-evidence lane as **pending** instead of crashing, while keeping it separate from the heuristic-risk and reviewed-risk lanes.
 
 ## External Validation Snapshot
 

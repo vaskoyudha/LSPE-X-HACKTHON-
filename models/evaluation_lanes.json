@@ -34,9 +34,17 @@
     "high_risk_probability_mean": null,
     "note": "No confirmed-outcome evidence rows available yet."
   },
+  "fraud_evidence_lane": {
+    "status": "pending_fraud_evidence_metrics",
+    "label_family": "fraud_evidence",
+    "label_type": "fraud_evidence_positive_unlabeled",
+    "source": "models/fraud_evidence_metrics.json",
+    "message": "fraud_evidence_metrics.json is missing, so the fraud-evidence lane remains pending until separate lane training runs."
+  },
   "lane_separation_checks": {
     "heuristic_lane_uses_heuristic_metrics": true,
     "reviewed_lane_source": "manual_review_summary_csv",
-    "confirmed_outcomes_descriptive_only": true
+    "confirmed_outcomes_descriptive_only": true,
+    "fraud_evidence_lane_separate": true
   }
 }

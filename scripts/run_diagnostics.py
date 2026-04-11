@@ -34,6 +34,7 @@ from src.diagnostics import (
     summarize_evidence_label_coverage,
     summarize_confirmed_outcome_alignment,
     summarize_evaluation_lanes,
+    summarize_fraud_evidence_lane,
     summarize_feature_health,
     summarize_feature_health_overview,
 )
@@ -49,6 +50,13 @@ MODELS_DIR = ROOT / "models"
 FIGURES_DIR = ROOT / "proposal" / "figures"
 EVIDENCE_DIR = ROOT / ".sisyphus" / "evidence"
 EVALUATION_LANES_PATH = MODELS_DIR / "evaluation_lanes.json"
+
+
+def load_optional_json(path: Path) -> dict[str, object]:
+    """Load an optional JSON artifact without crashing when it is absent."""
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
 
 
 def main() -> None:
@@ -252,6 +260,10 @@ def main() -> None:
         encoding="utf-8",
     )
     heuristic_metrics = load_metrics_artifact()
+    fraud_evidence_metrics = load_optional_json(
+        MODELS_DIR / "fraud_evidence_metrics.json"
+    )
+    fraud_evidence_lane = summarize_fraud_evidence_lane(fraud_evidence_metrics)
     confirmed_outcome_alignment = summarize_confirmed_outcome_alignment(
         confirmed_outcomes,
         test_raw,
@@ -264,6 +276,7 @@ def main() -> None:
         explanation_validation,
         evidence_coverage,
         confirmed_outcome_alignment,
+        fraud_evidence_lane,
     )
     EVALUATION_LANES_PATH.write_text(
         json.dumps(evaluation_lanes, indent=2),
@@ -276,6 +289,7 @@ def main() -> None:
                 "provenance": provenance,
                 "evidence_label_coverage": evidence_coverage,
                 "evaluation_lanes": evaluation_lanes,
+                "fraud_evidence_lane": fraud_evidence_lane,
                 "feature_health_overview": feature_health_overview,
                 "robustness": robustness,
                 "operational_metrics": operational,

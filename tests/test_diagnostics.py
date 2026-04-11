@@ -21,6 +21,7 @@ from src.diagnostics import (
     summarize_explanation_validation,
     summarize_evidence_label_coverage,
     summarize_evaluation_lanes,
+    summarize_fraud_evidence_lane,
     summarize_feature_health,
     summarize_feature_health_overview,
     summarize_data_provenance,
@@ -396,5 +397,33 @@ def test_summarize_evaluation_lanes_separates_families():
     assert summary["heuristic_risk_lane"]["label_family"] == "heuristic_risk"
     assert summary["reviewed_risk_lane"]["label_family"] == "reviewed_risk"
     assert summary["confirmed_outcome_lane"]["label_family"] == "confirmed_outcome"
+    assert summary["fraud_evidence_lane"]["label_family"] == "fraud_evidence"
+    assert summary["fraud_evidence_lane"]["status"] == "pending_fraud_evidence_metrics"
     assert summary["lane_separation_checks"]["heuristic_lane_uses_heuristic_metrics"] is True
     assert summary["lane_separation_checks"]["confirmed_outcomes_descriptive_only"] is True
+    assert summary["lane_separation_checks"]["fraud_evidence_lane_separate"] is True
+
+
+@pytest.mark.p1
+def test_summarize_fraud_evidence_lane_reports_binary_metrics():
+    metrics = {
+        "label_type": "fraud_evidence_positive_unlabeled",
+        "n_samples": 100,
+        "n_positive": 7,
+        "average_precision": 0.41,
+        "precision_at_10pct": 0.6,
+    }
+    summary = summarize_fraud_evidence_lane(metrics)
+    assert summary["status"] == "available"
+    assert summary["label_family"] == "fraud_evidence"
+    assert summary["source"] == "models/fraud_evidence_metrics.json"
+    assert summary["precision_at_10pct"] == 0.6
+
+
+@pytest.mark.p1
+def test_summarize_fraud_evidence_lane_reports_pending_when_metrics_missing():
+    summary = summarize_fraud_evidence_lane({})
+    assert summary["status"] == "pending_fraud_evidence_metrics"
+    assert summary["label_family"] == "fraud_evidence"
+    assert summary["source"] == "models/fraud_evidence_metrics.json"
+    assert "pending" in summary["message"].lower()
