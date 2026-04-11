@@ -10,6 +10,7 @@ import xgboost as xgb
 import onnxmltools
 
 from src.model import (
+    _resolve_threshold_tuning_subset,
     _select_calibration_subset,
     compute_class_weights,
     compute_sample_weights,
@@ -17,7 +18,9 @@ from src.model import (
     run_hpo,
     search_decision_thresholds,
     train_final_model,
+    save_decision_thresholds,
     save_model,
+    load_decision_thresholds,
     load_model,
     evaluate,
     BASE_PARAMS,
@@ -249,3 +252,131 @@ class TestDecisionThresholds:
 
         assert set(thresholds) == {"high_risk", "low_risk"}
         assert all(isinstance(value, float) for value in thresholds.values())
+
+    def test_load_decision_thresholds_ignores_metadata(self, tmp_path, monkeypatch):
+        import src.model as model_mod
+
+        monkeypatch.setattr(model_mod, "DECISION_THRESHOLDS_PATH", tmp_path / "decision_thresholds.json")
+        save_decision_thresholds(
+            {"high_risk": 0.61, "low_risk": 0.42},
+            metadata={"source": "reviewed_val_calibration", "n_rows": 123},
+        )
+
+        loaded = load_decision_thresholds()
+
+        assert loaded == {"high_risk": 0.61, "low_risk": 0.42}
+
+    def test_resolve_threshold_tuning_subset_prefers_reviewed_rows(self, monkeypatch):
+        import src.model as model_mod
+
+        class DummyModel:
+            def predict(self, dmatrix):
+                n = dmatrix.num_row()
+                if n == 3:
+                    return np.array(
+                        [
+                            [0.70, 0.20, 0.10],
+                            [0.10, 0.70, 0.20],
+                            [0.05, 0.25, 0.70],
+                        ],
+                        dtype=float,
+                    )
+                if n == 4:
+                    return np.array(
+                        [
+                            [0.60, 0.30, 0.10],
+                            [0.20, 0.50, 0.30],
+                            [0.10, 0.25, 0.65],
+                            [0.05, 0.15, 0.80],
+                        ],
+                        dtype=float,
+                    )
+                raise AssertionError(f"unexpected num_row={n}")
+
+        train_features = pd.DataFrame({f"f_{i}": np.arange(7, dtype=float) for i in range(3)})
+        train_labels = pd.Series([0, 1, 2, 0, 1, 2, 2])
+
+        monkeypatch.setattr(
+            model_mod,
+            "load_dev_split_indices",
+            lambda _: {"train_fit": np.array([0, 1]), "val_hpo": np.array([0, 1, 2]), "val_calibration": np.array([3, 4, 5, 6])},
+        )
+        monkeypatch.setattr(
+            model_mod,
+            "load_clean_labels",
+            lambda: pd.DataFrame(
+                {
+                    "verified_label": [2, 1],
+                    "confidence": ["high", "medium"],
+                    "source_row_idx": [3, 1],
+                }
+            ),
+        )
+
+        probs, labels, metadata = _resolve_threshold_tuning_subset(
+            DummyModel(),
+            train_features,
+            train_labels,
+            min_reviewed_rows=2,
+        )
+
+        np.testing.assert_array_equal(labels, np.array([2, 1]))
+        np.testing.assert_allclose(
+            probs,
+            np.array(
+                [
+                    [0.05, 0.15, 0.80],
+                    [0.20, 0.50, 0.30],
+                ],
+                dtype=float,
+            ),
+        )
+        assert metadata["source"] == "reviewed_val_calibration"
+        assert metadata["n_rows"] == 2
+
+    def test_resolve_threshold_tuning_subset_applies_calibration(self, monkeypatch):
+        import src.model as model_mod
+
+        class DummyModel:
+            def predict(self, dmatrix):
+                return np.array(
+                    [
+                        [0.60, 0.30, 0.10],
+                        [0.10, 0.20, 0.70],
+                    ],
+                    dtype=float,
+                )
+
+        train_features = pd.DataFrame({f"f_{i}": np.arange(4, dtype=float) for i in range(2)})
+        train_labels = pd.Series([0, 2, 1, 2])
+        calibration = {"enabled": True, "temperature": 2.0}
+
+        monkeypatch.setattr(
+            model_mod,
+            "load_dev_split_indices",
+            lambda _: {"train_fit": np.array([0]), "val_hpo": np.array([0, 1]), "val_calibration": np.array([2, 3])},
+        )
+        monkeypatch.setattr(model_mod, "load_clean_labels", lambda: pd.DataFrame())
+
+        probs, labels, metadata = _resolve_threshold_tuning_subset(
+            DummyModel(),
+            train_features,
+            train_labels,
+            calibration=calibration,
+            min_reviewed_rows=2,
+        )
+
+        expected = model_mod.apply_temperature(
+            np.array(
+                [
+                    [0.60, 0.30, 0.10],
+                    [0.10, 0.20, 0.70],
+                ],
+                dtype=float,
+            ),
+            2.0,
+        )
+        np.testing.assert_allclose(probs, expected)
+        np.testing.assert_array_equal(labels, np.array([0, 2]))
+        assert metadata["source"] == "heuristic_val_hpo"
+        assert metadata["calibrated"] is True

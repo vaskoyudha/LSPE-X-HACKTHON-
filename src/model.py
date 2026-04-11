@@ -800,10 +800,15 @@ def load_model() -> xgb.Booster:
 # ---------------------------------------------------------------------------
 
 
-def save_decision_thresholds(thresholds: dict[str, float]) -> None:
+def save_decision_thresholds(
+    thresholds: dict[str, float],
+    metadata: dict[str, Any] | None = None,
+) -> None:
     """Persist the selected class decision thresholds."""
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    serializable = {key: float(value) for key, value in thresholds.items()}
+    serializable: dict[str, Any] = {key: float(value) for key, value in thresholds.items()}
+    if metadata:
+        serializable["tuning_metadata"] = metadata
     DECISION_THRESHOLDS_PATH.write_text(
         json.dumps(serializable, indent=2),
         encoding="utf-8",
@@ -815,9 +820,11 @@ def load_decision_thresholds() -> dict[str, float] | None:
     """Load persisted decision thresholds if available."""
     if not DECISION_THRESHOLDS_PATH.exists():
         return None
+    payload = json.loads(DECISION_THRESHOLDS_PATH.read_text(encoding="utf-8"))
     return {
-        key: float(value)
-        for key, value in json.loads(DECISION_THRESHOLDS_PATH.read_text(encoding="utf-8")).items()
+        key: float(payload[key])
+        for key in ["high_risk", "low_risk"]
+        if key in payload
     }
 
 
@@ -993,19 +1000,66 @@ def predict_probabilities(
     return probs
 
 
+def _resolve_threshold_tuning_subset(
+    model: xgb.Booster,
+    train_features: pd.DataFrame,
+    train_labels: pd.Series,
+    calibration: dict[str, Any] | None = None,
+    min_reviewed_rows: int = 60,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    """Choose the most trustworthy subset for decision-threshold tuning.
+
+    Prefer reviewed calibration rows when enough human-reviewed labels exist,
+    otherwise fall back to heuristic val_hpo labels.
+    """
+    dev_idx = load_dev_split_indices(train_features)
+    X_hpo = train_features.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
+    y_hpo = train_labels.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
+    hpo_probs = model.predict(xgb.DMatrix(X_hpo))
+    if calibration and calibration.get("enabled"):
+        hpo_probs = apply_temperature(hpo_probs, float(calibration["temperature"]))
+
+    metadata: dict[str, Any] = {
+        "source": "heuristic_val_hpo",
+        "n_rows": int(len(y_hpo)),
+        "calibrated": bool(calibration and calibration.get("enabled")),
+    }
+
+    clean = load_clean_labels()
+    if len(clean) >= min_reviewed_rows:
+        cal_features = train_features.iloc[dev_idx["val_calibration"]].reset_index(drop=True)
+        cal_probs = model.predict(xgb.DMatrix(cal_features))
+        if calibration and calibration.get("enabled"):
+            cal_probs = apply_temperature(cal_probs, float(calibration["temperature"]))
+        sample_probs, sample_labels = _select_calibration_subset(cal_probs, clean)
+        if len(sample_labels) >= min_reviewed_rows:
+            metadata = {
+                "source": "reviewed_val_calibration",
+                "n_rows": int(len(sample_labels)),
+                "calibrated": bool(calibration and calibration.get("enabled")),
+                "review_confidence": "high_or_medium",
+            }
+            return sample_probs, sample_labels, metadata
+
+    return hpo_probs, y_hpo.to_numpy(dtype=int), metadata
+
+
+
 def tune_decision_thresholds(
     model: xgb.Booster,
     train_features: pd.DataFrame,
     train_labels: pd.Series,
+    calibration: dict[str, Any] | None = None,
 ) -> dict[str, float]:
-    """Tune decision thresholds on val_hpo and persist them."""
-    dev_idx = load_dev_split_indices(train_features)
-    X_hpo = train_features.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
-    y_hpo = train_labels.iloc[dev_idx["val_hpo"]].reset_index(drop=True)
-
-    probs = model.predict(xgb.DMatrix(X_hpo))
-    thresholds = search_decision_thresholds(probs, y_hpo)
-    save_decision_thresholds(thresholds)
+    """Tune decision thresholds using reviewed calibration rows when available."""
+    probs, labels, metadata = _resolve_threshold_tuning_subset(
+        model,
+        train_features,
+        train_labels,
+        calibration=calibration,
+    )
+    thresholds = search_decision_thresholds(probs, labels)
+    save_decision_thresholds(thresholds, metadata=metadata)
     return thresholds
 
 
@@ -1513,14 +1567,18 @@ def run_evaluation_pipeline() -> dict:
     model = load_model()
     train_features, train_labels = load_train_artifacts()
     test_features, test_labels = load_test_artifacts()
-    thresholds = load_decision_thresholds()
-    if thresholds is None:
-        logger.info("--- Tuning decision thresholds ---")
-        thresholds = tune_decision_thresholds(model, train_features, train_labels)
 
     # Step 1: Calibration
     logger.info("--- Running calibration ---")
     calibration = run_calibration(model, train_features)
+
+    logger.info("--- Tuning decision thresholds ---")
+    thresholds = tune_decision_thresholds(
+        model,
+        train_features,
+        train_labels,
+        calibration=calibration if calibration.get("enabled") else None,
+    )
 
     # Step 2: Evaluate on test (uncalibrated)
     logger.info("--- Test metrics (uncalibrated) ---")
@@ -1535,6 +1593,7 @@ def run_evaluation_pipeline() -> dict:
 
     # Step 3: Evaluate on test (calibrated, if enabled)
     test_metrics_cal = None
+    test_metrics_cal_thresholded = None
     if calibration.get("enabled"):
         dtest = xgb.DMatrix(test_features)
         cal_probs = apply_temperature(
@@ -1555,6 +1614,16 @@ def run_evaluation_pipeline() -> dict:
             "n_samples": len(test_labels),
             "temperature": calibration["temperature"],
         }
+        cal_thresholded_preds = predict_with_thresholds(cal_probs, thresholds)
+        test_metrics_cal_thresholded = _build_metrics(
+            test_labels,
+            cal_probs,
+            cal_thresholded_preds,
+            "test_calibrated_thresholded",
+            thresholds=thresholds,
+            label_type="heuristic_risk_labels",
+        )
+        test_metrics_cal_thresholded["temperature"] = calibration["temperature"]
         logger.info(
             "[calibrated] Macro-F1=%.4f, Weighted-F1=%.4f",
             test_metrics_cal["macro_f1"], test_metrics_cal["weighted_f1"],
@@ -1584,6 +1653,8 @@ def run_evaluation_pipeline() -> dict:
     }
     if test_metrics_cal:
         full_metrics["final_test_calibrated"] = test_metrics_cal
+    if test_metrics_cal_thresholded:
+        full_metrics["final_test_calibrated_thresholded"] = test_metrics_cal_thresholded
 
     save_metrics(full_metrics)
 
