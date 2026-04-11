@@ -3,12 +3,14 @@
 This script:
   1. Loads train_data/raw.parquet
   2. Applies internal dev splits to extract val_calibration
-  3. Computes features for val_calibration and merges raw + feature inputs
+  3. Computes features for val_calibration using only prior train_fit + val_hpo
+     rows as history context, then merges raw + feature inputs
   4. Computes heuristic labels for the merged val_calibration frame
-  4. Selects 100 stratified samples
-  5. Saves as data/processed/calibration_sheet_100.csv
+  5. Selects 100 stratified samples
+  6. Saves as data/processed/calibration_sheet_100.csv
 
-SAFETY: Only val_calibration data is used. test_data is never touched.
+SAFETY: Only pre-val_calibration train rows are used as history context.
+test_data is never touched.
 """
 
 import argparse
@@ -43,12 +45,15 @@ def main(n_samples: int = 100) -> None:
     # Step 2: Extract val_calibration via dev splits
     logger.info("Applying internal dev splits...")
     dev_splits = internal_dev_splits(train_raw)
+    train_fit = dev_splits["train_fit"].reset_index(drop=True)
+    val_hpo = dev_splits["val_hpo"].reset_index(drop=True)
     val_cal = dev_splits["val_calibration"].reset_index(drop=True)
     logger.info("val_calibration: %d rows", len(val_cal))
 
     # Step 3: Compute features and merged label inputs for val_calibration
     logger.info("Computing features for val_calibration...")
-    val_cal_features = compute_all_features(val_cal)
+    prior_history = pd.concat([train_fit, val_hpo], axis=0, ignore_index=True)
+    val_cal_features = compute_all_features(val_cal, history_df=prior_history)
     val_cal_label_inputs = pd.concat(
         [val_cal.reset_index(drop=True), val_cal_features.reset_index(drop=True)],
         axis=1,

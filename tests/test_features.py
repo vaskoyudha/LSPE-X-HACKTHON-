@@ -169,3 +169,76 @@ class TestCombinedFeatures:
         feats = compute_all_features(sample_raw_df)
         for col in feats.columns:
             assert col.startswith("f_"), f"Feature '{col}' not prefixed with 'f_'"
+
+    def test_history_context_carries_forward_prior_rows(self):
+        history_df = pd.DataFrame(
+            {
+                "ocid": ["hist-1", "hist-2"],
+                "tender_datePublished": pd.to_datetime(["2020-01-01", "2020-02-01"], utc=True),
+                "tender_tenderPeriod_startDate": pd.to_datetime(["2019-12-20", "2020-01-20"], utc=True),
+                "award_date": pd.to_datetime(["2020-01-10", "2020-02-10"], utc=True),
+                "tender_value_amount": [100.0, 200.0],
+                "award_value_amount": [90.0, 180.0],
+                "buyer_id": ["buyer-A", "buyer-A"],
+                "supplier_id": ["sup-1", "sup-1"],
+                "tender_title": ["Pengadaan 1", "Pengadaan 2"],
+                "tender_description": ["desc 1", "desc 2"],
+            }
+        )
+        target_df = pd.DataFrame(
+            {
+                "ocid": ["target-1"],
+                "tender_datePublished": pd.to_datetime(["2020-03-01"], utc=True),
+                "tender_tenderPeriod_startDate": pd.to_datetime(["2020-02-20"], utc=True),
+                "award_date": pd.to_datetime(["2020-03-10"], utc=True),
+                "tender_value_amount": [300.0],
+                "award_value_amount": [270.0],
+                "buyer_id": ["buyer-A"],
+                "supplier_id": ["sup-1"],
+                "tender_title": ["Pengadaan 3"],
+                "tender_description": ["desc 3"],
+            }
+        )
+
+        feats = compute_all_features(target_df, history_df=history_df)
+
+        assert feats.loc[0, "f_buyer_hist_avg_value"] == pytest.approx(150.0)
+        assert feats.loc[0, "f_supplier_hist_win_count"] == pytest.approx(2.0)
+        assert feats.loc[0, "f_buyer_supplier_repeat_count"] == pytest.approx(2.0)
+
+    def test_history_context_still_respects_past_only_within_target_rows(self):
+        history_df = pd.DataFrame(
+            {
+                "ocid": ["hist-1"],
+                "tender_datePublished": pd.to_datetime(["2020-01-01"], utc=True),
+                "tender_tenderPeriod_startDate": pd.to_datetime(["2019-12-20"], utc=True),
+                "award_date": pd.to_datetime(["2020-01-10"], utc=True),
+                "tender_value_amount": [100.0],
+                "award_value_amount": [90.0],
+                "buyer_id": ["buyer-A"],
+                "supplier_id": ["sup-1"],
+                "tender_title": ["Pengadaan 1"],
+                "tender_description": ["desc 1"],
+            }
+        )
+        target_df = pd.DataFrame(
+            {
+                "ocid": ["target-1", "target-2"],
+                "tender_datePublished": pd.to_datetime(["2020-03-01", "2020-04-01"], utc=True),
+                "tender_tenderPeriod_startDate": pd.to_datetime(["2020-02-20", "2020-03-20"], utc=True),
+                "award_date": pd.to_datetime(["2020-03-10", "2020-04-10"], utc=True),
+                "tender_value_amount": [300.0, 500.0],
+                "award_value_amount": [270.0, 450.0],
+                "buyer_id": ["buyer-A", "buyer-A"],
+                "supplier_id": ["sup-1", "sup-1"],
+                "tender_title": ["Pengadaan 2", "Pengadaan 3"],
+                "tender_description": ["desc 2", "desc 3"],
+            }
+        )
+
+        feats = compute_all_features(target_df, history_df=history_df)
+
+        assert feats.loc[0, "f_buyer_hist_avg_value"] == pytest.approx(100.0)
+        assert feats.loc[0, "f_buyer_hist_tender_count"] == pytest.approx(1.0)
+        assert feats.loc[1, "f_buyer_hist_avg_value"] == pytest.approx(200.0)
+        assert feats.loc[1, "f_buyer_hist_tender_count"] == pytest.approx(2.0)

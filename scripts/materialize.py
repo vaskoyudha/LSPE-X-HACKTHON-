@@ -234,7 +234,7 @@ def materialize(use_synthetic: bool = False, n_synthetic: int = 5000) -> dict:
     # Step 4: Compute features per partition
     logger.info("--- Computing features ---")
     train_features = compute_all_features(train_raw)
-    test_features = compute_all_features(test_raw)
+    test_features = compute_all_features(test_raw, history_df=train_raw)
     save_features(train_features, "train")
     save_features(test_features, "test")
     logger.info(

@@ -1,7 +1,8 @@
 """Feature engineering utilities for split-aware procurement features.
 
-All features are computed from split raw inputs only.
-No feature may look ahead in time (expanding-window only for Tier 2).
+Tier 1 features are computed directly from the target rows.
+Tier 2 features may optionally use prior-history rows as expanding-window
+context, but never future rows.
 All output columns are numeric-safe for downstream ONNX path.
 
 Feature catalog:
@@ -380,13 +381,38 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-def compute_all_features(df: pd.DataFrame) -> pd.DataFrame:
+def compute_all_features(
+    df: pd.DataFrame,
+    history_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """Compute all 30 feature families (Tier 1 + Tier 2).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Target rows to featurize.
+    history_df : pd.DataFrame | None
+        Optional prior-history rows that should be visible to Tier 2
+        expanding-window features. These rows are used only as historical
+        context and are not included in the returned feature frame.
 
     Returns a DataFrame with 30 numeric columns, all ONNX-safe.
     """
     t1 = tier1_features(df)
-    t2 = tier2_features(df)
+
+    if history_df is not None and len(history_df) > 0:
+        history_len = len(history_df)
+        target_index = df.index
+        tier2_context = pd.concat(
+            [history_df.reset_index(drop=True), df.reset_index(drop=True)],
+            axis=0,
+            ignore_index=True,
+        )
+        t2 = tier2_features(tier2_context).iloc[history_len:].copy()
+        t2.index = target_index
+    else:
+        t2 = tier2_features(df)
+
     combined = pd.concat([t1, t2], axis=1)
 
     # Update the frozen catalog

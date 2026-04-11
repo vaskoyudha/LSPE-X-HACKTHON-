@@ -85,9 +85,9 @@ def run_external_validation(years: list[int], download_missing: bool = False) ->
 
         X_fit = compute_all_features(train_fit_raw)
         y_fit = _build_labels(train_fit_raw, X_fit)
-        X_hpo = compute_all_features(val_hpo_raw)
+        X_hpo = compute_all_features(val_hpo_raw, history_df=train_fit_raw)
         y_hpo = _build_labels(val_hpo_raw, X_hpo)
-        X_test = compute_all_features(test_raw)
+        X_test = compute_all_features(test_raw, history_df=train_raw)
         y_test = _build_labels(test_raw, X_test)
 
         model = train_final_model(X_fit, y_fit, X_hpo, y_hpo, best_params.copy())
