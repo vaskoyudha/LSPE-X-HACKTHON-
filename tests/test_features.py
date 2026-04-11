@@ -97,9 +97,9 @@ class TestTier1Features:
 
 @pytest.mark.p0
 class TestTier2Features:
-    def test_returns_15_columns(self, sample_raw_df):
+    def test_returns_19_columns(self, sample_raw_df):
         feats = tier2_features(sample_raw_df)
-        assert len(feats.columns) == 15
+        assert len(feats.columns) == 19
 
     def test_all_numeric(self, sample_raw_df):
         feats = tier2_features(sample_raw_df)
@@ -129,9 +129,9 @@ class TestTier2Features:
 
 @pytest.mark.p0
 class TestCombinedFeatures:
-    def test_30_total_features(self, sample_raw_df):
+    def test_34_total_features(self, sample_raw_df):
         feats = compute_all_features(sample_raw_df)
-        assert len(feats.columns) == 30
+        assert len(feats.columns) == 34
 
     def test_real_supported_replacement_features_exist(self, sample_raw_df):
         sample_raw_df["tender_mainProcurementCategory"] = ["services"] * len(
@@ -152,11 +152,14 @@ class TestCombinedFeatures:
             "f_supplier_recent_90d_award_count",
             "f_title_token_count",
             "f_description_token_count",
+            "f_buyer_unique_suppliers_count",
+            "f_supplier_unique_buyers_count",
+            "f_pair_share_of_buyer_history",
+            "f_pair_share_of_supplier_history",
         }
 
         assert expected.issubset(set(feats.columns))
-        assert len(feats.columns) == 30
-        assert "f_supplier_unique_buyers" not in feats.columns
+        assert len(feats.columns) == 34
 
     def test_all_numeric_onnx_safe(self, sample_raw_df):
         feats = compute_all_features(sample_raw_df)
@@ -242,3 +245,40 @@ class TestCombinedFeatures:
         assert feats.loc[0, "f_buyer_hist_tender_count"] == pytest.approx(1.0)
         assert feats.loc[1, "f_buyer_hist_avg_value"] == pytest.approx(200.0)
         assert feats.loc[1, "f_buyer_hist_tender_count"] == pytest.approx(2.0)
+
+    def test_concentration_features_capture_dependency_patterns(self):
+        history_df = pd.DataFrame(
+            {
+                "ocid": ["hist-1", "hist-2", "hist-3"],
+                "tender_datePublished": pd.to_datetime(["2020-01-01", "2020-02-01", "2020-03-01"], utc=True),
+                "tender_tenderPeriod_startDate": pd.to_datetime(["2019-12-20", "2020-01-20", "2020-02-20"], utc=True),
+                "award_date": pd.to_datetime(["2020-01-10", "2020-02-10", "2020-03-10"], utc=True),
+                "tender_value_amount": [100.0, 200.0, 150.0],
+                "award_value_amount": [90.0, 180.0, 140.0],
+                "buyer_id": ["buyer-A", "buyer-A", "buyer-B"],
+                "supplier_id": ["sup-1", "sup-1", "sup-1"],
+                "tender_title": ["Pengadaan 1", "Pengadaan 2", "Pengadaan 3"],
+                "tender_description": ["desc 1", "desc 2", "desc 3"],
+            }
+        )
+        target_df = pd.DataFrame(
+            {
+                "ocid": ["target-1"],
+                "tender_datePublished": pd.to_datetime(["2020-04-01"], utc=True),
+                "tender_tenderPeriod_startDate": pd.to_datetime(["2020-03-20"], utc=True),
+                "award_date": pd.to_datetime(["2020-04-10"], utc=True),
+                "tender_value_amount": [300.0],
+                "award_value_amount": [270.0],
+                "buyer_id": ["buyer-A"],
+                "supplier_id": ["sup-1"],
+                "tender_title": ["Pengadaan 4"],
+                "tender_description": ["desc 4"],
+            }
+        )
+
+        feats = compute_all_features(target_df, history_df=history_df)
+
+        assert feats.loc[0, "f_buyer_unique_suppliers_count"] == pytest.approx(1.0)
+        assert feats.loc[0, "f_supplier_unique_buyers_count"] == pytest.approx(2.0)
+        assert feats.loc[0, "f_pair_share_of_buyer_history"] == pytest.approx(1.0)
+        assert feats.loc[0, "f_pair_share_of_supplier_history"] == pytest.approx(2.0 / 3.0)

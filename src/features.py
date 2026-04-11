@@ -7,7 +7,7 @@ All output columns are numeric-safe for downstream ONNX path.
 
 Feature catalog:
   Tier 1 (15 families): direct from raw fields
-  Tier 2 (15 families): temporal and aggregated, past-only windows
+  Tier 2 (19 families): temporal, dependency, and aggregated past-only windows
 """
 
 from __future__ import annotations
@@ -152,7 +152,7 @@ def tier1_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Tier 2: Temporal and aggregated features (15 families)
+# Tier 2: Temporal and aggregated features (19 families)
 # ---------------------------------------------------------------------------
 
 
@@ -162,7 +162,7 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     CRITICAL: For each row, only data from BEFORE that row's tender date
     is used. This is the anti-leakage guarantee.
 
-    Returns a DataFrame with 15 numeric feature columns.
+    Returns a DataFrame with 19 numeric feature columns.
     """
     feats = pd.DataFrame(index=df.index)
 
@@ -354,6 +354,41 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     # 30. Supplier historical average award value
     feats_sorted_30 = _expanding_group_stat(supplier_sorted, award_val_sorted, "mean")
 
+    # 31-34. Buyer/supplier concentration and dependency features
+    feats_sorted_31 = pd.Series(0.0, index=range(n))
+    feats_sorted_32 = pd.Series(0.0, index=range(n))
+    feats_sorted_33 = pd.Series(0.0, index=range(n))
+    feats_sorted_34 = pd.Series(0.0, index=range(n))
+    buyer_suppliers_seen: dict[str, set[str]] = {}
+    supplier_buyers_seen: dict[str, set[str]] = {}
+    buyer_partner_event_count: dict[str, int] = {}
+    supplier_partner_event_count: dict[str, int] = {}
+    pair_partner_history: dict[tuple[str, str], int] = {}
+    for i in range(n):
+        b = buyer_sorted.iloc[i]
+        s = supplier_sorted.iloc[i]
+
+        if b:
+            feats_sorted_31.iloc[i] = float(len(buyer_suppliers_seen.get(b, set())))
+        if s:
+            feats_sorted_32.iloc[i] = float(len(supplier_buyers_seen.get(s, set())))
+
+        if b and s:
+            pair_key = (b, s)
+            buyer_events = buyer_partner_event_count.get(b, 0)
+            supplier_events = supplier_partner_event_count.get(s, 0)
+            pair_events = pair_partner_history.get(pair_key, 0)
+            if buyer_events > 0:
+                feats_sorted_33.iloc[i] = float(pair_events / buyer_events)
+            if supplier_events > 0:
+                feats_sorted_34.iloc[i] = float(pair_events / supplier_events)
+
+            buyer_suppliers_seen.setdefault(b, set()).add(s)
+            supplier_buyers_seen.setdefault(s, set()).add(b)
+            buyer_partner_event_count[b] = buyer_events + 1
+            supplier_partner_event_count[s] = supplier_events + 1
+            pair_partner_history[pair_key] = pair_events + 1
+
     # Map sorted results back to original index
     inverse_idx = sort_idx.argsort()
 
@@ -372,6 +407,10 @@ def tier2_features(df: pd.DataFrame) -> pd.DataFrame:
     feats["f_buyer_hist_avg_award"] = feats_sorted_28.values[inverse_idx]
     feats["f_buyer_hist_award_std"] = feats_sorted_29.values[inverse_idx]
     feats["f_supplier_hist_avg_award"] = feats_sorted_30.values[inverse_idx]
+    feats["f_buyer_unique_suppliers_count"] = feats_sorted_31.values[inverse_idx]
+    feats["f_supplier_unique_buyers_count"] = feats_sorted_32.values[inverse_idx]
+    feats["f_pair_share_of_buyer_history"] = feats_sorted_33.values[inverse_idx]
+    feats["f_pair_share_of_supplier_history"] = feats_sorted_34.values[inverse_idx]
 
     return feats
 
@@ -385,7 +424,7 @@ def compute_all_features(
     df: pd.DataFrame,
     history_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Compute all 30 feature families (Tier 1 + Tier 2).
+    """Compute all 34 feature families (Tier 1 + Tier 2).
 
     Parameters
     ----------
@@ -396,7 +435,7 @@ def compute_all_features(
         expanding-window features. These rows are used only as historical
         context and are not included in the returned feature frame.
 
-    Returns a DataFrame with 30 numeric columns, all ONNX-safe.
+    Returns a DataFrame with 34 numeric columns, all ONNX-safe.
     """
     t1 = tier1_features(df)
 

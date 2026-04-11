@@ -148,6 +148,102 @@ def _extract_first(lst: list[dict] | None, *keys: str, default: Any = None) -> A
     return _safe_get(lst[0], *keys, default=default)
 
 
+def _extract_award_supplier_rows(record: dict) -> list[dict]:
+    """Extract all award-supplier relationships from an OCDS record.
+
+    The flat training table still keeps one supplier per award row for backward
+    compatibility, but this helper preserves the full supplier list so future
+    graph/entity workflows can use it.
+    """
+    ocid = record.get("ocid", "")
+    tender_id = _safe_get(record, "tender", "id", default="")
+    buyer_id = _safe_get(record, "buyer", "id", default="")
+    buyer_name = _safe_get(record, "buyer", "name", default="")
+
+    rows: list[dict] = []
+    for award in record.get("awards", []) or []:
+        award_id = award.get("id", "")
+        award_date = award.get("date", "")
+        award_status = award.get("status", "")
+        for supplier_position, supplier in enumerate(award.get("suppliers", []) or []):
+            rows.append(
+                {
+                    "ocid": ocid,
+                    "tender_id": tender_id,
+                    "award_id": award_id,
+                    "award_date": award_date,
+                    "award_status": award_status,
+                    "buyer_id": buyer_id,
+                    "buyer_name": buyer_name,
+                    "supplier_id": supplier.get("id", ""),
+                    "supplier_name": supplier.get("name", ""),
+                    "supplier_position": supplier_position,
+                }
+            )
+    return rows
+
+
+def _extract_party_rows(record: dict) -> list[dict]:
+    """Extract normalized party/entity rows from an OCDS record."""
+    ocid = record.get("ocid", "")
+    rows: list[dict] = []
+    for party in record.get("parties", []) or []:
+        roles = party.get("roles", []) or []
+        rows.append(
+            {
+                "ocid": ocid,
+                "party_id": party.get("id", ""),
+                "party_name": party.get("name", ""),
+                "party_roles": "|".join(str(role) for role in roles),
+            }
+        )
+    return rows
+
+
+def extract_relational_tables(paths: list[Path] | Path) -> dict[str, pd.DataFrame]:
+    """Extract graph/entity-ready relational tables from OCDS JSONL files."""
+    if isinstance(paths, Path):
+        paths = [paths]
+
+    award_supplier_rows: list[dict] = []
+    party_rows: list[dict] = []
+
+    for path in paths:
+        logger.info("Extracting relational tables from %s ...", path.name)
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                award_supplier_rows.extend(_extract_award_supplier_rows(record))
+                party_rows.extend(_extract_party_rows(record))
+
+    return {
+        "award_suppliers": pd.DataFrame(award_supplier_rows),
+        "parties": pd.DataFrame(party_rows),
+    }
+
+
+def save_relational_tables(
+    tables: dict[str, pd.DataFrame],
+    output_dir: Path | None = None,
+) -> dict[str, Path]:
+    """Persist extracted relational tables as parquet artifacts."""
+    output_dir = output_dir or (PROCESSED_DIR / "relational")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    saved: dict[str, Path] = {}
+    for name, df in tables.items():
+        path = output_dir / f"{name}.parquet"
+        df.to_parquet(path, index=False, engine="pyarrow")
+        saved[name] = path
+    return saved
+
+
 def _flatten_release(record: dict) -> list[dict]:
     """Flatten one OCDS record (contracting process) into row(s).
 
@@ -465,6 +561,10 @@ def run_pipeline(
 
     # Step 2: Flatten
     df = flatten_jsonl_gz(paths)
+
+    # Step 2b: Preserve richer relational views for graph/entity work
+    relational_tables = extract_relational_tables(paths)
+    save_relational_tables(relational_tables)
 
     # Step 3: Clean dates
     df = clean_dates(df)

@@ -41,6 +41,31 @@ SHAP_SUMMARY_PATH = Path("proposal/figures/shap_summary.png")
 FIGURES_DIR = PROJECT_ROOT / "proposal" / "figures"
 LABEL_NAMES: Dict[int, str] = {0: "Rendah", 1: "Sedang", 2: "Tinggi"}
 
+
+class XGBoostContributionExplainer:
+    """SHAP-compatible fallback using native XGBoost feature contributions."""
+
+    def __init__(self, model: xgb.Booster):
+        self.model = model
+
+    def shap_values(self, X):
+        if isinstance(X, xgb.DMatrix):
+            dmatrix = X
+        elif isinstance(X, pd.DataFrame):
+            dmatrix = xgb.DMatrix(X)
+        else:
+            arr = np.asarray(X, dtype=np.float32)
+            if arr.ndim == 1:
+                arr = arr.reshape(1, -1)
+            dmatrix = xgb.DMatrix(arr)
+
+        contrib = self.model.predict(dmatrix, pred_contribs=True)
+        if isinstance(contrib, np.ndarray) and contrib.ndim == 3:
+            return np.transpose(contrib[:, :, :-1], (0, 2, 1))
+        if isinstance(contrib, np.ndarray) and contrib.ndim == 2:
+            return contrib[:, :-1]
+        return contrib
+
 # ---------------------------------------------------------------------------
 # Model / explainer loading
 # ---------------------------------------------------------------------------
@@ -403,17 +428,25 @@ def get_counterfactual_dice(
 
 
 def get_explainer(model: xgb.Booster | None = None):
-    """Create a SHAP TreeExplainer for the XGBoost model.
+    """Create a SHAP TreeExplainer or XGBoost-contrib fallback.
 
-    Uses the native .ubj model (not ONNX) for SHAP compatibility.
+    Uses the native .ubj model (not ONNX) for SHAP compatibility. If SHAP is
+    unavailable or binary-incompatible in the current environment, fall back to
+    native XGBoost feature contributions so explanation paths remain usable.
     """
-    import shap
-
     if model is None:
         model = load_model()
 
-    explainer = shap.TreeExplainer(model)
-    return explainer
+    try:
+        import shap
+        return shap.TreeExplainer(model)
+    except Exception as exc:
+        logger.warning(
+            "SHAP TreeExplainer unavailable (%s: %s); using XGBoost contribution fallback.",
+            type(exc).__name__,
+            exc,
+        )
+        return XGBoostContributionExplainer(model)
 
 
 def compute_shap_values(
@@ -555,7 +588,6 @@ def generate_shap_summary(
     """
     import matplotlib
     matplotlib.use("Agg")
-    import shap
     import matplotlib.pyplot as plt
 
     if model is None:

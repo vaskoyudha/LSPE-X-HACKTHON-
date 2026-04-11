@@ -9,10 +9,13 @@ import pandas as pd
 import pytest
 
 from src.data import (
+    _extract_award_supplier_rows,
+    _extract_party_rows,
     _flatten_release,
     _gzip_looks_readable,
     _safe_get,
     clean_dates,
+    extract_relational_tables,
     generate_quality_report,
     flatten_jsonl_gz,
     REQUIRED_FIELDS,
@@ -209,6 +212,55 @@ class TestFlattenRelease:
         assert row["tender_mainProcurementCategory"] == "services"
         assert row["tender_items_count"] == 2
         assert row["award_items_count"] == 1
+
+
+@pytest.mark.p1
+class TestRelationalExtraction:
+    def test_extract_award_supplier_rows_preserves_multiple_suppliers(self):
+        record = {
+            "ocid": "ocds-rel-001",
+            "tender": {"id": "T-REL-1"},
+            "buyer": {"id": "buyer-1", "name": "Buyer 1"},
+            "awards": [
+                {
+                    "id": "A-REL-1",
+                    "suppliers": [
+                        {"id": "sup-1", "name": "PT Alpha"},
+                        {"id": "sup-2", "name": "PT Beta"},
+                    ],
+                }
+            ],
+        }
+
+        rows = _extract_award_supplier_rows(record)
+
+        assert len(rows) == 2
+        assert rows[0]["supplier_id"] == "sup-1"
+        assert rows[1]["supplier_id"] == "sup-2"
+        assert rows[0]["supplier_position"] == 0
+        assert rows[1]["supplier_position"] == 1
+
+    def test_extract_party_rows_preserves_roles(self):
+        record = {
+            "ocid": "ocds-rel-002",
+            "parties": [
+                {"id": "buyer-1", "name": "Buyer 1", "roles": ["buyer"]},
+                {"id": "sup-1", "name": "PT Alpha", "roles": ["supplier", "tenderer"]},
+            ],
+        }
+
+        rows = _extract_party_rows(record)
+
+        assert len(rows) == 2
+        assert rows[0]["party_id"] == "buyer-1"
+        assert rows[1]["party_roles"] == "supplier|tenderer"
+
+    def test_extract_relational_tables_returns_dataframes(self, sample_jsonl_gz: Path):
+        relations = extract_relational_tables(sample_jsonl_gz)
+
+        assert set(relations) == {"award_suppliers", "parties"}
+        assert len(relations["award_suppliers"]) == 1
+        assert list(relations["award_suppliers"]["supplier_name"]) == ["PT Medika Sejahtera"]
 
 
 @pytest.mark.p1
