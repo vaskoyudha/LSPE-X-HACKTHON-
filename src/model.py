@@ -693,6 +693,10 @@ def run_hpo(
             early_stopping_rounds=20,
             verbose_eval=False,
         )
+        trial.set_user_attr(
+            "selected_n_rounds",
+            _selected_n_rounds_from_booster(model, n_rounds),
+        )
 
         # Evaluate with macro F1 on validation
         preds_prob = model.predict(dval)
@@ -708,6 +712,12 @@ def run_hpo(
     study.optimize(objective, n_trials=n_trials, timeout=timeout)
 
     best = study.best_params.copy()
+    best["n_rounds"] = int(
+        study.best_trial.user_attrs.get(
+            "selected_n_rounds",
+            best.get("n_rounds", 300),
+        )
+    )
     best_f1 = study.best_value
 
     logger.info("HPO complete: best macro F1 = %.4f", best_f1)
@@ -730,39 +740,54 @@ def train_final_model(
 ) -> xgb.Booster:
     """Train the final model on train_fit + val_hpo with best HPO params.
 
-    Uses early stopping on val to determine optimal boosting rounds.
+    Uses the boosting-round count selected during HPO. No early stopping is
+    applied here because val_hpo is already merged into the final training
+    data.
     """
-    # Extract n_rounds from HPO params (separate from XGB params)
-    n_rounds = hpo_params.pop("n_rounds", 300)
+    params = hpo_params.copy()
+    n_rounds = int(params.pop("n_rounds", 300))
 
     # Combine train_fit + val_hpo for final training
     X_combined = pd.concat([X_train, X_val], axis=0).reset_index(drop=True)
     y_combined = pd.concat([y_train, y_val], axis=0).reset_index(drop=True)
 
     w_combined = compute_sample_weights(y_combined)
-    w_val = compute_sample_weights(y_val)
-
     dtrain = xgb.DMatrix(X_combined, label=y_combined, weight=w_combined)
-    dval = xgb.DMatrix(X_val, label=y_val, weight=w_val)
 
-    params = {**BASE_PARAMS, **hpo_params}
+    params = {**BASE_PARAMS, **params}
 
     model = xgb.train(
         params,
         dtrain,
         num_boost_round=n_rounds,
-        evals=[(dtrain, "train"), (dval, "val")],
-        early_stopping_rounds=30,
+        evals=[(dtrain, "train")],
         verbose_eval=False,
     )
 
     logger.info(
-        "Final model trained: %d trees, best iteration: %d",
+        "Final model trained: %d trees, configured rounds: %d",
         model.num_boosted_rounds(),
-        model.best_iteration,
+        n_rounds,
     )
 
     return model
+
+
+def _selected_n_rounds_from_booster(model: Any, fallback_n_rounds: int) -> int:
+    """Resolve the usable boosting-round count from an HPO-trained booster."""
+    best_iteration = getattr(model, "best_iteration", None)
+    if best_iteration is None:
+        return int(fallback_n_rounds)
+
+    try:
+        best_iteration = int(best_iteration)
+    except (TypeError, ValueError):
+        return int(fallback_n_rounds)
+
+    if best_iteration < 0:
+        return int(fallback_n_rounds)
+
+    return min(int(fallback_n_rounds), best_iteration + 1)
 
 
 # ---------------------------------------------------------------------------

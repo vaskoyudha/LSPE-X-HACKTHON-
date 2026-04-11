@@ -12,6 +12,7 @@ import onnxmltools
 from src.model import (
     _resolve_threshold_tuning_subset,
     _select_calibration_subset,
+    _selected_n_rounds_from_booster,
     compute_class_weights,
     compute_sample_weights,
     predict_with_thresholds,
@@ -133,6 +134,52 @@ class TestTrainFinalModel:
         # Probabilities should sum to 1
         row_sums = probs.sum(axis=1)
         np.testing.assert_allclose(row_sums, 1.0, atol=1e-5)
+
+    def test_final_model_does_not_reuse_validation_for_early_stopping(self, synthetic_split_data, monkeypatch):
+        import src.model as model_mod
+
+        X_fit, y_fit, X_hpo, y_hpo = synthetic_split_data
+        captured = {}
+
+        class DummyBooster:
+            def num_boosted_rounds(self):
+                return 17
+
+        def fake_train(params, dtrain, num_boost_round, evals=None, early_stopping_rounds=None, verbose_eval=False):
+            captured["num_boost_round"] = num_boost_round
+            captured["evals"] = evals
+            captured["early_stopping_rounds"] = early_stopping_rounds
+            return DummyBooster()
+
+        monkeypatch.setattr(model_mod.xgb, "train", fake_train)
+
+        model = train_final_model(
+            X_fit,
+            y_fit,
+            X_hpo,
+            y_hpo,
+            {"max_depth": 4, "learning_rate": 0.1, "n_rounds": 17},
+        )
+
+        assert isinstance(model, DummyBooster)
+        assert captured["num_boost_round"] == 17
+        assert captured["early_stopping_rounds"] is None
+        assert [name for _, name in captured["evals"]] == ["train"]
+
+
+@pytest.mark.p0
+class TestBoostRoundSelection:
+    def test_selected_n_rounds_uses_best_iteration_when_available(self):
+        class DummyBooster:
+            best_iteration = 18
+
+        assert _selected_n_rounds_from_booster(DummyBooster(), 50) == 19
+
+    def test_selected_n_rounds_falls_back_when_best_iteration_missing(self):
+        class DummyBooster:
+            pass
+
+        assert _selected_n_rounds_from_booster(DummyBooster(), 50) == 50
 
 
 @pytest.mark.p1
