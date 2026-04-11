@@ -45,44 +45,120 @@ def _entropy(probs: np.ndarray) -> np.ndarray:
     return -np.sum(probs * np.log(probs + eps), axis=1)
 
 
+
+def _nearest_threshold_margin(
+    probs: np.ndarray,
+    thresholds: dict[str, float],
+) -> np.ndarray:
+    """Distance to the nearest low/high decision threshold."""
+    probs = np.asarray(probs, dtype=float)
+    if probs.ndim != 2 or probs.shape[1] != 3:
+        raise ValueError("Expected probability matrix with shape (n_samples, 3)")
+
+    high_threshold = float(thresholds["high_risk"])
+    low_threshold = float(thresholds["low_risk"])
+    high_margin = np.abs(probs[:, 2] - high_threshold)
+    low_margin = np.abs(probs[:, 0] - low_threshold)
+    return np.minimum(high_margin, low_margin)
+
+
+
+def _review_priority_score(
+    probs: np.ndarray,
+    preds: np.ndarray,
+    heuristic_labels: np.ndarray,
+    thresholds: dict[str, float],
+) -> np.ndarray:
+    """Composite queue score for manual review prioritization.
+
+    Higher values mean the row is more useful for review collection: strong high-risk
+    signal, disagreement between heuristic and model, high uncertainty, and proximity
+    to a decision threshold.
+    """
+    probs = np.asarray(probs, dtype=float)
+    preds = np.asarray(preds, dtype=int)
+    heuristic = np.asarray(heuristic_labels, dtype=int)
+
+    p_high = probs[:, 2]
+    entropy = _entropy(probs)
+    entropy_norm = entropy / np.log(probs.shape[1])
+    disagreement = (preds != heuristic).astype(float)
+    margin = _nearest_threshold_margin(probs, thresholds)
+    boundary_focus = 1.0 - np.clip(margin / 0.25, 0.0, 1.0)
+
+    score = (
+        0.45 * p_high
+        + 0.25 * entropy_norm
+        + 0.20 * disagreement
+        + 0.10 * boundary_focus
+    )
+    return np.clip(score, 0.0, 1.0)
+
+
+
 def _select_review_rows(
     probs: np.ndarray,
     preds: np.ndarray,
+    heuristic_labels: np.ndarray,
+    thresholds: dict[str, float],
     n_rows: int,
 ) -> tuple[np.ndarray, list[str]]:
-    """Select a review mix: high-risk, uncertain, and stratified by class."""
+    """Select a review mix: high-risk, disagreement, uncertainty, threshold-boundary, and stratified rows."""
     p_high = probs[:, 2]
     entropy = _entropy(probs)
+    disagreement_mask = preds != heuristic_labels
+    threshold_margin = _nearest_threshold_margin(probs, thresholds)
+    priority = _review_priority_score(probs, preds, heuristic_labels, thresholds)
+
     selected: list[int] = []
     reasons: list[str] = []
 
     def add_indices(indices: np.ndarray, reason: str, limit: int) -> None:
+        added = 0
         for idx in indices:
-            if idx not in selected:
-                selected.append(int(idx))
+            idx_int = int(idx)
+            if idx_int not in selected:
+                selected.append(idx_int)
                 reasons.append(reason)
-                if len([r for r in reasons if r == reason]) >= limit:
+                added += 1
+                if added >= limit:
                     break
 
-    high_n = max(1, int(n_rows * 0.40))
-    uncertain_n = max(1, int(n_rows * 0.30))
-    stratified_n = max(1, n_rows - high_n - uncertain_n)
+    high_n = max(1, int(round(n_rows * 0.30)))
+    disagreement_n = max(1, int(round(n_rows * 0.25)))
+    uncertain_n = max(1, int(round(n_rows * 0.20)))
+    boundary_n = max(1, int(round(n_rows * 0.15)))
+    stratified_n = max(1, n_rows - high_n - disagreement_n - uncertain_n - boundary_n)
 
-    add_indices(np.argsort(p_high)[::-1], "high_risk_probability", high_n)
+    add_indices(np.argsort(priority)[::-1], "priority_mix", high_n)
+
+    disagreement_idx = np.flatnonzero(disagreement_mask)
+    if len(disagreement_idx) > 0:
+        disagreement_sorted = disagreement_idx[np.argsort(priority[disagreement_idx])[::-1]]
+        add_indices(disagreement_sorted, "model_heuristic_disagreement", disagreement_n)
+
     add_indices(np.argsort(entropy)[::-1], "high_uncertainty", uncertain_n)
+    add_indices(np.argsort(threshold_margin), "near_decision_threshold", boundary_n)
 
-    remaining = [idx for idx in range(len(preds)) if idx not in selected]
-    remaining_arr = np.array(remaining, dtype=int)
-    if len(remaining_arr) > 0:
+    remaining = np.array([idx for idx in range(len(preds)) if idx not in selected], dtype=int)
+    if len(remaining) > 0:
         per_class = max(1, stratified_n // 3)
         for cls in [2, 1, 0]:
-            cls_idx = remaining_arr[preds[remaining_arr] == cls]
-            add_indices(cls_idx, f"stratified_predicted_{LABEL_TEXT[cls].lower().replace(' ', '_')}", per_class)
+            cls_idx = remaining[preds[remaining] == cls]
+            if len(cls_idx) == 0:
+                continue
+            cls_sorted = cls_idx[np.argsort(priority[cls_idx])[::-1]]
+            add_indices(
+                cls_sorted,
+                f"stratified_predicted_{LABEL_TEXT[cls].lower().replace(' ', '_')}",
+                per_class,
+            )
 
     if len(selected) < n_rows:
-        add_indices(np.argsort(p_high)[::-1], "top_up", n_rows)
+        add_indices(np.argsort(priority)[::-1], "top_up", n_rows)
 
     return np.array(selected[:n_rows], dtype=int), reasons[:n_rows]
+
 
 
 def main(n_rows: int = 500) -> None:
@@ -102,8 +178,17 @@ def main(n_rows: int = 500) -> None:
     if calibration and calibration.get("enabled"):
         probs = apply_temperature(probs, calibration["temperature"])
     preds = predict_with_thresholds(probs, thresholds)
+    heuristic_labels = labels.to_numpy(dtype=int)
 
-    selected_idx, reasons = _select_review_rows(probs, preds, min(n_rows, len(features)))
+    selected_idx, reasons = _select_review_rows(
+        probs,
+        preds,
+        heuristic_labels,
+        thresholds,
+        min(n_rows, len(features)),
+    )
+    priority_scores = _review_priority_score(probs, preds, heuristic_labels, thresholds)
+    threshold_margins = _nearest_threshold_margin(probs, thresholds)
 
     xai_model = load_xai_model()
     explainer = get_explainer(xai_model)
@@ -131,6 +216,13 @@ def main(n_rows: int = 500) -> None:
                 "source_partition": "test",
                 "source_row_idx": int(idx),
                 "sampling_reason": reason,
+                "review_priority_score": round(float(priority_scores[idx]), 6),
+                "heuristic_pred_disagree": bool(preds[idx] != heuristic_labels[idx]),
+                "nearest_threshold_margin": round(float(threshold_margins[idx]), 6),
+                "high_risk_threshold": round(float(thresholds["high_risk"]), 6),
+                "low_risk_threshold": round(float(thresholds["low_risk"]), 6),
+                "high_risk_margin": round(float(probs[idx, 2] - thresholds["high_risk"]), 6),
+                "low_risk_margin": round(float(probs[idx, 0] - thresholds["low_risk"]), 6),
                 "ocid": raw.iloc[idx].get("ocid", ""),
                 "tender_title": raw.iloc[idx].get("tender_title", ""),
                 "tender_datePublished": raw.iloc[idx].get("tender_datePublished", ""),
