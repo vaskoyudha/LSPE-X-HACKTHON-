@@ -1,28 +1,17 @@
-# LPSE-X
+# LPSE-X — Find IT! 2026 Track C Submission Repo
 
-**LPSE-X** adalah sistem triase risiko pengadaan publik berbasis Explainable AI untuk **Find IT! 2026 Track C — The Explainable Oracle**.
+LPSE-X adalah **sistem triase risiko pengadaan publik berbasis Explainable AI** untuk membantu prioritisasi audit pengadaan pemerintah Indonesia. Repositori ini telah dirapikan agar reviewer dapat langsung menemukan artefak submission utama tanpa harus menelusuri dokumen kerja internal.
 
-Repositori ini disusun agar juri atau reviewer dapat langsung menemukan artefak utama tanpa harus menelusuri seluruh histori eksperimen.
-
-## Ringkasan Singkat
-
-LPSE-X membantu reviewer memprioritaskan paket pengadaan yang paling layak diperiksa lebih dulu. Sistem ini berjalan sepenuhnya secara lokal, menggunakan model tabular berbasis **XGBoost**, menyediakan penjelasan **SHAP**, dan menghasilkan narasi Bahasa Indonesia agar alasan di balik skor risiko dapat dibaca manusia.
-
-Posisi ilmiahnya sengaja dibuat tegas tetapi jujur:
-- ini adalah **alat triase risiko pengadaan**,
-- bukan mesin keputusan hukum,
-- dan metrik utamanya dibaca terhadap **heuristic risk labels**, bukan outcome fraud final.
-
-## File yang Paling Penting untuk Dinilai
+## Artefak Utama untuk Dinilai
 
 ### Proposal
-- `proposal/proposal-final.pdf` — proposal final lengkap Bab 1–4
-- `proposal/proposal-final.docx` — versi DOCX proposal final
-- `proposal/proposal-final.md` — sumber utama proposal
+- `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.pdf` — **file utama yang siap diunggah**
+- `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.docx` — versi DOCX proposal final
+- `proposal/proposal-final.md` — sumber proposal final Bab 1–4
 
 ### Notebook
-- `training.ipynb` — notebook training dengan output/log terlihat
-- `inference.ipynb` — notebook inference dengan prediksi dan penjelasan yang terlihat
+- `training.ipynb` — notebook training dengan log/output terlihat
+- `inference.ipynb` — notebook inference dengan prediksi, explanation, dan output ONNX terlihat
 
 ### Model
 - `models/xgb_model.ubj`
@@ -32,37 +21,31 @@ Posisi ilmiahnya sengaja dibuat tegas tetapi jujur:
 - `train_data/`
 - `test_data/`
 
-## Ringkasan Benchmark
+## Ringkasan Cepat Model
 
-Benchmark saat ini menggunakan **slice data riil multi-tahun OCDS Indonesia**.
-
-Ringkasan utama:
-- total baris usable: **465.184**
-- train rows: **372.150**
-- test rows: **93.034**
-- buyer unik: **618**
-- supplier unik: **60.976**
-
-Metrik utama pada held-out test (`models/metrics.json`):
+- Data riil multi-tahun OCDS Indonesia
+- Total baris usable: **465.184**
+- Train rows: **372.150**
+- Test rows: **93.034**
 - Accuracy: **0,9899**
 - Macro-F1: **0,9830**
-- Weighted-F1: **0,9898**
-
-Nilai operasional utama (`models/operational_metrics.json`):
 - Precision@100: **1,00**
 
-## Struktur Repo
+## Struktur Data Submission
 
-```text
-src/            modul inti pipeline
-models/         artefak model dan metrik
-train_data/     split data latih
-test_data/      split data uji
-proposal/       proposal final dan visual pendukung
-tests/          pengujian terfokus
-```
+### `train_data/`
+- `raw.parquet` — data mentah hasil split train
+- `features.parquet` — fitur hasil rekayasa fitur
+- `labels.parquet` — label risiko untuk training/evaluasi internal
 
-## Cara Menjalankan Secara Singkat
+### `test_data/`
+- `raw.parquet` — data mentah hasil split test
+- `features.parquet` — fitur hasil rekayasa fitur
+- `labels.parquet` — label risiko untuk evaluasi held-out
+
+Pemisahan `train_data` dan `test_data` dipertahankan sebagai bukti kontrol **anti-data-leakage**.
+
+## Cara Cek Cepat
 
 ```bash
 python3 -m venv .venv
@@ -73,17 +56,16 @@ python -m jupyter nbconvert --to notebook --execute training.ipynb --output /tmp
 python -m jupyter nbconvert --to notebook --execute inference.ipynb --output /tmp/inference-check.ipynb
 ```
 
-## Catatan Penting untuk Reviewer
+## Catatan Penting untuk Juri
 
-- `train_data` dan `test_data` dipisahkan untuk menjaga kontrol **anti-data-leakage**
-- model dieksekusi **tanpa layanan cloud**
-- proposal Bab 3 secara khusus memetakan kepatuhan terhadap setiap constraint Track C
-- proposal Bab 4 menjelaskan integrasi Phase 3, dampak, dan model adopsi
+- LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum final.
+- Pipeline berjalan **sepenuhnya secara lokal** tanpa layanan cloud.
+- Proposal final memuat **Bab 1–4 lengkap**.
+- Bab 3 memetakan kepatuhan terhadap setiap constraint Track C.
+- Bab 4 menjelaskan integrasi Phase 3, model adopsi, KPI, dan analisis dampak.
 
 ## Keterbatasan yang Diakui
 
-LPSE-X adalah proposal yang kuat untuk **triase risiko** dan **prioritisasi audit awal**, tetapi belum boleh dibaca sebagai sistem fraud detection final yang menyelesaikan seluruh masalah lapangan. Proposal ini secara eksplisit mengakui:
-
-- penggunaan **heuristic risk labels**
-- masih adanya **circularity risk**
-- kebutuhan validasi lapangan dan penguatan label lebih lanjut
+- benchmark masih menggunakan **heuristic risk labels**
+- masih ada **circularity risk** yang diakui secara eksplisit
+- masih diperlukan validasi lapangan dan penguatan label lebih lanjut
