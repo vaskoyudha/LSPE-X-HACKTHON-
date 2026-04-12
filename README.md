@@ -1,8 +1,8 @@
-# LPSE-X — Find IT! 2026 Track C Submission Repo
+# LPSE-X — Find IT! 2026 Track C
 
-LPSE-X adalah **sistem triase risiko pengadaan publik berbasis Explainable AI** untuk membantu prioritisasi audit pengadaan pemerintah Indonesia. Repositori ini telah dirapikan agar reviewer dapat langsung menemukan artefak submission utama tanpa harus menelusuri dokumen kerja internal.
+LPSE-X adalah **sistem triase risiko pengadaan publik berbasis Explainable AI** untuk membantu prioritisasi audit pengadaan pemerintah Indonesia. Repositori ini telah dirapikan agar pembaca dapat langsung menemukan artefak utama tanpa harus menelusuri dokumen kerja internal.
 
-## Artefak Utama untuk Dinilai
+## Artefak Utama
 
 ### Proposal
 - `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.pdf` — **file utama yang siap diunggah**
@@ -31,7 +31,7 @@ LPSE-X adalah **sistem triase risiko pengadaan publik berbasis Explainable AI** 
 - Macro-F1: **0,9830**
 - Precision@100: **1,00**
 
-## Struktur Data Submission
+## Struktur Data
 
 ### `train_data/`
 - `raw.parquet` — data mentah hasil split train
@@ -56,7 +56,7 @@ python -m jupyter nbconvert --to notebook --execute training.ipynb --output /tmp
 python -m jupyter nbconvert --to notebook --execute inference.ipynb --output /tmp/inference-check.ipynb
 ```
 
-## Catatan Penting untuk Juri
+## Catatan Penting
 
 - LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum final.
 - Pipeline berjalan **sepenuhnya secara lokal** tanpa layanan cloud.
