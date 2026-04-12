@@ -12,7 +12,7 @@ Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menj
 | C-C4 | Wajib membuktikan tidak ada data leakage | Raw split dilakukan sebelum preprocessing; test tidak dipakai untuk tuning atau kalibrasi | `src/split.py`, `train_data/raw.parquet`, `test_data/raw.parquet`, `data/processed/split_metadata.json` |
 | C-C5 | Offline total | Training, inferensi, dan explainability berjalan lokal tanpa API cloud | `training.ipynb`, `inference.ipynb`, `requirements.txt` |
 
-> **Placeholder visual untuk PDF final:** sisipkan diagram atau matriks visual Track C compliance pada akhir subbab ini. Bila nama file final berubah saat rendering, isi dan pemetaan tabel di atas tetap menjadi sumber kebenaran.
+Tabel di atas adalah checklist kepatuhan utama untuk juri: setiap constraint Track C dipetakan langsung ke artefak implementasi yang bisa diperiksa pada repo submission.
 
 ## 3.2 Pembuktian per Constraint
 
@@ -117,4 +117,4 @@ Status implementasi yang relevan untuk Tahap 2 dapat diringkas sebagai berikut.
 - notebook training dan inference sudah menjadi artefak submission;
 - proposal kini memetakan setiap constraint Track C ke artefak nyata.
 
-> **Placeholder visual untuk PDF final:** tambahkan diagram submission package map yang menunjukkan apa saja yang akan diterima juri di repo/folder cloud.
+![Peta artefak yang diterima juri pada paket submission](figures/submission-package-map.png)

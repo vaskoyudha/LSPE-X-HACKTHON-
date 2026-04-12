@@ -66,7 +66,18 @@ Pada evaluasi review manual, kualitas explanation menunjukkan:
 
 Artinya, explanation yang dihasilkan belum sempurna dari sisi kejelasan, tetapi sudah cukup membantu untuk actionability review.
 
-> **Placeholder visual untuk PDF final:** tambahkan satu kartu contoh kasus (*single-case explanation card*) yang menampilkan skor, tiga faktor teratas, arah pengaruh, dan rekomendasi tindak lanjut.
+![Alur inferensi explainable dari input hingga rekomendasi review](figures/inference-flow.png)
+
+Contoh *single-case explanation card* yang judge-friendly dapat diringkas sebagai berikut.
+
+| Komponen | Ringkasan contoh |
+| --- | --- |
+| Paket | **Pengadaan Public Safety Diving Equipment** |
+| Prediksi model | **High Risk (86,63%)** |
+| Rating akhir | **Risiko Kritis** karena terhubung ke bukti resmi `kpk_procurement_case` |
+| Tiga faktor utama | `f_tender_value_log` (+3,4595), `f_buyer_supplier_repeat_count` (+3,2338), `f_is_q4` (+3,2271) |
+| Narasi singkat | Paket diprioritaskan karena sinyal nilai pengadaan tinggi, hubungan buyer–supplier yang berulang, dan timing kuartal IV sama-sama mendorong skor ke kelas risiko tertinggi. |
+| Tindak lanjut | Reviewer memeriksa kecocokan entitas, kronologi kasus, dan dokumen pengadaan pendukung sebelum eskalasi investigatif final. |
 
 ## 4.5 Manual Review dan Validasi Tambahan
 
@@ -143,7 +154,7 @@ Sementara artefak `proposal/official_evidence_showcase.md` menunjukkan:
 
 Bagi juri, ini menambah kualitas demo secara signifikan. Sistem tidak lagi hanya menampilkan angka model, tetapi juga menunjukkan bagaimana kasus dengan bukti resmi dapat dinaikkan ke status yang lebih kritis secara investigatif.
 
-> **Placeholder visual untuk PDF final:** tambahkan diagram decision flow 4-level (*Aman → Perlu Pantauan → Risiko Tinggi → Risiko Kritis*) agar alur presentasi demo lebih intuitif.
+![Decision flow empat level untuk demo investigatif LPSE-X](figures/risk-decision-flow.png)
 
 ## 4.10 Keterbatasan
 

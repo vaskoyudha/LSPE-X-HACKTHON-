@@ -120,7 +120,9 @@ Diagram implementasi Phase 2 yang sudah tersedia di repo memberi gambaran urutan
 
 ![Rencana implementasi dan integrasi LPSE-X Tahap 2](figures/phase2-plan.png)
 
-> **Placeholder visual untuk PDF final:** tambahkan diagram arsitektur end-to-end yang lebih ringkas untuk juri dengan alur *raw procurement data → split → feature engineering → XGBoost scoring → SHAP factors → human-readable explanation → reviewer action*.
+Untuk kebutuhan juri, alur inti end-to-end diringkas lagi pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca lebih cepat.
+
+![Arsitektur end-to-end LPSE-X](figures/pipeline-architecture.png)
 
 ## 2.2 Sumber Data dan Kualitas
 
@@ -155,7 +157,7 @@ Constraint terpenting pada Track C adalah bukti bahwa **tidak ada data leakage**
 
 Konsekuensi desain ini adalah setiap angka evaluasi di Bab 4 berasal dari pemisahan yang defensible terhadap kebocoran data.
 
-> **Placeholder visual untuk PDF final:** sisipkan diagram anti-leakage / data lineage yang menunjukkan bahwa folder `train_data` dan `test_data` dipisah sebelum preprocessing apa pun.
+![Alur anti-leakage dan pemisahan train/test LPSE-X](figures/anti-leakage-flow.png)
 
 ## 2.4 Pelabelan Risiko dan Implikasi Ilmiahnya
 
@@ -277,7 +279,7 @@ Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menj
 | C-C4 | Wajib membuktikan tidak ada data leakage | Raw split dilakukan sebelum preprocessing; test tidak dipakai untuk tuning atau kalibrasi | `src/split.py`, `train_data/raw.parquet`, `test_data/raw.parquet`, `data/processed/split_metadata.json` |
 | C-C5 | Offline total | Training, inferensi, dan explainability berjalan lokal tanpa API cloud | `training.ipynb`, `inference.ipynb`, `requirements.txt` |
 
-> **Placeholder visual untuk PDF final:** sisipkan diagram atau matriks visual Track C compliance pada akhir subbab ini. Bila nama file final berubah saat rendering, isi dan pemetaan tabel di atas tetap menjadi sumber kebenaran.
+Tabel di atas adalah checklist kepatuhan utama untuk juri: setiap constraint Track C dipetakan langsung ke artefak implementasi yang bisa diperiksa pada repo submission.
 
 ## 3.2 Pembuktian per Constraint
 
@@ -382,7 +384,7 @@ Status implementasi yang relevan untuk Tahap 2 dapat diringkas sebagai berikut.
 - notebook training dan inference sudah menjadi artefak submission;
 - proposal kini memetakan setiap constraint Track C ke artefak nyata.
 
-> **Placeholder visual untuk PDF final:** tambahkan diagram submission package map yang menunjukkan apa saja yang akan diterima juri di repo/folder cloud.
+![Peta artefak yang diterima juri pada paket submission](figures/submission-package-map.png)
 
 
 ---
@@ -455,7 +457,18 @@ Pada evaluasi review manual, kualitas explanation menunjukkan:
 
 Artinya, explanation yang dihasilkan belum sempurna dari sisi kejelasan, tetapi sudah cukup membantu untuk actionability review.
 
-> **Placeholder visual untuk PDF final:** tambahkan satu kartu contoh kasus (*single-case explanation card*) yang menampilkan skor, tiga faktor teratas, arah pengaruh, dan rekomendasi tindak lanjut.
+![Alur inferensi explainable dari input hingga rekomendasi review](figures/inference-flow.png)
+
+Contoh *single-case explanation card* yang judge-friendly dapat diringkas sebagai berikut.
+
+| Komponen | Ringkasan contoh |
+| --- | --- |
+| Paket | **Pengadaan Public Safety Diving Equipment** |
+| Prediksi model | **High Risk (86,63%)** |
+| Rating akhir | **Risiko Kritis** karena terhubung ke bukti resmi `kpk_procurement_case` |
+| Tiga faktor utama | `f_tender_value_log` (+3,4595), `f_buyer_supplier_repeat_count` (+3,2338), `f_is_q4` (+3,2271) |
+| Narasi singkat | Paket diprioritaskan karena sinyal nilai pengadaan tinggi, hubungan buyer–supplier yang berulang, dan timing kuartal IV sama-sama mendorong skor ke kelas risiko tertinggi. |
+| Tindak lanjut | Reviewer memeriksa kecocokan entitas, kronologi kasus, dan dokumen pengadaan pendukung sebelum eskalasi investigatif final. |
 
 ## 4.5 Manual Review dan Validasi Tambahan
 
@@ -532,7 +545,7 @@ Sementara artefak `proposal/official_evidence_showcase.md` menunjukkan:
 
 Bagi juri, ini menambah kualitas demo secara signifikan. Sistem tidak lagi hanya menampilkan angka model, tetapi juga menunjukkan bagaimana kasus dengan bukti resmi dapat dinaikkan ke status yang lebih kritis secara investigatif.
 
-> **Placeholder visual untuk PDF final:** tambahkan diagram decision flow 4-level (*Aman → Perlu Pantauan → Risiko Tinggi → Risiko Kritis*) agar alur presentasi demo lebih intuitif.
+![Decision flow empat level untuk demo investigatif LPSE-X](figures/risk-decision-flow.png)
 
 ## 4.10 Keterbatasan
 

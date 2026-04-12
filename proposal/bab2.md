@@ -15,7 +15,9 @@ Diagram implementasi Phase 2 yang sudah tersedia di repo memberi gambaran urutan
 
 ![Rencana implementasi dan integrasi LPSE-X Tahap 2](figures/phase2-plan.png)
 
-> **Placeholder visual untuk PDF final:** tambahkan diagram arsitektur end-to-end yang lebih ringkas untuk juri dengan alur *raw procurement data → split → feature engineering → XGBoost scoring → SHAP factors → human-readable explanation → reviewer action*.
+Untuk kebutuhan juri, alur inti end-to-end diringkas lagi pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca lebih cepat.
+
+![Arsitektur end-to-end LPSE-X](figures/pipeline-architecture.png)
 
 ## 2.2 Sumber Data dan Kualitas
 
@@ -50,7 +52,7 @@ Constraint terpenting pada Track C adalah bukti bahwa **tidak ada data leakage**
 
 Konsekuensi desain ini adalah setiap angka evaluasi di Bab 4 berasal dari pemisahan yang defensible terhadap kebocoran data.
 
-> **Placeholder visual untuk PDF final:** sisipkan diagram anti-leakage / data lineage yang menunjukkan bahwa folder `train_data` dan `test_data` dipisah sebelum preprocessing apa pun.
+![Alur anti-leakage dan pemisahan train/test LPSE-X](figures/anti-leakage-flow.png)
 
 ## 2.4 Pelabelan Risiko dan Implikasi Ilmiahnya
 
