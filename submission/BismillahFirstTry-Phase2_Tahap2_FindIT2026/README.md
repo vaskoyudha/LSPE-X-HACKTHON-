@@ -15,6 +15,21 @@ Sistem yang diajukan adalah **LPSE-X**, yaitu prototipe *offline* untuk skrining
 - `figures/` — grafik dan diagram yang dipakai di proposal
 - `requirements.txt` — dependensi Python
 
+## Struktur dataset
+
+Folder dataset sengaja dipisahkan menjadi dua bagian utama agar sesuai dengan aturan submission dan kontrol *anti-leakage*:
+
+- `train_data/` — seluruh artefak data untuk proses pelatihan
+- `test_data/` — seluruh artefak data untuk evaluasi akhir
+
+Di masing-masing folder terdapat tiga file:
+
+- `raw.parquet` — data hasil split mentah sebelum preprocessing lanjutan
+- `features.parquet` — data fitur hasil feature engineering
+- `labels.parquet` — label risiko untuk eksperimen/modeling
+
+Dengan struktur ini, juri dapat melihat dengan jelas bahwa data pelatihan dan data pengujian dipisahkan sebagai folder yang berbeda, lalu setiap tahap penting (*raw*, *features*, *labels*) tetap tersedia di dalam masing-masing folder.
+
 ## Cara menjalankan secara lokal
 
 1. Buat virtual environment Python 3.11+.
