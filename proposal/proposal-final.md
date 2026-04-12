@@ -52,8 +52,6 @@ LPSE-X diposisikan sebagai **explainable procurement-risk screening system** den
 3. **Siap didemokan** — model diekspor ke artefak ringan (`.ubj` dan `.onnx`) dan dilengkapi notebook training serta inference.
 4. **Jujur secara ilmiah** — metrik dilaporkan terhadap label heuristik risiko, bukan diklaim sebagai tingkat keberhasilan mendeteksi korupsi yang sudah terverifikasi.
 
-> **Catatan visual untuk PDF final:** letakkan diagram arsitektur end-to-end LPSE-X pada akhir subbab ini untuk membantu juri memahami alur data → model → explanation → reviewer action.
-
 ## 1.4 Tujuan
 
 Tujuan pengembangan LPSE-X pada Tahap 2 adalah:
