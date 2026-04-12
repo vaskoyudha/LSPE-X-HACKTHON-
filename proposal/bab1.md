@@ -15,7 +15,7 @@ Rumusan masalah yang dijawab proposal ini adalah sebagai berikut.
 1. Bagaimana mengubah data pengadaan publik berbasis OCDS menjadi pipeline analitik yang siap dipakai untuk triase risiko?
 2. Bagaimana membangun model prediktif yang tetap patuh pada prinsip **anti-data-leakage** dan dapat dijalankan sepenuhnya secara offline?
 3. Bagaimana menghasilkan penjelasan prediksi yang tidak berhenti pada probabilitas, tetapi dapat dibaca manusia dan berguna bagi reviewer non-teknis?
-4. Bagaimana menyajikan hasil model secara jujur, termasuk keterbatasan weak labels dan circularity risk, agar solusi tetap ilmiah dan defensible di depan juri?
+4. Bagaimana menyajikan hasil model secara jujur, termasuk keterbatasan weak labels dan circularity risk, agar solusi tetap ilmiah dan defensible di depan penilai?
 
 ## 1.3 Posisi Solusi dan Nilai Utama
 
@@ -33,7 +33,7 @@ Tujuan pengembangan LPSE-X pada Tahap 2 adalah:
 1. menyusun pipeline data pengadaan yang rapi, split-aware, dan reproducible;
 2. melatih model prediktif berbasis XGBoost untuk klasifikasi risiko pengadaan;
 3. menghasilkan output explainability yang memenuhi kebutuhan Track C, termasuk minimal tiga faktor teratas beserta arah pengaruhnya;
-4. menyiapkan paket submission yang mudah diperiksa juri: proposal, notebook, model, dan folder data terpisah;
+4. menyiapkan paket submission yang mudah diperiksa penilai: proposal, notebook, model, dan folder data terpisah;
 5. menunjukkan posisi ilmiah proyek secara seimbang: cukup kuat untuk demo, tetapi tetap eksplisit mengenai keterbatasannya.
 
 ## 1.5 Batasan dan Kejujuran Ilmiah
@@ -48,7 +48,7 @@ Agar tidak terjadi overclaim, proposal ini menetapkan batasan berikut.
 
 ## 1.6 Manfaat
 
-### Bagi juri dan pengguna akhir
+### Bagi penilai dan pengguna akhir
 
 - Memberi contoh solusi AI yang relevan langsung dengan tata kelola publik.
 - Menunjukkan bagaimana model prediktif dapat tetap transparan dan audit-friendly.

@@ -2,7 +2,7 @@
 
 ## 3.1 Matriks Kepatuhan Track C
 
-Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menjelaskan secara rinci bagaimana solusi mematuhi setiap constraint track**. Tabel berikut menjadi ringkasan paling langsung untuk juri.
+Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menjelaskan secara rinci bagaimana solusi mematuhi setiap constraint track**. Tabel berikut menjadi ringkasan paling langsung untuk penilai.
 
 | Kode | Constraint resmi | Implementasi pada LPSE-X | Bukti utama |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menj
 | C-C4 | Wajib membuktikan tidak ada data leakage | Raw split dilakukan sebelum preprocessing; test tidak dipakai untuk tuning atau kalibrasi | `src/split.py`, `train_data/raw.parquet`, `test_data/raw.parquet`, `data/processed/split_metadata.json` |
 | C-C5 | Offline total | Training, inferensi, dan explainability berjalan lokal tanpa API cloud | `training.ipynb`, `inference.ipynb`, `requirements.txt` |
 
-Tabel di atas adalah checklist kepatuhan utama untuk juri: setiap constraint Track C dipetakan langsung ke artefak implementasi yang bisa diperiksa pada repo submission.
+Tabel di atas adalah checklist kepatuhan utama untuk penilai: setiap constraint Track C dipetakan langsung ke artefak implementasi yang bisa diperiksa pada repo submission.
 
 ## 3.2 Pembuktian per Constraint
 
@@ -34,7 +34,7 @@ Dengan desain ini, reviewer tidak perlu menginterpretasi angka mentah sendiri. O
 
 ### C-C3 — Anti-black-box
 
-Kami sengaja tidak menggunakan arsitektur yang sepenuhnya opaque untuk submission Tahap 2. XGBoost dipilih karena lebih cocok untuk data tabular dan lebih mudah dipertanggungjawabkan pada konteks kebijakan publik. Bila juri menelusuri artefaknya, mereka dapat memeriksa:
+Kami sengaja tidak menggunakan arsitektur yang sepenuhnya opaque untuk submission Tahap 2. XGBoost dipilih karena lebih cocok untuk data tabular dan lebih mudah dipertanggungjawabkan pada konteks kebijakan publik. Bila penilai menelusuri artefaknya, mereka dapat memeriksa:
 
 - fitur input yang digunakan,
 - manifest fitur dan split,
@@ -75,7 +75,7 @@ LPSE-X **tidak** menggunakan API inferensi cloud, API explainability, maupun lay
 
 ## 3.3 Kesiapan Paket Submission
 
-Selain constraint Track C, panitia juga mensyaratkan struktur artefak yang jelas. Paket Tahap 2 untuk LPSE-X disusun agar juri mudah memeriksa ulang komponen utama berikut.
+Selain constraint Track C, panitia juga mensyaratkan struktur artefak yang jelas. Paket Tahap 2 untuk LPSE-X disusun agar penilai mudah memeriksa ulang komponen utama berikut.
 
 | Artefak submission | Status peran |
 | --- | --- |
@@ -90,9 +90,9 @@ Di lane submission resmi, kami juga mengunci tiga aturan tambahan agar paket tid
 
 1. **Single-model submission** — hanya satu model utama yang dikirim, yaitu XGBoost multiclass yang diekspor ke `model_risk.ubj` dan `model_risk.onnx`; tidak ada ensemble terpisah atau model cloud pendamping pada paket final.
 2. **Penamaan resmi panitia** — folder/repo final dikunci ke `BismillahFirstTry-Phase2_Tahap2_FindIT2026`, sedangkan proposal PDF final dikunci ke `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.pdf`.
-3. **Bundle judge-safe** — isi folder dibatasi pada proposal, notebook, model, data split, source code inti, dan figures yang benar-benar dipakai juri.
+3. **Bundle clean-package** — isi folder dibatasi pada proposal, notebook, model, data split, source code inti, dan figures yang benar-benar dipakai penilai.
 
-Pendekatan ini sengaja dibuat judge-safe: yang ditampilkan adalah artefak yang benar-benar dibutuhkan untuk evaluasi, bukan seluruh histori eksperimen internal.
+Pendekatan ini sengaja dibuat clean-package: yang ditampilkan adalah artefak yang benar-benar dibutuhkan untuk evaluasi, bukan seluruh histori eksperimen internal.
 
 ## 3.4 Pengendalian Risiko Teknis
 
@@ -111,7 +111,7 @@ Kepatuhan teknis tidak boleh membuat proposal kehilangan kejujuran ilmiah. Karen
 2. audit robustness menunjukkan circularity risk yang signifikan,
 3. evidence lane dan manual review menambah bukti yang berguna, tetapi belum mengubah sistem menjadi oracle hukum final.
 
-Justru dengan menyatakan batasan ini secara terbuka, proposal menjadi lebih kuat di hadapan juri: solusi terlihat serius, patuh constraint, dan tidak menjual klaim berlebihan.
+Justru dengan menyatakan batasan ini secara terbuka, proposal menjadi lebih kuat di hadapan penilai: solusi terlihat serius, patuh constraint, dan tidak menjual klaim berlebihan.
 
 ## 3.6 Bukti Verifikasi Implementasi
 
@@ -123,4 +123,4 @@ Status implementasi yang relevan untuk Tahap 2 dapat diringkas sebagai berikut.
 - notebook training dan inference sudah menjadi artefak submission;
 - proposal kini memetakan setiap constraint Track C ke artefak nyata.
 
-![Peta artefak yang diterima juri pada paket submission](figures/submission-package-map.png)
+![Peta artefak yang diterima penilai pada paket submission](figures/submission-package-map.png)

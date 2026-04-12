@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the Find IT! 2026 Tahap 2 judge-safe submission bundle.
+"""Assemble the Find IT! 2026 Tahap 2 clean-package submission bundle.
 
 The builder copies the approved submission artifacts from the working repository into
 one clean folder with the exact filenames expected for submission.
@@ -51,7 +51,7 @@ MANAGED_DESTINATIONS = tuple(rule.destination for rule in ALL_RULES)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build the judge-safe Tahap 2 submission bundle.",
+        description="Build the clean-package Tahap 2 submission bundle.",
     )
     parser.add_argument(
         "--output-dir",

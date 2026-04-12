@@ -23,3 +23,5 @@ data/processed/evidence/_tmp_*/
 .DS_Store
 .agents/
 .omx/
+
+.sisyphus/

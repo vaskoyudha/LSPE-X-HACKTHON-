@@ -11,7 +11,7 @@ LPSE-X dibangun sebagai pipeline offline untuk mengubah data pengadaan publik me
 5. pelatihan model XGBoost dan kalibrasi probabilitas;
 6. generasi explanation berbasis SHAP dan narasi Bahasa Indonesia.
 
-Untuk kebutuhan juri, metodologi inti LPSE-X diringkas pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca dengan cepat dan jelas.
+Untuk kebutuhan penilai, metodologi inti LPSE-X diringkas pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca dengan cepat dan jelas.
 
 ![Arsitektur end-to-end LPSE-X](figures/pipeline-architecture.png)
 
@@ -29,7 +29,7 @@ Ringkasan benchmark saat ini:
 - rentang train: **2015-07-09 s.d. 2023-03-10 07:27:51 UTC**
 - rentang test: **2023-03-10 07:38:45 s.d. 2023-12-20 23:00:00 UTC**
 
-Temuan kualitas data yang paling penting untuk dibaca juri adalah sebagai berikut.
+Temuan kualitas data yang paling penting untuk dibaca penilai adalah sebagai berikut.
 
 1. `award_value_amount` relatif kuat sehingga tetap berguna untuk sinyal nilai.
 2. Beberapa field seperti `tender.value.amount` dan `tender.description` memerlukan fallback karena coverage tidak konsisten.
@@ -103,7 +103,7 @@ Model utama yang dipakai adalah **XGBoost multiclass** dengan objective `multi:s
 3. mudah dihubungkan ke SHAP untuk explainability global maupun lokal,
 4. bisa diekspor ke artefak ringan untuk demo lokal.
 
-Dibanding pendekatan deep learning murni, XGBoost memberi trade-off yang lebih rasional untuk fase seleksi ini: performanya kuat pada data tabular, biaya komputasinya rendah, dan jalur interpretasinya jauh lebih mudah dijelaskan kepada juri maupun calon pengguna institusional. Dibanding rule-only system, model ini juga memberi fleksibilitas lebih baik untuk menangkap kombinasi sinyal risiko yang tidak selalu terlihat dari satu aturan tunggal.
+Dibanding pendekatan deep learning murni, XGBoost memberi trade-off yang lebih rasional untuk fase seleksi ini: performanya kuat pada data tabular, biaya komputasinya rendah, dan jalur interpretasinya jauh lebih mudah dijelaskan kepada penilai maupun calon pengguna institusional. Dibanding rule-only system, model ini juga memberi fleksibilitas lebih baik untuk menangkap kombinasi sinyal risiko yang tidak selalu terlihat dari satu aturan tunggal.
 
 Artefak model yang saat ini tersedia juga kecil dan praktis untuk submission:
 
@@ -130,7 +130,7 @@ Pada level output, fungsi `explain_single(...)` dirancang untuk memenuhi kebutuh
 
 ## 2.8 Artefak Submission dan Reproducibility
 
-Struktur submission yang disiapkan untuk juri mengikuti constraint umum kompetisi.
+Struktur submission yang disiapkan untuk penilai mengikuti constraint umum kompetisi.
 
 | Artefak | Peran |
 | --- | --- |
@@ -142,7 +142,7 @@ Struktur submission yang disiapkan untuk juri mengikuti constraint umum kompetis
 | `requirements.txt` | dependency agar eksperimen dapat dijalankan ulang |
 | `proposal/figures/` | visual evaluasi dan bukti presentasi |
 
-Dengan desain ini, juri tidak perlu menebak alur kerja proyek: semua komponen utama tersedia sebagai artefak lokal yang eksplisit.
+Dengan desain ini, penilai tidak perlu menebak alur kerja proyek: semua komponen utama tersedia sebagai artefak lokal yang eksplisit.
 
 ## 2.9 Filosofi Evaluasi
 

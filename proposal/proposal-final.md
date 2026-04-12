@@ -12,13 +12,13 @@
 
 LPSE-X membantu reviewer pengadaan memusatkan perhatian pada paket yang paling layak diperiksa lebih dulu. Dalam konteks audit dengan waktu terbatas dan volume data besar, nilai utama sistem ini bukan sekadar menghasilkan skor, tetapi **mengubah ribuan baris data pengadaan menjadi shortlist prioritas yang dapat dijelaskan, ditelusuri, dan dijalankan sepenuhnya di lingkungan lokal**. Dengan kata lain, LPSE-X tidak hanya memberi sinyal risiko, tetapi juga mempercepat langkah pertama pengawasan yang biasanya paling mahal: menentukan **kasus mana yang harus diperiksa lebih dulu, dan mengapa**.
 
-Secara teknis, LPSE-X dibangun dengan model XGBoost tabular, SHAP untuk penjelasan faktor pendorong prediksi, serta narasi Bahasa Indonesia agar hasilnya mudah dibaca manusia. Pipeline disusun dengan pemisahan `train_data` dan `test_data` sebelum rekayasa fitur, sehingga proposal ini tidak hanya kuat dari sisi performa, tetapi juga defensible terhadap pertanyaan juri tentang kebocoran data, transparansi, dan kepatuhan Track C.
+Secara teknis, LPSE-X dibangun dengan model XGBoost tabular, SHAP untuk penjelasan faktor pendorong prediksi, serta narasi Bahasa Indonesia agar hasilnya mudah dibaca manusia. Pipeline disusun dengan pemisahan `train_data` dan `test_data` sebelum rekayasa fitur, sehingga proposal ini tidak hanya kuat dari sisi performa, tetapi juga defensible terhadap pertanyaan penilai tentang kebocoran data, transparansi, dan kepatuhan Track C.
 
 Secara ilmiah, proposal ini mengambil posisi yang tegas tetapi jujur: LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum. Kinerja yang tinggi pada benchmark saat ini harus dibaca sebagai bukti bahwa sistem mampu mereplikasi dan mengurutkan sinyal risiko heuristik secara leakage-safe, bukan sebagai klaim bahwa masalah fraud detection telah selesai sepenuhnya. Justru kombinasi antara **kepatuhan teknis, relevansi operasional, dan kejujuran evaluasi** inilah yang membuat LPSE-X tidak hanya terlihat rapi di atas kertas, tetapi juga masuk akal untuk benar-benar dipakai pada workflow pengawasan yang nyata.
 
 ### Ringkasan Bukti Utama
 
-| Dimensi | Bukti saat ini | Makna untuk juri |
+| Dimensi | Bukti saat ini | Makna untuk penilai |
 | --- | --- | --- |
 | Kinerja held-out | Accuracy **0,9899**; Macro-F1 **0,9830** pada `models/metrics.json` | Model sangat kuat terhadap label risiko heuristik yang digunakan |
 | Nilai operasional | Precision@100 **1,00** pada `models/operational_metrics.json` | Shortlist teratas sangat padat sinyal risiko untuk reviewer dengan kapasitas terbatas |
@@ -39,7 +39,7 @@ Salah satu cara tercepat untuk memahami nilai LPSE-X adalah melihat bagaimana si
 | Tindak lanjut reviewer | memeriksa kecocokan entitas, dokumen pengadaan, dan bukti resmi pendukung sebelum eskalasi |
 | Nilai praktis | reviewer tidak mulai dari ribuan paket, tetapi dari satu kasus prioritas yang sudah disertai alasan dan arah tindakan |
 
-Contoh ini penting karena menunjukkan bahwa LPSE-X bukan hanya “model dengan angka tinggi”, melainkan **alat kerja yang mengubah data menjadi keputusan prioritas yang siap dijelaskan**. Di mata juri, bagian ini adalah bukti bahwa solusi kami bukan sekadar memenuhi constraint Track C, tetapi juga memahami bagaimana AI digunakan secara masuk akal di lingkungan pengawasan publik.
+Contoh ini penting karena menunjukkan bahwa LPSE-X bukan hanya “model dengan angka tinggi”, melainkan **alat kerja yang mengubah data menjadi keputusan prioritas yang siap dijelaskan**. Di mata penilai, bagian ini adalah bukti bahwa solusi kami bukan sekadar memenuhi constraint Track C, tetapi juga memahami bagaimana AI digunakan secara masuk akal di lingkungan pengawasan publik.
 
 ## Daftar Isi
 
@@ -68,7 +68,7 @@ Rumusan masalah yang dijawab proposal ini adalah sebagai berikut.
 1. Bagaimana mengubah data pengadaan publik berbasis OCDS menjadi pipeline analitik yang siap dipakai untuk triase risiko?
 2. Bagaimana membangun model prediktif yang tetap patuh pada prinsip **anti-data-leakage** dan dapat dijalankan sepenuhnya secara offline?
 3. Bagaimana menghasilkan penjelasan prediksi yang tidak berhenti pada probabilitas, tetapi dapat dibaca manusia dan berguna bagi reviewer non-teknis?
-4. Bagaimana menyajikan hasil model secara jujur, termasuk keterbatasan weak labels dan circularity risk, agar solusi tetap ilmiah dan defensible di depan juri?
+4. Bagaimana menyajikan hasil model secara jujur, termasuk keterbatasan weak labels dan circularity risk, agar solusi tetap ilmiah dan defensible di depan penilai?
 
 ## 1.3 Posisi Solusi dan Nilai Utama
 
@@ -86,7 +86,7 @@ Tujuan pengembangan LPSE-X pada Tahap 2 adalah:
 1. menyusun pipeline data pengadaan yang rapi, dapat diulang, dan menjaga disiplin pemisahan data sebelum rekayasa fitur;
 2. melatih model prediktif berbasis XGBoost untuk klasifikasi risiko pengadaan;
 3. menghasilkan output explainability yang memenuhi kebutuhan Track C, termasuk minimal tiga faktor teratas beserta arah pengaruhnya;
-4. menyiapkan paket submission yang mudah diperiksa juri: proposal, notebook, model, dan folder data terpisah;
+4. menyiapkan paket submission yang mudah diperiksa penilai: proposal, notebook, model, dan folder data terpisah;
 5. menunjukkan posisi ilmiah proyek secara seimbang: cukup kuat untuk demo, tetapi tetap eksplisit mengenai keterbatasannya.
 
 ## 1.5 Batasan dan Kejujuran Ilmiah
@@ -101,7 +101,7 @@ Agar tidak terjadi overclaim, proposal ini menetapkan batasan berikut.
 
 ## 1.6 Manfaat
 
-### Bagi juri dan pengguna akhir
+### Bagi penilai dan pengguna akhir
 
 - Memberi contoh solusi AI yang relevan langsung dengan tata kelola publik.
 - Menunjukkan bagaimana model prediktif dapat tetap transparan dan audit-friendly.
@@ -141,7 +141,7 @@ LPSE-X dibangun sebagai pipeline offline untuk mengubah data pengadaan publik me
 5. pelatihan model XGBoost dan kalibrasi probabilitas;
 6. generasi explanation berbasis SHAP dan narasi Bahasa Indonesia.
 
-Untuk kebutuhan juri, metodologi inti LPSE-X diringkas pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca dengan cepat dan jelas.
+Untuk kebutuhan penilai, metodologi inti LPSE-X diringkas pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca dengan cepat dan jelas.
 
 ![Arsitektur end-to-end LPSE-X](figures/pipeline-architecture.png)
 
@@ -159,7 +159,7 @@ Ringkasan benchmark saat ini:
 - rentang train: **2015-07-09 s.d. 2023-03-10 07:27:51 UTC**
 - rentang test: **2023-03-10 07:38:45 s.d. 2023-12-20 23:00:00 UTC**
 
-Temuan kualitas data yang paling penting untuk dibaca juri adalah sebagai berikut.
+Temuan kualitas data yang paling penting untuk dibaca penilai adalah sebagai berikut.
 
 1. `award_value_amount` relatif kuat sehingga tetap berguna untuk sinyal nilai.
 2. Beberapa field seperti `tender.value.amount` dan `tender.description` memerlukan fallback karena coverage tidak konsisten.
@@ -258,7 +258,7 @@ Pada level output, fungsi `explain_single(...)` dirancang untuk memenuhi kebutuh
 
 ## 2.8 Artefak Submission dan Reproducibility
 
-Struktur submission yang disiapkan untuk juri mengikuti constraint umum kompetisi.
+Struktur submission yang disiapkan untuk penilai mengikuti constraint umum kompetisi.
 
 | Artefak | Peran |
 | --- | --- |
@@ -270,7 +270,7 @@ Struktur submission yang disiapkan untuk juri mengikuti constraint umum kompetis
 | `requirements.txt` | dependency agar eksperimen dapat dijalankan ulang |
 | `proposal/figures/` | visual evaluasi dan bukti presentasi |
 
-Dengan desain ini, juri tidak perlu menebak alur kerja proyek: semua komponen utama tersedia sebagai artefak lokal yang eksplisit.
+Dengan desain ini, penilai tidak perlu menebak alur kerja proyek: semua komponen utama tersedia sebagai artefak lokal yang eksplisit.
 
 ## 2.9 Filosofi Evaluasi
 
@@ -290,7 +290,7 @@ Dengan demikian, Bab 4 tidak hanya mengusulkan integrasi sistem, tetapi juga men
 
 ## 3.1 Matriks Kepatuhan Track C
 
-Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menjelaskan secara rinci bagaimana solusi mematuhi setiap constraint track**. Tabel berikut menjadi ringkasan paling langsung untuk juri.
+Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menjelaskan secara rinci bagaimana solusi mematuhi setiap constraint track**. Tabel berikut menjadi ringkasan paling langsung untuk penilai.
 
 | Kode | Constraint resmi | Implementasi pada LPSE-X | Bukti utama |
 | --- | --- | --- | --- |
@@ -300,7 +300,7 @@ Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menj
 | C-C4 | Wajib membuktikan tidak ada data leakage | Raw split dilakukan sebelum preprocessing; test tidak dipakai untuk tuning atau kalibrasi | `src/split.py`, `train_data/raw.parquet`, `test_data/raw.parquet`, `data/processed/split_metadata.json` |
 | C-C5 | Offline total | Training, inferensi, dan explainability berjalan lokal tanpa API cloud | `training.ipynb`, `inference.ipynb`, `requirements.txt` |
 
-Tabel di atas adalah checklist kepatuhan utama untuk juri: setiap constraint Track C dipetakan langsung ke artefak implementasi yang bisa diperiksa pada repo submission.
+Tabel di atas adalah checklist kepatuhan utama untuk penilai: setiap constraint Track C dipetakan langsung ke artefak implementasi yang bisa diperiksa pada repo submission.
 
 ## 3.2 Pembuktian per Constraint
 
@@ -322,7 +322,7 @@ Dengan desain ini, reviewer tidak perlu menginterpretasi angka mentah sendiri. O
 
 ### C-C3 — Anti-black-box
 
-Kami sengaja tidak menggunakan arsitektur yang sepenuhnya opaque untuk submission Tahap 2. XGBoost dipilih karena lebih cocok untuk data tabular dan lebih mudah dipertanggungjawabkan pada konteks kebijakan publik. Bila juri menelusuri artefaknya, mereka dapat memeriksa:
+Kami sengaja tidak menggunakan arsitektur yang sepenuhnya opaque untuk submission Tahap 2. XGBoost dipilih karena lebih cocok untuk data tabular dan lebih mudah dipertanggungjawabkan pada konteks kebijakan publik. Bila penilai menelusuri artefaknya, mereka dapat memeriksa:
 
 - fitur input yang digunakan,
 - manifest fitur dan split,
@@ -363,7 +363,7 @@ LPSE-X **tidak** menggunakan API inferensi cloud, API explainability, maupun lay
 
 ## 3.3 Kesiapan Paket Submission
 
-Selain constraint Track C, panitia juga mensyaratkan struktur artefak yang jelas. Paket Tahap 2 untuk LPSE-X disusun agar juri mudah memeriksa ulang komponen utama berikut.
+Selain constraint Track C, panitia juga mensyaratkan struktur artefak yang jelas. Paket Tahap 2 untuk LPSE-X disusun agar penilai mudah memeriksa ulang komponen utama berikut.
 
 | Artefak submission | Status peran |
 | --- | --- |
@@ -378,9 +378,9 @@ Di lane submission resmi, kami juga mengunci tiga aturan tambahan agar paket tid
 
 1. **Single-model submission** — hanya satu model utama yang dikirim, yaitu XGBoost multiclass yang diekspor ke `model_risk.ubj` dan `model_risk.onnx`; tidak ada ensemble terpisah atau model cloud pendamping pada paket final.
 2. **Penamaan resmi panitia** — folder/repo final dikunci ke `BismillahFirstTry-Phase2_Tahap2_FindIT2026`, sedangkan proposal PDF final dikunci ke `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.pdf`.
-3. **Bundle judge-safe** — isi folder dibatasi pada proposal, notebook, model, data split, source code inti, dan figures yang benar-benar dipakai juri.
+3. **Bundle clean-package** — isi folder dibatasi pada proposal, notebook, model, data split, source code inti, dan figures yang benar-benar dipakai penilai.
 
-Pendekatan ini sengaja dibuat judge-safe: yang ditampilkan adalah artefak yang benar-benar dibutuhkan untuk evaluasi, bukan seluruh histori eksperimen internal.
+Pendekatan ini sengaja dibuat clean-package: yang ditampilkan adalah artefak yang benar-benar dibutuhkan untuk evaluasi, bukan seluruh histori eksperimen internal.
 
 ## 3.4 Pengendalian Risiko Teknis
 
@@ -399,7 +399,7 @@ Kepatuhan teknis tidak boleh membuat proposal kehilangan kejujuran ilmiah. Karen
 2. audit robustness menunjukkan circularity risk yang signifikan,
 3. jalur bukti pendukung dan manual review menambah bukti yang berguna, tetapi belum mengubah sistem menjadi oracle hukum final.
 
-Justru dengan menyatakan batasan ini secara terbuka, proposal menjadi lebih kuat di hadapan juri: solusi terlihat serius, patuh constraint, dan tidak menjual klaim berlebihan.
+Justru dengan menyatakan batasan ini secara terbuka, proposal menjadi lebih kuat di hadapan penilai: solusi terlihat serius, patuh constraint, dan tidak menjual klaim berlebihan.
 
 ## 3.6 Bukti Verifikasi Implementasi
 
@@ -411,7 +411,7 @@ Status implementasi yang relevan untuk Tahap 2 dapat diringkas sebagai berikut.
 - notebook training dan inference sudah menjadi artefak submission;
 - proposal kini memetakan setiap constraint Track C ke artefak nyata.
 
-![Peta artefak yang diterima juri pada paket submission](figures/submission-package-map.png)
+![Peta artefak yang diterima penilai pada paket submission](figures/submission-package-map.png)
 
 
 ---
@@ -613,4 +613,4 @@ Bab ini menempatkan LPSE-X secara eksplisit sebagai **rancangan sistem dan bisni
 
 Secara bisnis, bentuk adopsi yang paling realistis adalah alat bantu keputusan internal dengan pilot bertahap. Secara dampak, manfaat utamanya terletak pada efisiensi triase, transparansi keputusan awal, dan penguatan akuntabilitas. Secara ilmiah, proposal ini tetap menjaga kejujuran: LPSE-X sudah cukup matang untuk didemokan dan diintegrasikan secara terbatas, tetapi masih memerlukan penguatan label, evaluasi lapangan, dan tata kelola implementasi sebelum dapat diklaim sebagai sistem yang sepenuhnya matang.
 
-Yang kami tawarkan kepada juri bukan sekadar kombinasi **XGBoost + SHAP**, melainkan sebuah cara yang lebih dapat dipercaya untuk mengubah data pengadaan menjadi prioritas review yang masuk akal, dapat dijelaskan, dan siap dipakai secara lokal. Jika banyak proposal berhenti pada “AI yang akurat”, maka LPSE-X sengaja melangkah satu tahap lebih jauh: **AI yang membantu reviewer mengambil keputusan awal dengan lebih cepat, lebih transparan, dan lebih bertanggung jawab**.
+Yang kami tawarkan kepada penilai bukan sekadar kombinasi **XGBoost + SHAP**, melainkan sebuah cara yang lebih dapat dipercaya untuk mengubah data pengadaan menjadi prioritas review yang masuk akal, dapat dijelaskan, dan siap dipakai secara lokal. Jika banyak proposal berhenti pada “AI yang akurat”, maka LPSE-X sengaja melangkah satu tahap lebih jauh: **AI yang membantu reviewer mengambil keputusan awal dengan lebih cepat, lebih transparan, dan lebih bertanggung jawab**.

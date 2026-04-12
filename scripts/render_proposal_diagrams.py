@@ -490,7 +490,7 @@ flowchart LR
         Diagram(
             slug="submission-package-map",
             title="Peta Paket Pengumpulan Tahap 2",
-            subtitle="Proposal PDF diunggah ke Google Form, sedangkan repo/folder teknis memuat artefak yang harus diperiksa juri.",
+            subtitle="Proposal PDF diunggah ke Google Form, sedangkan repo/folder teknis memuat artefak yang harus diperiksa penilai.",
             mermaid="""
 flowchart TD
     A[Proposal PDF] --> P[Google Form Tahap 2]
@@ -503,7 +503,7 @@ flowchart TD
 """,
             width=1620,
             height=980,
-            badges=[Badge("Judge-safe", PALETTE["risk_watch"]), Badge("Named exactly", PALETTE["data"])],
+            badges=[Badge("Clean-package", PALETTE["risk_watch"]), Badge("Named exactly", PALETTE["data"])],
             nodes=[
                 box("P", 1120, 140, 330, 120, "Google Form Tahap 2", PALETTE["decision"]),
                 box("A", 230, 140, 350, 120, "Proposal_BismillahFirstTry-Phase2\n_Tahap2_FindIT2026.pdf", PALETTE["model"]),
@@ -514,7 +514,7 @@ flowchart TD
                 box("E", 1230, 510, 240, 95, "train_data/", PALETTE["data"]),
                 box("F", 1230, 630, 240, 95, "test_data/", PALETTE["data"]),
                 box("G", 120, 630, 240, 95, "README + figures", PALETTE["explain"]),
-                box("N", 280, 800, 1060, 110, "Tujuan packaging: juri dapat memeriksa proposal, notebook, model, dan dataset split tanpa terganggu oleh artefak riset yang tidak wajib.", PALETTE["bg"], kind="note", stroke="#CBD5E1"),
+                box("N", 280, 800, 1060, 110, "Tujuan packaging: penilai dapat memeriksa proposal, notebook, model, dan dataset split tanpa terganggu oleh artefak riset yang tidak wajib.", PALETTE["bg"], kind="note", stroke="#CBD5E1"),
             ],
             edges=[
                 Edge("A", "P"),
