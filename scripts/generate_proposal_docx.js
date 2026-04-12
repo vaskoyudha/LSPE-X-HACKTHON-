@@ -187,12 +187,12 @@ while (i < lines.length) {
 
 const doc = new Document({
   styles: {
-    default: { document: { run: { font: 'Arial', size: 22 } } },
+    default: { document: { run: { font: 'Times New Roman', size: 24 } } },
     paragraphStyles: [
-      { id: 'Title', name: 'Title', basedOn: 'Normal', run: { size: 34, bold: true, font: 'Arial' }, paragraph: { spacing: { before: 160, after: 140 }, alignment: AlignmentType.CENTER } },
-      { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', quickFormat: true, run: { size: 28, bold: true, font: 'Arial' }, paragraph: { spacing: { before: 220, after: 120 }, outlineLevel: 0 } },
-      { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', quickFormat: true, run: { size: 24, bold: true, font: 'Arial' }, paragraph: { spacing: { before: 160, after: 100 }, outlineLevel: 1 } },
-      { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', quickFormat: true, run: { size: 22, bold: true, font: 'Arial' }, paragraph: { spacing: { before: 120, after: 80 }, outlineLevel: 2 } },
+      { id: 'Title', name: 'Title', basedOn: 'Normal', run: { size: 34, bold: true, font: 'Times New Roman' }, paragraph: { spacing: { before: 160, after: 140 }, alignment: AlignmentType.CENTER } },
+      { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', quickFormat: true, run: { size: 28, bold: true, font: 'Times New Roman' }, paragraph: { spacing: { before: 220, after: 120 }, outlineLevel: 0 } },
+      { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', quickFormat: true, run: { size: 24, bold: true, font: 'Times New Roman' }, paragraph: { spacing: { before: 160, after: 100 }, outlineLevel: 1 } },
+      { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', quickFormat: true, run: { size: 22, bold: true, font: 'Times New Roman' }, paragraph: { spacing: { before: 120, after: 80 }, outlineLevel: 2 } },
     ],
   },
   numbering: {
@@ -203,7 +203,7 @@ const doc = new Document({
     ],
   },
   sections: [{
-    properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+    properties: { page: { margin: { top: 1701, right: 1701, bottom: 1701, left: 2268 } } },
     footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun('Page '), new TextRun({ children: [PageNumber.CURRENT] })] })] }) },
     children,
   }],

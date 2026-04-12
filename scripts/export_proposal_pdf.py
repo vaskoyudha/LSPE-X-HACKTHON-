@@ -33,15 +33,19 @@ HTML_TEMPLATE = """<!doctype html>
     <title>{title}</title>
     <base href="{base_href}" />
     <style>
+      @page {{
+        size: A4;
+        margin: 3cm 3cm 3cm 4cm;
+      }}
       body {{
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: 11pt;
+        font-family: "Times New Roman", Times, serif;
+        font-size: 12pt;
         line-height: 1.5;
         color: #111827;
-        margin: 24px;
+        margin: 0;
       }}
-      h1 {{ font-size: 20pt; margin-top: 28px; margin-bottom: 12px; }}
-      h2 {{ font-size: 15pt; margin-top: 20px; margin-bottom: 8px; }}
+      h1 {{ font-size: 18pt; margin-top: 28px; margin-bottom: 12px; }}
+      h2 {{ font-size: 14pt; margin-top: 20px; margin-bottom: 8px; }}
       h3 {{ font-size: 12pt; margin-top: 14px; margin-bottom: 6px; }}
       p {{ margin: 8px 0; }}
       ul, ol {{ margin: 8px 0 8px 24px; }}

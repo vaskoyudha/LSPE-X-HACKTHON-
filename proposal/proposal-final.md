@@ -6,13 +6,25 @@
 - **Nama Solusi:** LPSE-X
 - **Track:** Track C — *The Explainable Oracle (Predictive Analytics)*
 - **Subtema:** Smart Governance & Public Service
-- **Posisi Solusi:** explainable procurement-risk screening system untuk membantu prioritisasi audit pengadaan publik
+- **Posisi Solusi:** sistem triase risiko pengadaan yang dapat dijelaskan untuk membantu prioritisasi audit pengadaan publik
 
 ## Ringkasan Eksekutif
 
-LPSE-X adalah sistem prediktif offline untuk membantu menyaring paket pengadaan yang layak diperiksa lebih dulu. Sistem ini dibangun dengan model XGBoost tabular, dilengkapi SHAP untuk explainability, dan menghasilkan penjelasan Bahasa Indonesia agar hasil prediksi dapat dibaca manusia. Seluruh pipeline dirancang patuh terhadap constraint Track C: explainability wajib, human-readable explanation, anti-black-box, validasi anti-leakage, dan offline total.
+LPSE-X membantu reviewer pengadaan memusatkan perhatian pada paket yang paling layak diperiksa lebih dulu. Dalam konteks audit dengan waktu terbatas dan volume data besar, nilai utama sistem ini bukan sekadar menghasilkan skor, tetapi **mengubah ribuan baris data pengadaan menjadi shortlist prioritas yang dapat dijelaskan, ditelusuri, dan dijalankan sepenuhnya di lingkungan lokal**.
 
-Secara ilmiah, proposal ini mengambil posisi yang konservatif dan defensible. Metrik utama memang tinggi pada benchmark saat ini, tetapi tetap dilaporkan sebagai performa terhadap **heuristic risk labels**, bukan sebagai bukti final keberhasilan mendeteksi kasus korupsi yang sudah terverifikasi untuk seluruh dataset. Karena itu, kekuatan utama LPSE-X pada Tahap 2 adalah kombinasi antara **kepatuhan teknis, kualitas presentasi, dan kejujuran evaluasi**.
+Secara teknis, LPSE-X dibangun dengan model XGBoost tabular, SHAP untuk penjelasan faktor pendorong prediksi, serta narasi Bahasa Indonesia agar hasilnya mudah dibaca manusia. Pipeline disusun dengan pemisahan `train_data` dan `test_data` sebelum rekayasa fitur, sehingga proposal ini tidak hanya kuat dari sisi performa, tetapi juga defensible terhadap pertanyaan juri tentang kebocoran data, transparansi, dan kepatuhan Track C.
+
+Secara ilmiah, proposal ini mengambil posisi yang tegas tetapi jujur: LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum. Kinerja yang tinggi pada benchmark saat ini harus dibaca sebagai bukti bahwa sistem mampu mereplikasi dan mengurutkan sinyal risiko heuristik secara leakage-safe, bukan sebagai klaim bahwa masalah fraud detection telah selesai sepenuhnya. Justru kombinasi antara **kepatuhan teknis, relevansi operasional, dan kejujuran evaluasi** inilah yang menjadi kekuatan utama LPSE-X pada tahap seleksi.
+
+### Ringkasan Bukti Utama
+
+| Dimensi | Bukti saat ini | Makna untuk juri |
+| --- | --- | --- |
+| Kinerja held-out | Accuracy **0,9899**; Macro-F1 **0,9830** pada `models/metrics.json` | Model sangat kuat terhadap label risiko heuristik yang digunakan |
+| Nilai operasional | Precision@100 **1,00** pada `models/operational_metrics.json` | Shortlist teratas sangat padat sinyal risiko untuk reviewer dengan kapasitas terbatas |
+| Validasi tambahan | mean external-validation Macro-F1 **0,9151**; manual-review agreement **95,8%** | Bukti tidak berhenti pada satu split uji saja |
+| Kepatuhan Track C | explainability, narasi mudah dibaca, anti-leakage, dan offline total | Proposal kuat terhadap kriteria teknis lomba |
+| Nilai implementasi | Bab 4 memetakan integrasi Phase 3, workflow pengguna, KPI, dan mitigasi risiko | Solusi terlihat siap berkembang ke alur kerja nyata, bukan sekadar demo |
 
 ## Daftar Isi
 
@@ -45,18 +57,18 @@ Rumusan masalah yang dijawab proposal ini adalah sebagai berikut.
 
 ## 1.3 Posisi Solusi dan Nilai Utama
 
-LPSE-X diposisikan sebagai **explainable procurement-risk screening system** dengan empat nilai utama.
+LPSE-X diposisikan sebagai **sistem triase risiko pengadaan yang dapat dijelaskan** dengan empat nilai utama.
 
-1. **Praktis untuk triase** — sistem memprioritaskan paket yang layak ditinjau lebih dulu, bukan menggantikan investigator.
-2. **Patuh Track C** — setiap prediksi disertai alasan, arah pengaruh, dan bukti bahwa pipeline tidak melanggar aturan anti-leakage serta offline total.
-3. **Siap didemokan** — model diekspor ke artefak ringan (`.ubj` dan `.onnx`) dan dilengkapi notebook training serta inference.
+1. **Praktis untuk triase** — sistem memadatkan populasi paket menjadi shortlist prioritas, bukan menggantikan investigator.
+2. **Patuh Track C** — setiap prediksi disertai alasan, arah pengaruh, dan bukti bahwa pipeline tidak melanggar aturan anti-leakage serta berjalan sepenuhnya secara lokal.
+3. **Siap ditelaah dan didemokan** — model diekspor ke artefak ringan (`.ubj` dan `.onnx`) dan dilengkapi notebook training serta inference.
 4. **Jujur secara ilmiah** — metrik dilaporkan terhadap label heuristik risiko, bukan diklaim sebagai tingkat keberhasilan mendeteksi korupsi yang sudah terverifikasi.
 
 ## 1.4 Tujuan
 
 Tujuan pengembangan LPSE-X pada Tahap 2 adalah:
 
-1. menyusun pipeline data pengadaan yang rapi, split-aware, dan reproducible;
+1. menyusun pipeline data pengadaan yang rapi, dapat diulang, dan menjaga disiplin pemisahan data sebelum rekayasa fitur;
 2. melatih model prediktif berbasis XGBoost untuk klasifikasi risiko pengadaan;
 3. menghasilkan output explainability yang memenuhi kebutuhan Track C, termasuk minimal tiga faktor teratas beserta arah pengaruhnya;
 4. menyiapkan paket submission yang mudah diperiksa juri: proposal, notebook, model, dan folder data terpisah;
@@ -68,7 +80,7 @@ Agar tidak terjadi overclaim, proposal ini menetapkan batasan berikut.
 
 1. Data kerja berasal dari artefak OCDS yang telah diproses lokal di repo ini; benchmark saat ini adalah **slice data riil** dengan total 465.184 baris usable, bukan seluruh histori pengadaan nasional.
 2. Label target adalah **heuristic risk labels**, bukan putusan hukum atau ground truth fraud outcome untuk seluruh dataset.
-3. Model digunakan untuk **risk screening**, sehingga outputnya harus dipahami sebagai prioritas review, bukan keputusan final atau tuduhan pelanggaran.
+3. Model digunakan untuk **triase risiko**, sehingga outputnya harus dipahami sebagai prioritas review, bukan keputusan final atau tuduhan pelanggaran.
 4. Explainability yang dipakai adalah SHAP dan narasi deterministik, bukan generative AI atau cloud explanation service.
 5. Hasil evaluasi yang sangat tinggi tetap harus dibaca bersama audit circularity agar tidak disalahartikan sebagai bukti final validitas lapangan.
 
@@ -137,7 +149,7 @@ Temuan kualitas data yang paling penting untuk dibaca juri adalah sebagai beriku
 1. `award_value_amount` relatif kuat sehingga tetap berguna untuk sinyal nilai.
 2. Beberapa field seperti `tender.value.amount` dan `tender.description` memerlukan fallback karena coverage tidak konsisten.
 3. Coverage `tender_numberOfTenderers`, `contracts`, dan `procurementMethod` masih lemah pada slice ini.
-4. Karena kualitas field tidak merata, proposal ini lebih jujur bila memposisikan sistem sebagai **prototype risk screening** daripada solusi operasional nasional yang matang.
+4. Karena kualitas field tidak merata, proposal ini lebih jujur bila memposisikan sistem sebagai **prototipe triase risiko** daripada solusi operasional nasional yang matang.
 
 ## 2.3 Strategi Split Data dan Anti-Leakage
 
@@ -252,7 +264,7 @@ Agar hasil mudah dibaca secara profesional, evaluasi pada proposal ini dibagi me
 1. **headline benchmark** pada test split heuristik,
 2. **calibration dan confusion analysis** untuk membaca trade-off operasional,
 3. **robustness / proxy-reduced validation** untuk mengukur circularity risk,
-4. **manual review, external validation, dan official evidence lane** untuk memperkaya bukti di luar sekadar angka terhadap weak labels.
+4. **manual review, external validation, dan jalur bukti pendukung resmi** untuk memperkaya bukti di luar sekadar angka terhadap weak labels.
 
 Dengan demikian, Bab 4 tidak hanya mengusulkan integrasi sistem, tetapi juga menautkannya pada bukti evaluasi yang dibaca secara hati-hati dan tidak berlebihan.
 
@@ -268,7 +280,7 @@ Bab ini ditulis khusus untuk memenuhi ketentuan panitia bahwa **Bab 3 harus menj
 | Kode | Constraint resmi | Implementasi pada LPSE-X | Bukti utama |
 | --- | --- | --- | --- |
 | C-C1 | Explainability wajib | Prediksi dijelaskan dengan SHAP global dan lokal | `src/explain.py`, `figures/shap_summary.png` |
-| C-C2 | Output penjelasan harus human-readable | Inference menghasilkan narasi Bahasa Indonesia dengan faktor utama dan arah pengaruh | `src/narrative.py`, `inference.ipynb` |
+| C-C2 | Output penjelasan harus mudah dibaca manusia | Inference menghasilkan narasi Bahasa Indonesia dengan faktor utama dan arah pengaruh | `src/narrative.py`, `inference.ipynb` |
 | C-C3 | Anti-black-box | Model utama adalah XGBoost tabular yang dapat diinspeksi; explainability bukan tempelan kosmetik | `src/model.py`, `models/xgb_model.ubj`, `models/xgb_model.onnx` |
 | C-C4 | Wajib membuktikan tidak ada data leakage | Raw split dilakukan sebelum preprocessing; test tidak dipakai untuk tuning atau kalibrasi | `src/split.py`, `train_data/raw.parquet`, `test_data/raw.parquet`, `data/processed/split_metadata.json` |
 | C-C5 | Offline total | Training, inferensi, dan explainability berjalan lokal tanpa API cloud | `training.ipynb`, `inference.ipynb`, `requirements.txt` |
@@ -362,7 +374,7 @@ Agar implementasi tetap stabil di bawah tekanan waktu kompetisi, beberapa prinsi
 1. **Fallback tetap tersedia** — bila jalur counterfactual yang lebih berat tidak stabil, sistem tetap bisa menjelaskan hasil melalui SHAP dan narasi deterministik.
 2. **Model artefak ganda** — ekspor `.ubj` dan `.onnx` mengurangi risiko kegagalan demo pada satu format saja.
 3. **Sumber kebenaran artefak** — bila ada perbedaan antara narasi proposal dan implementasi, artefak repo menjadi acuan utama.
-4. **No overclaim policy** — output disebut sebagai risk screening, bukan putusan fraud.
+4. **No overclaim policy** — output disebut sebagai triase risiko, bukan putusan fraud.
 
 ## 3.5 Posisi Ilmiah yang Jujur
 
@@ -370,7 +382,7 @@ Kepatuhan teknis tidak boleh membuat proposal kehilangan kejujuran ilmiah. Karen
 
 1. metrik utama masih dievaluasi terhadap **heuristic risk labels**,
 2. audit robustness menunjukkan circularity risk yang signifikan,
-3. evidence lane dan manual review menambah bukti yang berguna, tetapi belum mengubah sistem menjadi oracle hukum final.
+3. jalur bukti pendukung dan manual review menambah bukti yang berguna, tetapi belum mengubah sistem menjadi oracle hukum final.
 
 Justru dengan menyatakan batasan ini secara terbuka, proposal menjadi lebih kuat di hadapan juri: solusi terlihat serius, patuh constraint, dan tidak menjual klaim berlebihan.
 
@@ -400,17 +412,17 @@ Tahap 2 menempatkan LPSE-X sebagai **prototype prediktif yang dapat dijelaskan**
 
 1. memasukkan skor risiko dan penjelasan model ke alur kerja review yang sudah ada,
 2. memastikan setiap rekomendasi tetap dapat ditelusuri kembali ke fitur, narasi, dan bukti pendukung,
-3. menambah lapisan evidence-backed review agar kasus prioritas tinggi dapat diperkaya dengan sumber resmi,
+3. menambah lapisan review berbasis bukti pendukung agar kasus prioritas tinggi dapat diperkaya dengan sumber resmi,
 4. mengubah output model dari sekadar artefak notebook menjadi **alat bantu operasional** bagi tim audit/pengawasan.
 
-Secara prinsip, Phase 3 harus mempertahankan tiga batas etik yang sudah dijaga sejak awal: **offline-first**, **human-in-the-loop**, dan **tidak overclaim**. Artinya, LPSE-X memberi rekomendasi prioritas pemeriksaan, tetapi keputusan investigatif, administratif, maupun hukum tetap berada pada reviewer manusia.
+Secara prinsip, Phase 3 harus mempertahankan tiga batas etik yang sudah dijaga sejak awal: **berjalan sepenuhnya secara lokal**, **berbasis tinjauan manusia**, dan **tidak overclaim**. Artinya, LPSE-X memberi rekomendasi prioritas pemeriksaan, tetapi keputusan investigatif, administratif, maupun hukum tetap berada pada reviewer manusia.
 
 ## 4.2 Rancangan Sistem Target untuk Phase 3
 
 Arsitektur target LPSE-X dirancang sebagai sistem modular agar mudah diadopsi bertahap. Komponen intinya adalah sebagai berikut.
 
 1. **Data ingestion layer** — menerima ekspor OCDS atau snapshot data pengadaan dari sumber lokal.
-2. **Feature preparation layer** — melakukan pembersihan, normalisasi, dan rekayasa fitur secara split-aware serta terdokumentasi.
+2. **Feature preparation layer** — melakukan pembersihan, normalisasi, dan rekayasa fitur dengan disiplin pemisahan data serta dokumentasi yang jelas.
 3. **Risk scoring engine** — memuat model XGBoost final dan menghasilkan probabilitas kelas risiko.
 4. **Explainability layer** — menerjemahkan kontribusi fitur menjadi alasan yang bisa dibaca manusia.
 5. **Evidence lane** — menghubungkan paket prioritas dengan bukti resmi atau casebook pendukung bila tersedia.
@@ -429,7 +441,7 @@ Agar integrasi tidak berhenti pada demo teknis, berikut alur operasional yang ka
 2. Pipeline lokal menjalankan preprocessing dan scoring terhadap paket yang masuk.
 3. Sistem menghasilkan **risk score, kelas risiko, tiga faktor utama, dan narasi Bahasa Indonesia**.
 4. Paket dengan skor tertinggi masuk ke antrean reviewer beserta justifikasi model.
-5. Jika ada kecocokan dengan evidence lane, kasus dapat dinaikkan ke prioritas pemeriksaan lebih tinggi.
+5. Jika ada kecocokan dengan jalur bukti pendukung, kasus dapat dinaikkan ke prioritas pemeriksaan lebih tinggi.
 6. Reviewer memberi status lanjut: dipantau, direview mendalam, atau ditutup.
 7. Hasil review disimpan sebagai jejak audit sekaligus bahan penguatan label pada iterasi berikutnya.
 
@@ -468,7 +480,7 @@ Phase 3 idealnya menyediakan tiga tampilan inti.
 Kami mengusulkan integrasi bertahap berikut agar adopsi tetap rendah risiko.
 
 - **Tahap 3A — pilot internal terbatas**: scoring batch lokal untuk satu instansi atau satu rentang waktu, fokus pada validasi workflow.
-- **Tahap 3B — evidence-assisted review**: evidence lane aktif untuk kasus prioritas tinggi dan casebook demonstratif mulai dipakai.
+- **Tahap 3B — evidence-assisted review**: jalur bukti pendukung aktif untuk kasus prioritas tinggi dan casebook demonstratif mulai dipakai.
 - **Tahap 3C — feedback-enabled governance**: hasil review manual disimpan terstruktur sebagai sumber pembelajaran untuk iterasi model selanjutnya.
 
 Pendekatan bertahap ini lebih defensible dibanding langsung mengklaim kesiapan produksi penuh, karena memberi ruang untuk validasi organisasi, kalibrasi SOP, dan penyesuaian peran manusia di lapangan.
@@ -489,7 +501,7 @@ LPSE-X menawarkan tiga nilai utama bagi institusi.
 
 | Opsi | Bentuk | Kesesuaian untuk LPSE-X |
 | --- | --- | --- |
-| Internal decision-support tool | dipakai langsung oleh unit pengawasan | **paling realistis** untuk fase awal karena offline-first dan mudah diaudit |
+| Internal decision-support tool | dipakai langsung oleh unit pengawasan | **paling realistis** untuk fase awal karena berjalan lokal dan mudah diaudit |
 | Managed analytics pilot | dijalankan tim kecil lintas fungsi untuk beberapa instansi | cocok untuk demonstrasi manfaat dan penguatan SOP |
 | Platform layanan lebih luas | integrasi ke dashboard pengawasan multi-unit | layak dipertimbangkan setelah validasi pilot dan feedback loop matang |
 
@@ -542,7 +554,7 @@ Secara lebih luas, sistem seperti LPSE-X dapat membantu mendorong budaya pengawa
 
 ## 4.7 Evidence Lane sebagai Penguat Nilai Bisnis
 
-Salah satu elemen pembeda LPSE-X adalah adanya **evidence-backed risk lane**. Dalam desain bisnis dan sistem, komponen ini penting karena meningkatkan nilai solusi dari sekadar “predictive scoring” menjadi **review support yang lebih kredibel**. Ketika bukti resmi tersedia, reviewer tidak hanya melihat skor model, tetapi juga konteks eksternal yang memperkuat prioritas kasus.
+Salah satu elemen pembeda LPSE-X adalah adanya **jalur bukti pendukung berbasis sumber resmi**. Dalam desain bisnis dan sistem, komponen ini penting karena meningkatkan nilai solusi dari sekadar “predictive scoring” menjadi **alat bantu review yang lebih kredibel**. Ketika bukti resmi tersedia, reviewer tidak hanya melihat skor model, tetapi juga konteks eksternal yang memperkuat prioritas kasus.
 
 ![Decision flow empat level untuk prioritisasi dan eskalasi kasus](figures/risk-decision-flow.png)
 
@@ -552,7 +564,7 @@ Pada Phase 3, komponen ini dapat berfungsi sebagai:
 2. jembatan antara screening kuantitatif dan investigasi kualitatif,
 3. dasar untuk menyusun casebook atau portofolio kasus prioritas.
 
-Dari perspektif bisnis/adopsi, evidence lane membuat solusi lebih mudah diterima karena reviewer cenderung lebih percaya pada sistem yang tidak hanya mengeluarkan skor, tetapi juga memberi konteks dan jalur verifikasi tambahan.
+Dari perspektif bisnis/adopsi, jalur bukti pendukung membuat solusi lebih mudah diterima karena reviewer cenderung lebih percaya pada sistem yang tidak hanya mengeluarkan skor, tetapi juga memberi konteks dan jalur verifikasi tambahan.
 
 ## 4.8 Risiko Implementasi dan Strategi Mitigasi
 
@@ -582,6 +594,6 @@ Dengan KPI tersebut, Phase 3 tidak dinilai hanya dari akurasi model, tetapi dari
 
 ## 4.10 Kesimpulan Bab
 
-Bab ini menempatkan LPSE-X secara eksplisit sebagai **rancangan sistem dan bisnis untuk integrasi Phase 3**, bukan sekadar eksperimen model. Rancangan yang kami usulkan bersifat modular, offline-first, human-in-the-loop, dan berorientasi pada nilai publik. Nilai utamanya bukan mengganti auditor, melainkan membantu mereka bekerja lebih cepat, lebih konsisten, dan lebih mampu menjelaskan alasan prioritas review.
+Bab ini menempatkan LPSE-X secara eksplisit sebagai **rancangan sistem dan bisnis untuk integrasi Phase 3**, bukan sekadar eksperimen model. Rancangan yang kami usulkan bersifat modular, berjalan lokal, berbasis tinjauan manusia, dan berorientasi pada nilai publik. Nilai utamanya bukan mengganti auditor, melainkan membantu mereka bekerja lebih cepat, lebih konsisten, dan lebih mampu menjelaskan alasan prioritas review.
 
-Secara bisnis, bentuk adopsi yang paling realistis adalah decision-support tool internal dengan pilot bertahap. Secara dampak, manfaat utamanya terletak pada efisiensi triase, transparansi keputusan awal, dan penguatan akuntabilitas. Secara ilmiah, proposal ini tetap menjaga kejujuran: LPSE-X sudah cukup matang untuk didemokan dan diintegrasikan secara terbatas, tetapi masih memerlukan penguatan label, evaluasi lapangan, dan governance implementasi sebelum dapat diklaim sebagai sistem yang sepenuhnya matang.
+Secara bisnis, bentuk adopsi yang paling realistis adalah alat bantu keputusan internal dengan pilot bertahap. Secara dampak, manfaat utamanya terletak pada efisiensi triase, transparansi keputusan awal, dan penguatan akuntabilitas. Secara ilmiah, proposal ini tetap menjaga kejujuran: LPSE-X sudah cukup matang untuk didemokan dan diintegrasikan secara terbatas, tetapi masih memerlukan penguatan label, evaluasi lapangan, dan tata kelola implementasi sebelum dapat diklaim sebagai sistem yang sepenuhnya matang.
