@@ -10,11 +10,11 @@
 
 ## Ringkasan Eksekutif
 
-LPSE-X membantu reviewer pengadaan memusatkan perhatian pada paket yang paling layak diperiksa lebih dulu. Dalam konteks audit dengan waktu terbatas dan volume data besar, nilai utama sistem ini bukan sekadar menghasilkan skor, tetapi **mengubah ribuan baris data pengadaan menjadi shortlist prioritas yang dapat dijelaskan, ditelusuri, dan dijalankan sepenuhnya di lingkungan lokal**.
+LPSE-X membantu reviewer pengadaan memusatkan perhatian pada paket yang paling layak diperiksa lebih dulu. Dalam konteks audit dengan waktu terbatas dan volume data besar, nilai utama sistem ini bukan sekadar menghasilkan skor, tetapi **mengubah ribuan baris data pengadaan menjadi shortlist prioritas yang dapat dijelaskan, ditelusuri, dan dijalankan sepenuhnya di lingkungan lokal**. Dengan kata lain, LPSE-X tidak hanya memberi sinyal risiko, tetapi juga mempercepat langkah pertama pengawasan yang biasanya paling mahal: menentukan **kasus mana yang harus diperiksa lebih dulu, dan mengapa**.
 
 Secara teknis, LPSE-X dibangun dengan model XGBoost tabular, SHAP untuk penjelasan faktor pendorong prediksi, serta narasi Bahasa Indonesia agar hasilnya mudah dibaca manusia. Pipeline disusun dengan pemisahan `train_data` dan `test_data` sebelum rekayasa fitur, sehingga proposal ini tidak hanya kuat dari sisi performa, tetapi juga defensible terhadap pertanyaan juri tentang kebocoran data, transparansi, dan kepatuhan Track C.
 
-Secara ilmiah, proposal ini mengambil posisi yang tegas tetapi jujur: LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum. Kinerja yang tinggi pada benchmark saat ini harus dibaca sebagai bukti bahwa sistem mampu mereplikasi dan mengurutkan sinyal risiko heuristik secara leakage-safe, bukan sebagai klaim bahwa masalah fraud detection telah selesai sepenuhnya. Justru kombinasi antara **kepatuhan teknis, relevansi operasional, dan kejujuran evaluasi** inilah yang menjadi kekuatan utama LPSE-X pada tahap seleksi.
+Secara ilmiah, proposal ini mengambil posisi yang tegas tetapi jujur: LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum. Kinerja yang tinggi pada benchmark saat ini harus dibaca sebagai bukti bahwa sistem mampu mereplikasi dan mengurutkan sinyal risiko heuristik secara leakage-safe, bukan sebagai klaim bahwa masalah fraud detection telah selesai sepenuhnya. Justru kombinasi antara **kepatuhan teknis, relevansi operasional, dan kejujuran evaluasi** inilah yang membuat LPSE-X tidak hanya terlihat rapi di atas kertas, tetapi juga masuk akal untuk benar-benar dipakai pada workflow pengawasan yang nyata.
 
 ### Ringkasan Bukti Utama
 
@@ -25,6 +25,21 @@ Secara ilmiah, proposal ini mengambil posisi yang tegas tetapi jujur: LPSE-X ada
 | Validasi tambahan | mean external-validation Macro-F1 **0,9151**; manual-review agreement **95,8%** | Bukti tidak berhenti pada satu split uji saja |
 | Kepatuhan Track C | explainability, narasi mudah dibaca, anti-leakage, dan offline total | Proposal kuat terhadap kriteria teknis lomba |
 | Nilai implementasi | Bab 4 memetakan integrasi Phase 3, workflow pengguna, KPI, dan mitigasi risiko | Solusi terlihat siap berkembang ke alur kerja nyata, bukan sekadar demo |
+
+### Kasus Unggulan yang Menggambarkan Nilai LPSE-X
+
+Salah satu cara tercepat untuk memahami nilai LPSE-X adalah melihat bagaimana sistem bekerja pada satu paket nyata. Pada contoh **Pengadaan Public Safety Diving Equipment**, model tidak hanya memberi sinyal bahwa paket ini perlu diperhatikan, tetapi juga menjelaskan alasannya secara langsung kepada reviewer.
+
+| Komponen | Ringkasan contoh |
+| --- | --- |
+| Paket | **Pengadaan Public Safety Diving Equipment** |
+| Prediksi model | **High Risk (86,63%)** |
+| Tiga pendorong utama | nilai pengadaan tinggi, hubungan buyer–supplier berulang, dan timing kuartal IV |
+| Narasi sistem | paket diprioritaskan karena kombinasi sinyal nilai, pola relasi, dan momentum pengadaan sama-sama mendorong risiko ke level tertinggi |
+| Tindak lanjut reviewer | memeriksa kecocokan entitas, dokumen pengadaan, dan bukti resmi pendukung sebelum eskalasi |
+| Nilai praktis | reviewer tidak mulai dari ribuan paket, tetapi dari satu kasus prioritas yang sudah disertai alasan dan arah tindakan |
+
+Contoh ini penting karena menunjukkan bahwa LPSE-X bukan hanya “model dengan angka tinggi”, melainkan **alat kerja yang mengubah data menjadi keputusan prioritas yang siap dijelaskan**. Di mata juri, bagian ini adalah bukti bahwa solusi kami bukan sekadar memenuhi constraint Track C, tetapi juga memahami bagaimana AI digunakan secara masuk akal di lingkungan pengawasan publik.
 
 ## Daftar Isi
 
@@ -597,3 +612,5 @@ Dengan KPI tersebut, Phase 3 tidak dinilai hanya dari akurasi model, tetapi dari
 Bab ini menempatkan LPSE-X secara eksplisit sebagai **rancangan sistem dan bisnis untuk integrasi Phase 3**, bukan sekadar eksperimen model. Rancangan yang kami usulkan bersifat modular, berjalan lokal, berbasis tinjauan manusia, dan berorientasi pada nilai publik. Nilai utamanya bukan mengganti auditor, melainkan membantu mereka bekerja lebih cepat, lebih konsisten, dan lebih mampu menjelaskan alasan prioritas review.
 
 Secara bisnis, bentuk adopsi yang paling realistis adalah alat bantu keputusan internal dengan pilot bertahap. Secara dampak, manfaat utamanya terletak pada efisiensi triase, transparansi keputusan awal, dan penguatan akuntabilitas. Secara ilmiah, proposal ini tetap menjaga kejujuran: LPSE-X sudah cukup matang untuk didemokan dan diintegrasikan secara terbatas, tetapi masih memerlukan penguatan label, evaluasi lapangan, dan tata kelola implementasi sebelum dapat diklaim sebagai sistem yang sepenuhnya matang.
+
+Yang kami tawarkan kepada juri bukan sekadar kombinasi **XGBoost + SHAP**, melainkan sebuah cara yang lebih dapat dipercaya untuk mengubah data pengadaan menjadi prioritas review yang masuk akal, dapat dijelaskan, dan siap dipakai secara lokal. Jika banyak proposal berhenti pada “AI yang akurat”, maka LPSE-X sengaja melangkah satu tahap lebih jauh: **AI yang membantu reviewer mengambil keputusan awal dengan lebih cepat, lebih transparan, dan lebih bertanggung jawab**.
