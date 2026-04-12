@@ -1,17 +1,35 @@
-# LPSE-X — Find IT! 2026 Track C
+# LPSE-X — Explainable AI for Procurement Risk Triage
 
-LPSE-X adalah **sistem triase risiko pengadaan publik berbasis Explainable AI** untuk membantu prioritisasi audit pengadaan pemerintah Indonesia. Repositori ini telah dirapikan agar pembaca dapat langsung menemukan artefak utama tanpa harus menelusuri dokumen kerja internal.
+LPSE-X adalah proyek **Explainable AI untuk triase risiko pengadaan publik** yang dikembangkan untuk **Find IT! 2026 Track C — The Explainable Oracle (Predictive Analytics)**. Fokus utamanya adalah membantu proses **prioritisasi audit pengadaan pemerintah Indonesia** melalui model tabular yang transparan, dapat dijelaskan, dan berjalan sepenuhnya secara lokal.
 
-## Artefak Utama
+Repositori ini dirapikan untuk menampilkan artefak utama secara langsung: proposal final, notebook training dan inference, model akhir, serta dataset train/test yang dipisahkan untuk menjaga kontrol anti-data-leakage.
+
+---
+
+## 1. Apa yang Dikerjakan LPSE-X
+
+LPSE-X tidak diposisikan sebagai mesin keputusan hukum final. Sistem ini dirancang sebagai **alat triase risiko** yang membantu reviewer menjawab pertanyaan awal yang paling mahal dalam workflow audit:
+
+> paket mana yang perlu diperiksa lebih dulu, dan mengapa?
+
+Untuk itu, LPSE-X menggabungkan:
+- **model XGBoost** untuk prediksi risiko pada data tabular,
+- **SHAP** untuk menunjukkan faktor utama yang mendorong skor,
+- **narasi Bahasa Indonesia** agar hasil model dapat dibaca manusia,
+- **split train/test yang terpisah** agar evaluasi tetap defensible dari sisi kebocoran data.
+
+---
+
+## 2. Artefak Utama di Repo Ini
 
 ### Proposal
-- `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.pdf` — **file utama yang siap diunggah**
-- `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.docx` — versi DOCX proposal final
-- `proposal/proposal-final.md` — sumber proposal final Bab 1–4
+- `proposal/proposal-final.pdf` — proposal final lengkap Bab 1–4
+- `proposal/proposal-final.docx` — versi DOCX proposal final
+- `proposal/proposal-final.md` — sumber proposal final
 
 ### Notebook
-- `training.ipynb` — notebook training dengan log/output terlihat
-- `inference.ipynb` — notebook inference dengan prediksi, explanation, dan output ONNX terlihat
+- `training.ipynb` — notebook pelatihan model dengan log/output yang terlihat
+- `inference.ipynb` — notebook inferensi dengan hasil prediksi, penjelasan, narasi, dan output ONNX yang terlihat
 
 ### Model
 - `models/xgb_model.ubj`
@@ -21,31 +39,62 @@ LPSE-X adalah **sistem triase risiko pengadaan publik berbasis Explainable AI** 
 - `train_data/`
 - `test_data/`
 
-## Ringkasan Cepat Model
+---
 
-- Data riil multi-tahun OCDS Indonesia
-- Total baris usable: **465.184**
-- Train rows: **372.150**
-- Test rows: **93.034**
+## 3. Ringkasan Data dan Benchmark
+
+Benchmark utama LPSE-X menggunakan **slice data riil multi-tahun OCDS Indonesia** yang telah diproses lokal.
+
+Ringkasan data:
+- total baris usable: **465.184**
+- train rows: **372.150**
+- test rows: **93.034**
+- buyer unik: **618**
+- supplier unik: **60.976**
+
+Ringkasan performa utama (`models/metrics.json`):
 - Accuracy: **0,9899**
 - Macro-F1: **0,9830**
+- Weighted-F1: **0,9898**
+
+Ringkasan nilai operasional (`models/operational_metrics.json`):
 - Precision@100: **1,00**
 
-## Struktur Data
+Artinya, pada benchmark saat ini, LPSE-X sangat kuat dalam **mengurutkan shortlist prioritas** berdasarkan sinyal risiko heuristik yang digunakan.
+
+---
+
+## 4. Struktur Dataset
 
 ### `train_data/`
 - `raw.parquet` — data mentah hasil split train
-- `features.parquet` — fitur hasil rekayasa fitur
-- `labels.parquet` — label risiko untuk training/evaluasi internal
+- `features.parquet` — hasil rekayasa fitur untuk training
+- `labels.parquet` — label risiko untuk pembelajaran dan evaluasi internal
 
 ### `test_data/`
 - `raw.parquet` — data mentah hasil split test
-- `features.parquet` — fitur hasil rekayasa fitur
-- `labels.parquet` — label risiko untuk evaluasi held-out
+- `features.parquet` — hasil rekayasa fitur untuk evaluasi held-out
+- `labels.parquet` — label risiko untuk evaluasi akhir
 
 Pemisahan `train_data` dan `test_data` dipertahankan sebagai bukti kontrol **anti-data-leakage**.
 
-## Cara Cek Cepat
+---
+
+## 5. Struktur Proyek
+
+```text
+src/            modul inti pipeline
+models/         artefak model dan metrik
+train_data/     split data latih
+test_data/      split data uji
+proposal/       proposal final dan visual pendukung
+tests/          pengujian terfokus
+scripts/        utilitas build, export, dan evaluasi
+```
+
+---
+
+## 6. Cara Menjalankan dengan Cepat
 
 ```bash
 python3 -m venv .venv
@@ -56,16 +105,35 @@ python -m jupyter nbconvert --to notebook --execute training.ipynb --output /tmp
 python -m jupyter nbconvert --to notebook --execute inference.ipynb --output /tmp/inference-check.ipynb
 ```
 
-## Catatan Penting
+Jika ingin mengecek pipeline tambahan:
 
-- LPSE-X adalah **alat triase risiko pengadaan**, bukan mesin keputusan hukum final.
-- Pipeline berjalan **sepenuhnya secara lokal** tanpa layanan cloud.
-- Proposal final memuat **Bab 1–4 lengkap**.
-- Bab 3 memetakan kepatuhan terhadap setiap constraint Track C.
-- Bab 4 menjelaskan integrasi Phase 3, model adopsi, KPI, dan analisis dampak.
+```bash
+python scripts/run_diagnostics.py
+```
 
-## Keterbatasan yang Diakui
+---
 
-- benchmark masih menggunakan **heuristic risk labels**
-- masih ada **circularity risk** yang diakui secara eksplisit
-- masih diperlukan validasi lapangan dan penguatan label lebih lanjut
+## 7. Catatan Metodologis Penting
+
+Beberapa hal penting untuk dipahami saat membaca hasil LPSE-X:
+
+1. Sistem ini adalah **triase risiko pengadaan**, bukan vonis fraud final.
+2. Seluruh pipeline berjalan **sepenuhnya secara lokal** tanpa layanan cloud.
+3. Proposal final memuat **Bab 1–4 lengkap**.
+4. Bab 3 memetakan kepatuhan terhadap setiap constraint Track C.
+5. Bab 4 menjelaskan integrasi Phase 3, model adopsi, KPI, dan analisis dampak.
+
+---
+
+## 8. Keterbatasan yang Diakui
+
+Repositori ini secara eksplisit mengakui bahwa:
+- benchmark masih menggunakan **heuristic risk labels**,
+- masih ada **circularity risk** yang perlu dibaca dengan hati-hati,
+- validasi lapangan dan penguatan label tetap dibutuhkan untuk tahap berikutnya.
+
+Dengan kata lain, kekuatan utama LPSE-X ada pada kombinasi antara:
+- relevansi masalah,
+- kepatuhan teknis,
+- transparansi model,
+- dan nilai operasional untuk prioritisasi audit awal.
