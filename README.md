@@ -1,175 +1,89 @@
-# LPSE-X Hackathon
+# LPSE-X
 
-LPSE-X is an offline, explainable procurement-risk prototype for Find IT! 2026 Track C.
+**LPSE-X** adalah sistem triase risiko pengadaan publik berbasis Explainable AI untuk **Find IT! 2026 Track C — The Explainable Oracle**.
 
-## Current Scope
+Repositori ini disusun agar juri atau reviewer dapat langsung menemukan artefak utama tanpa harus menelusuri seluruh histori eksperimen.
 
-- real OCDS benchmark slice built from the official Indonesia publication on data.open-contracting.org
-- temporal train/test split with split-aware feature engineering
-- heuristic risk labeling for Low / Medium / High procurement risk
-- XGBoost + SHAP + Bahasa Indonesia narrative explanation
-- CPU-safe local inference artifacts (`.ubj` + `.onnx`)
-- executable `training.ipynb` and `inference.ipynb`
-- proposal bundle (Bab 1-4 + final markdown)
-- provenance, robustness, and synthetic-vs-real comparison diagnostics
-- larger reviewed-calibration artifacts, operational review metrics, and external-validation artifacts
+## Ringkasan Singkat
 
-## Current Data Provenance
+LPSE-X membantu reviewer memprioritaskan paket pengadaan yang paling layak diperiksa lebih dulu. Sistem ini berjalan sepenuhnya secara lokal, menggunakan model tabular berbasis **XGBoost**, menyediakan penjelasan **SHAP**, dan menghasilkan narasi Bahasa Indonesia agar alasan di balik skor risiko dapat dibaca manusia.
 
-The tracked benchmark is now a **real multi-year OCDS slice (2021–2023)**.
+Posisi ilmiahnya sengaja dibuat tegas tetapi jujur:
+- ini adalah **alat triase risiko pengadaan**,
+- bukan mesin keputusan hukum,
+- dan metrik utamanya dibaca terhadap **heuristic risk labels**, bukan outcome fraud final.
 
-Evidence:
-- `data/processed/source_manifest.json` records the official source publication and selected year slice
-- `data/processed/data_provenance.json` reports `data_kind = "real_or_mixed_ocds"`
-- the current benchmark contains **465,184** usable rows after date cleaning, with **618 buyers** and **60,976 suppliers**
+## File yang Paling Penting untuk Dinilai
 
-Important limitation:
-- this is a strong Phase 2 benchmark upgrade, but it still uses the currently selected publication slice and heuristic labels rather than confirmed fraud outcomes
+### Proposal
+- `proposal/proposal-final.pdf` — proposal final lengkap Bab 1–4
+- `proposal/proposal-final.docx` — versi DOCX proposal final
+- `proposal/proposal-final.md` — sumber utama proposal
 
-## Review and Validation Upgrades
+### Notebook
+- `training.ipynb` — notebook training dengan output/log terlihat
+- `inference.ipynb` — notebook inference dengan prediksi dan penjelasan yang terlihat
 
-New validation-layer artifacts now exist:
-- `data/processed/calibration_sheet_300.csv`
-- `data/processed/clean_labels_300.csv`
-- `data/processed/review_benchmark_500.csv`
-- `models/operational_metrics.json`
-- `models/external_validation.json`
-- `models/reviewed_subset_metrics.json`
-- `models/explanation_validation.json`
+### Model
+- `models/xgb_model.ubj`
+- `models/xgb_model.onnx`
 
-Current status:
-- reviewed calibration rows used: **287**
-- manual review summary imported for **500 reviewed rows**
-- reviewed-subset metrics and explanation-validation metrics are now available
-- row-level reviewed-label import path is now available via `scripts/import_reviewed_row_level.py`
-- row-level reviewer annotations themselves are still not stored as a full reviewed sheet in the repo
+### Dataset
+- `train_data/`
+- `test_data/`
 
-## Synthetic vs Real Benchmark Comparison
+## Ringkasan Benchmark
 
-Tracked comparison artifact:
-- `models/benchmark_comparison.json`
-- `proposal/figures/benchmark_comparison.png`
+Benchmark saat ini menggunakan **slice data riil multi-tahun OCDS Indonesia**.
 
-Current comparison:
-- synthetic benchmark Macro-F1: **0.9950**
-- real 2021–2023 benchmark Macro-F1: **0.9833**
-- delta: **-0.0117**
+Ringkasan utama:
+- total baris usable: **465.184**
+- train rows: **372.150**
+- test rows: **93.034**
+- buyer unik: **618**
+- supplier unik: **60.976**
 
-Interpretation: the previous synthetic benchmark still overstates performance, but the hardened 2021–2023 real-data run now transfers much better after replacing dead features, redesigning heuristic labels around real-supported signals, and re-running real calibration.
+Metrik utama pada held-out test (`models/metrics.json`):
+- Accuracy: **0,9899**
+- Macro-F1: **0,9830**
+- Weighted-F1: **0,9898**
 
-## Robustness Snapshot
+Nilai operasional utama (`models/operational_metrics.json`):
+- Precision@100: **1,00**
 
-The repository includes a circularity audit at `models/robustness.json` and `proposal/figures/robustness_ablation.png`.
-
-Current real-benchmark findings:
-- full model (30 features): Macro-F1 **0.9833**
-- core-proxy removed (19 features): Macro-F1 **0.5215**
-- broad-proxy removed (13 features): Macro-F1 **0.5204**
-
-Interpretation: the model still relies heavily on features close to the heuristic labeling rules, but the feature-health audit now shows **0 active dead features** in the tracked real benchmark, so the current weakness is circularity rather than stale feature slots.
-
-## Operational Review Metrics
-
-Tracked artifacts:
-- `models/operational_metrics.json`
-- `proposal/figures/operational_metrics.png`
-
-Current held-out benchmark highlights:
-- Precision@50 = **1.00**
-- Precision@100 = **1.00**
-- Precision@250 = **1.00**
-- Precision@500 = **1.00**
-- Precision@1000 = **1.00**
-
-Interpretation: under the current benchmark target, the top-ranked High Risk queue is extremely concentrated, which is promising for limited-budget review workflows.
-
-## Manual Review Summary
-
-Tracked artifacts:
-- `data/processed/manual_review_summary.csv`
-- `models/reviewed_subset_metrics.json`
-- `models/explanation_validation.json`
-- `models/manual_review_summary.json`
-- `proposal/figures/manual_review_summary.png`
-
-Imported 500-row manual review summary highlights:
-- overall agreement vs model prediction: **95.8%**
-- reviewed-subset Macro-F1: **0.9679**
-- reviewed High Risk F1: **0.9603**
-- explanation agreement: **95.8%**
-- explanation clarity mean: **3.48 / 5**
-- explanation actionability mean: **4.03 / 5**
-
-Interpretation: the model aligns strongly with the manual review summary overall, but the remaining errors concentrate at the **Medium ↔ High** boundary, especially in high-uncertainty rows.
-
-## Row-Level Reviewed Label Import Path
-
-If a full reviewed sheet is available later, import it with:
-
-```bash
-source .venv/bin/activate
-python scripts/import_reviewed_row_level.py /path/to/reviewed_rows.csv
-python scripts/run_diagnostics.py
-```
-
-This will let the repo prefer row-level reviewed evidence over summary-only imports.
-
-## External Validation Snapshot
-
-Tracked artifacts:
-- `models/external_validation.json`
-- `proposal/figures/external_validation.png`
-
-Current year-holdout summary across **2019–2023**:
-- mean Macro-F1: **0.9151**
-- min Macro-F1: **0.6956** (2019)
-- max Macro-F1: **0.9934** (2023)
-- mean High Risk F1: **0.8972**
-
-Interpretation: generalization is strongest on recent years and weakest on the earliest low-history fold, which is useful evidence about temporal robustness.
-
-## Proxy-Reduced Validation Track
-
-Tracked artifacts:
-- `models/proxy_reduced_validation.json`
-- `proposal/figures/proxy_reduced_validation.png`
-
-Current stricter track:
-- selected track: **proxy_core_removed**
-- Macro-F1: **0.5215**
-- delta vs full model: **-0.4618**
-
-Interpretation: when features nearest to the labeling rules are removed, performance drops sharply. This is the clearest remaining scientific warning sign in the current system.
-
-## Project Structure
+## Struktur Repo
 
 ```text
-src/            core Python modules
-tests/          pytest suite
-proposal/       proposal drafts and figures
-data/           raw and processed data
-models/         trained model artifacts and comparison reports
-train_data/     raw/features/labels train split
-test_data/      raw/features/labels test split
-drafts/         research and planning notes
-plans/          execution plans
-.sisyphus/      lightweight evidence artifacts
+src/            modul inti pipeline
+models/         artefak model dan metrik
+train_data/     split data latih
+test_data/      split data uji
+proposal/       proposal final dan visual pendukung
+tests/          pengujian terfokus
 ```
 
-## Quick Start
+## Cara Menjalankan Secara Singkat
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest -q
-python -m nbconvert --to notebook --execute training.ipynb --output /tmp/training-executed.ipynb
-python -m nbconvert --to notebook --execute inference.ipynb --output /tmp/inference-executed.ipynb
-python scripts/run_diagnostics.py
+
+python -m jupyter nbconvert --to notebook --execute training.ipynb --output /tmp/training-check.ipynb
+python -m jupyter nbconvert --to notebook --execute inference.ipynb --output /tmp/inference-check.ipynb
 ```
 
-## Notes
+## Catatan Penting untuk Reviewer
 
-- Raw download files and model binaries are intentionally ignored by git.
-- `models/metrics.json` is the canonical tracked metrics artifact for the current benchmark.
-- The current package is strongest as an **explainable risk-screening prototype on a real 2021–2023 OCDS slice**, not as a fully validated production fraud detector.
+- `train_data` dan `test_data` dipisahkan untuk menjaga kontrol **anti-data-leakage**
+- model dieksekusi **tanpa layanan cloud**
+- proposal Bab 3 secara khusus memetakan kepatuhan terhadap setiap constraint Track C
+- proposal Bab 4 menjelaskan integrasi Phase 3, dampak, dan model adopsi
+
+## Keterbatasan yang Diakui
+
+LPSE-X adalah proposal yang kuat untuk **triase risiko** dan **prioritisasi audit awal**, tetapi belum boleh dibaca sebagai sistem fraud detection final yang menyelesaikan seluruh masalah lapangan. Proposal ini secara eksplisit mengakui:
+
+- penggunaan **heuristic risk labels**
+- masih adanya **circularity risk**
+- kebutuhan validasi lapangan dan penguatan label lebih lanjut

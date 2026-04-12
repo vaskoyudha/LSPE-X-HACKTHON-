@@ -23,8 +23,11 @@ const {
 } = docx;
 
 const ROOT = path.resolve(__dirname, '..');
-const INPUT = path.join(ROOT, 'proposal', 'proposal-final.md');
-const OUTPUT = path.join(ROOT, 'proposal', 'proposal-final.docx');
+const args = process.argv.slice(2);
+const inputArg = args[0] || path.join('proposal', 'proposal-final.md');
+const outputArg = args[1] || path.join('proposal', 'proposal-final.docx');
+const INPUT = path.isAbsolute(inputArg) ? inputArg : path.join(ROOT, inputArg);
+const OUTPUT = path.isAbsolute(outputArg) ? outputArg : path.join(ROOT, outputArg);
 const FIG_ROOT = path.join(ROOT, 'proposal');
 
 const md = fs.readFileSync(INPUT, 'utf8').replace(/\r\n/g, '\n');

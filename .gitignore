@@ -14,6 +14,7 @@ models/*.pkl
 
 # Keep source proposal chapters versioned; ignore only the generated final export.
 proposal/proposal-final.pdf
+proposal/.~lock.*
 
 # Ignore scratch outputs from evidence import/linking smoke checks.
 data/processed/evidence/_tmp_*/
