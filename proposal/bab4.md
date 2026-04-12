@@ -2,84 +2,117 @@
 
 ## 4.1 Ringkasan Hasil Utama
 
-Berdasarkan artefak evaluasi pada `models/metrics.json`, model LPSE-X pada benchmark riil 2021-2023 mencapai:
+Pada benchmark heuristik yang saat ini dipakai di repo, LPSE-X mencapai performa berikut pada `models/metrics.json`:
 
-- Accuracy: **0,9899**
-- Macro-F1: **0,9830**
-- Weighted-F1: **0,9898**
-- Log loss: **0,0553**
-- Jumlah sampel test: **93.034**
+| Metrik | Nilai |
+| --- | ---: |
+| Accuracy | **0,9899** |
+| Macro-F1 | **0,9830** |
+| Weighted-F1 | **0,9898** |
+| Log loss | **0,0553** |
+| Test rows | **93.034** |
 
-Nilai ini tetap lebih rendah dibanding benchmark sintetis sebelumnya, tetapi kini jauh lebih kredibel daripada benchmark sintetis maupun benchmark riil satu tahun. Dengan kata lain, hardening pada benchmark riil 2021-2023 mempertahankan performa sangat tinggi sambil meningkatkan validitas eksternal dan kejujuran ilmiah sistem.
-## 4.2 Analisis per Kelas
+Untuk juri, angka ini berarti model memiliki kemampuan ranking dan klasifikasi yang sangat kuat **terhadap label risiko heuristik yang digunakan pada benchmark saat ini**. Interpretasi ini penting: hasil tinggi tidak otomatis berarti sistem siap menggeneralisasi ke seluruh kasus nyata di lapangan.
 
-Nilai F1 per kelas pada benchmark riil multi-tahun adalah sebagai berikut:
+![Perbandingan benchmark sintetis dan benchmark data riil saat ini](figures/benchmark_comparison.png)
 
-- Low Risk: **0,9921**
-- Medium Risk: **0,9911**
-- High Risk: **0,9668**
+## 4.2 Analisis per Kelas dan Confusion Matrix
 
-Interpretasi utama:
+F1 per kelas pada test split adalah sebagai berikut:
 
-1. Kelas Low dan Medium tetap sangat kuat.
-2. Kelas High masih paling sulit, tetapi kini sudah sangat kuat dibanding benchmark riil satu tahun maupun versi sebelum hardening.
-3. Performa ini menunjukkan bahwa kombinasi multi-year real benchmark, feature refresh, dan label redesign memberi histori yang lebih kaya serta memperbaiki stabilitas prediksi.
+| Kelas | F1 |
+| --- | ---: |
+| Low Risk | **0,9932** |
+| Medium Risk | **0,9920** |
+| High Risk | **0,9639** |
 
-Figure pendukung:
+![Skor F1 per kelas](figures/per_class_f1.png)
 
-- `proposal/figures/per_class_f1.png`
-- `proposal/figures/confusion_matrix.png`
+Confusion matrix menunjukkan bahwa kesalahan terbesar tetap terkonsentrasi pada batas **Medium Risk ↔ High Risk**, bukan pada lompatan ekstrem Low ↔ High.
 
-## 4.3 Confusion Matrix
+- Low Risk benar: **26.354 / 26.358**
+- Medium Risk benar: **58.015 / 58.425**
+- High Risk benar: **7.726 / 8.251**
 
-Confusion matrix final menunjukkan:
+![Confusion matrix pada test split](figures/confusion_matrix.png)
 
-- Low Risk: 34.802/34.806 terklasifikasi benar
-- Medium Risk: 51.848/52.427 terklasifikasi benar
-- High Risk: 5.453/5.801 terklasifikasi benar
+Secara operasional, pola ini cukup masuk akal: batas ketidakpastian terbesar memang terjadi pada kasus yang sama-sama menampilkan sinyal risiko, tetapi belum cukup kuat untuk diposisikan pada kelas tertinggi.
 
-Kesalahan utama tetap terjadi ketika kelas High diprediksi sebagai Medium, tetapi tingkat deteksi kelas High sekarang jauh lebih tinggi daripada versi benchmark riil sebelumnya.
+## 4.3 Kalibrasi Probabilitas
 
-## 4.4 Kalibrasi Probabilitas
+LPSE-X tidak hanya mengejar klasifikasi yang tepat, tetapi juga probabilitas yang lebih dapat dipercaya. Temperature scaling dijalankan dengan **287 calibration samples** dan menghasilkan temperatur **7,697482**. Ini menunjukkan bahwa probabilitas mentah perlu dilunakkan sebelum dipakai sebagai dasar prioritas review.
 
-Model akhir tetap menggunakan temperature scaling berdasarkan clean-label review subset. Temperatur saat ini berada pada **7,697482**, dengan **287 reviewed rows** yang valid untuk fitting. Ini menandakan probabilitas mentah model masih cukup tajam dan perlu dilunakkan sebelum dipakai sebagai skor prioritas.
-Figure pendukung:
+![Kurva kalibrasi probabilitas LPSE-X](figures/calibration_curve.png)
 
-- `proposal/figures/calibration_curve.png`
+Bagi juri, poin utamanya adalah: sistem tidak berhenti pada label kelas, tetapi juga memperhatikan kualitas skor probabilitas yang akan dipakai dalam workflow nyata.
 
-## 4.5 Explainability dan Faktor Risiko
+## 4.4 Explainability dan Human-Readable Output
 
-Global explanation berbasis SHAP tetap menunjukkan bahwa fitur nilai, timing, dan histori buyer-supplier berperan penting. Namun, audit robustness memperlihatkan bahwa sebagian besar kekuatan model tetap bergantung pada fitur yang sangat dekat dengan aturan labeling.
+Track C menuntut penjelasan yang bisa dibaca manusia. Pada LPSE-X, SHAP digunakan untuk menunjukkan faktor global dan lokal, lalu hasilnya diterjemahkan menjadi narasi Bahasa Indonesia. Faktor yang sering muncul pada explanation review antara lain:
 
-Figure pendukung:
+- `f_buyer_supplier_repeat_count`,
+- `f_is_q4`,
+- `f_title_length`,
+- `f_supplier_recent_90d_award_count`,
+- `f_tender_value_log`.
 
-- `proposal/figures/shap_summary.png`
-- `proposal/figures/robustness_ablation.png`
+![Ringkasan SHAP global untuk model final](figures/shap_summary.png)
 
-## 4.6 Perbandingan Benchmark Sintetis vs Riil
+Pada evaluasi review manual, kualitas explanation menunjukkan:
 
-Perbandingan pada `models/benchmark_comparison.json` menunjukkan:
+- agreement explanation: **95,8%**
+- clarity mean: **3,48 / 5**
+- actionability mean: **4,03 / 5**
 
-- Macro-F1 benchmark sintetis: **0,9950**
-- Macro-F1 benchmark riil 2021-2023: **0,9831**
-- Delta: **-0,0117**
+Artinya, explanation yang dihasilkan belum sempurna dari sisi kejelasan, tetapi sudah cukup membantu untuk actionability review.
 
-Ini adalah hasil yang jauh lebih sehat secara ilmiah. Benchmark sintetis sebelumnya jelas terlalu optimistis. Namun setelah benchmark diperluas ke data riil multi-tahun, feature slots dibersihkan, dan label direka ulang mengikuti sinyal riil yang tersedia, performa kembali naik sampai mendekati benchmark sintetis sekaligus tetap berada pada level yang kuat untuk Phase 2.
+> **Placeholder visual untuk PDF final:** tambahkan satu kartu contoh kasus (*single-case explanation card*) yang menampilkan skor, tiga faktor teratas, arah pengaruh, dan rekomendasi tindak lanjut.
 
-## 4.7 Audit Kelemahan Model
+## 4.5 Manual Review dan Validasi Tambahan
 
-Audit tambahan pada `models/robustness.json` dan `models/proxy_reduced_validation.json` menunjukkan:
+Review manual 500 baris menambah lapisan bukti penting di luar metrik terhadap weak labels. Artefak `models/reviewed_subset_metrics.json` menunjukkan:
 
-- full model → Macro-F1 **0,9831**
-- proxy_core_removed → Macro-F1 **0,5047**
-- drop vs full → **0,4784**
+- reviewed rows: **500**
+- overall agreement: **95,8%**
+- reviewed-subset Macro-F1: **0,9679**
+- reviewed High Risk F1: **0,9603**
 
-Artinya, model masih sangat bergantung pada fitur yang berdekatan dengan heuristic labeling rules. Namun, `models/feature_health.json` menunjukkan feature catalog tetap sehat dan aktif, sehingga kelemahan utama yang tersisa benar-benar berada pada circularity risk, bukan lagi pada feature engineering yang rusak.
-## 4.8 Operational Review Metrics
+![Ringkasan manual review dan kualitas explanation](figures/manual_review_summary.png)
 
-Artefak `models/operational_metrics.json` dan `proposal/figures/operational_metrics.png` mengukur seberapa baik model memprioritaskan baris High Risk pada budget review auditor yang terbatas.
+Temuan utamanya adalah disagreement terkonsentrasi pada area **Medium Risk ↔ High Risk**, sedangkan flip ekstrem **Low Risk ↔ High Risk** tidak muncul. Ini memperkuat posisi bahwa model cukup stabil sebagai alat triase, meskipun belum dapat disebut penyelesai akhir.
 
-Hasil utama:
+## 4.6 Robustness, Circularity Risk, dan Kejujuran Ilmiah
+
+Bagian ini adalah alasan mengapa proposal kami tetap ilmiah dan tidak overclaim. Saat fitur-fitur yang paling dekat dengan aturan labeling dihapus, performa turun tajam:
+
+| Track evaluasi | Macro-F1 |
+| --- | ---: |
+| Full model | **0,9831** |
+| Proxy-core-removed | **0,5047** |
+| Penurunan | **0,4784** |
+
+![Audit robustness terhadap fitur proksi](figures/robustness_ablation.png)
+
+![Validasi proxy-reduced sebagai track evaluasi yang lebih ketat](figures/proxy_reduced_validation.png)
+
+Interpretasinya jelas: model saat ini sangat efektif sebagai **interpreter dan accelerator untuk risk rules yang ada**, tetapi masih menyimpan circularity gap yang besar. Inilah sebabnya LPSE-X diposisikan sebagai *explainable procurement-risk screening*, bukan penentu akhir atas outcome hukum atau investigatif.
+
+## 4.7 Validasi Eksternal Lintas Waktu
+
+LPSE-X juga diuji dengan skema holdout-year pada 2019–2023. Ringkasan `models/external_validation.json` menunjukkan:
+
+- mean Macro-F1: **0,9151**
+- min Macro-F1: **0,6956**
+- max Macro-F1: **0,9934**
+- mean High Risk F1: **0,8972**
+
+![External validation lintas tahun](figures/external_validation.png)
+
+Pesan penting untuk juri: generalisasi pada tahun-tahun terbaru terlihat kuat, tetapi fold awal seperti 2019 jauh lebih berat. Ini membuat klaim performa menjadi lebih seimbang dan realistis.
+
+## 4.8 Metrik Operasional untuk Budget Review Terbatas
+
+Dari sudut pandang pengguna nyata, auditor sering hanya punya kapasitas untuk meninjau sebagian kecil paket. Pada `models/operational_metrics.json`, LPSE-X menunjukkan bahwa daftar teratas sangat kaya sinyal High Risk:
 
 - Precision@50 = **1,00**
 - Precision@100 = **1,00**
@@ -87,121 +120,47 @@ Hasil utama:
 - Precision@500 = **1,00**
 - Precision@1000 = **1,00**
 
-Artinya, pada benchmark saat ini, daftar prioritas tertinggi hampir sepenuhnya terisi oleh kasus High Risk. Ini adalah sinyal operasional yang kuat untuk workflow audit berbasis antrean review.
+![Metrik operasional pada berbagai budget review](figures/operational_metrics.png)
 
-## 4.9 External Validation
+Interpretasi yang benar adalah: pada benchmark saat ini, model sangat baik dalam mengurutkan paket yang dianggap berisiko tinggi oleh sistem label yang digunakan. Sekali lagi, ini adalah kekuatan besar untuk workflow triase, tetapi tetap perlu dibaca bersama batasan label heuristik.
 
-Artefak `models/external_validation.json` dan `proposal/figures/external_validation.png` mengevaluasi model dengan skema holdout-year pada rentang 2019-2023.
+## 4.9 Evidence Lane dan Casebook Demo
 
-Ringkasan:
-
-- mean Macro-F1 = **0,9151**
-- min Macro-F1 = **0,6956** (holdout 2019)
-- max Macro-F1 = **0,9934** (holdout 2023)
-- mean High Risk F1 = **0,8972**
-
-Interpretasi:
-
-1. Generalisasi pada tahun-tahun terbaru sangat kuat.
-2. Fold 2019 paling lemah karena histori latih sebelum 2019 sangat terbatas.
-3. Validasi ini memberi bukti temporal yang lebih kuat daripada hanya satu split train/test.
-
-## 4.10 Manual Review Summary
-
-Artefak `data/processed/manual_review_summary.csv`, `models/reviewed_subset_metrics.json`, dan `models/explanation_validation.json` mengimpor hasil review manual 500 baris benchmark yang Anda lakukan di luar repo.
-
-Ringkasan utama:
-
-- overall agreement model vs review: **95,8%**
-- reviewed-subset Macro-F1: **0,9679**
-- reviewed High Risk F1: **0,9603**
-- explanation agreement: **95,8%**
-- explanation clarity mean: **3,48 / 5**
-- explanation actionability mean: **4,03 / 5**
-
-Temuan penting:
-
-1. Seluruh disagreement tetap berada pada batas **Medium ↔ High**.
-2. Tidak ada flip ekstrem **Low ↔ High**.
-3. Reviewer cenderung menaikkan sebagian kasus Medium menjadi High pada kelompok `high_uncertainty`.
-
-Ini memperkuat klaim bahwa model secara umum selaras dengan penilaian manual, sambil tetap menunjukkan area terlemah yang memang berada pada boundary uncertainty.
-
-## 4.11 What Manual Review Changed
-
-Manual review mengubah posisi ilmiah proyek secara nyata:
-
-1. Validasi tidak lagi hanya bergantung pada metric terhadap heuristic labels.
-2. Kini ada bukti bahwa prediksi model selaras dengan review manual pada **95,8%** kasus.
-3. Area lemah model dapat diidentifikasi dengan lebih spesifik, yaitu boundary **Medium ↔ High** pada baris ber-entropy tinggi.
-4. Explainability tidak hanya tersedia, tetapi juga dinilai cukup membantu, dengan actionability mean **4,03 / 5**.
-
-Dengan kata lain, manual review mengubah klaim proyek dari sekadar “model cocok dengan weak labels” menjadi “model juga cukup konsisten dengan penilaian manual pada sampel audit terbatas”.
-
-## 4.12 Keterbatasan
-
-Walaupun hasil benchmark riil multi-tahun jauh lebih kredibel, ada beberapa keterbatasan penting:
-
-1. Label yang dipakai tetap **heuristik risiko**, bukan ground-truth fraud outcome.
-2. Bukti manual review yang terimpor saat ini masih berbentuk **summary-level evidence**, belum berupa row-level reviewed sheet penuh di repo.
-3. `tender_numberOfTenderers`, `contracts`, dan `procurementMethod` masih memiliki coverage yang lemah pada sumber riil.
-4. Audit ablation menunjukkan circularity risk yang tetap kuat antara aturan labeling dan fitur utama.
-5. Counterfactual yang tersedia masih berbasis SHAP fallback, bukan sistem optimasi tindakan penuh.
-6. External validation 2019 masih lemah, menandakan adanya sensitivitas pada fold dengan histori sangat pendek.
-
-## 4.14 Evidence-Backed Risk Lane
-
-Upgrade terbaru menambahkan lane evidence resmi yang terpisah dari model heuristik. Artefak utama berada pada:
-
-- `data/processed/evidence/evidence_records.parquet`
-- `data/processed/evidence/linked_label_records.parquet`
-- `data/processed/evidence/evidence_match_summary.json`
-- `proposal/judge_casebook.md`
-
-Saat ini snapshot evidence lane menunjukkan:
+Salah satu penguatan terbaru pada proyek ini adalah **evidence-backed risk lane** yang terpisah dari model heuristik. Artefak `data/processed/evidence/evidence_match_summary.json` menunjukkan:
 
 - total evidence rows: **5**
-- matched to procurement rows: **4**
-- still needing reviewer confirmation: **1**
-- link confidence threshold: **0,55**
+- matched rows: **4**
+- needs review rows: **1**
 
-Makna ilmiahnya penting: LPSE-X tidak lagi hanya mengandalkan weak-label heuristik, tetapi sudah memiliki jalur terpisah untuk mengimpor bukti resmi, menghubungkannya ke `ocid`, dan menandai mana kasus yang cukup kuat untuk eskalasi investigatif.
+Sementara artefak `proposal/official_evidence_showcase.md` menunjukkan:
 
-Artefak `proposal/official_evidence_showcase.md` sekarang juga menunjukkan bagaimana model berperilaku pada kasus official-evidence yang benar-benar terhubung. Pada snapshot saat ini:
+- official evidence-linked cases: **3**
+- supporting official evidence rows: **4**
+- cases with multi-source corroboration: **1**
+- model predicted High Risk: **2**
+- model predicted Medium Risk: **1**
+- cases escalated to **Risiko Kritis** after evidence linkage: **3**
 
-- terdapat **3 kasus linked** yang ditopang oleh **4 baris bukti resmi**, 
-- **1 dari 3** kasus sekarang sudah memiliki **multi-source corroboration** dari dua sumber resmi berbeda,
-- **2 dari 3** kasus official evidence diprediksi langsung sebagai **High Risk** oleh model,
-- **1 dari 3** kasus official evidence hanya diprediksi **Medium Risk**, tetapi tetap dinaikkan menjadi **Risiko Kritis** oleh evidence lane.
+Bagi juri, ini menambah kualitas demo secara signifikan. Sistem tidak lagi hanya menampilkan angka model, tetapi juga menunjukkan bagaimana kasus dengan bukti resmi dapat dinaikkan ke status yang lebih kritis secara investigatif.
 
-Ini adalah argumen demo yang sangat kuat: evidence lane bukan kosmetik, tetapi benar-benar memperbaiki blind spot model-only triage ketika bukti resmi tersedia.
+> **Placeholder visual untuk PDF final:** tambahkan diagram decision flow 4-level (*Aman → Perlu Pantauan → Risiko Tinggi → Risiko Kritis*) agar alur presentasi demo lebih intuitif.
 
-## 4.15 Judge-Facing 4-Level Rating
+## 4.10 Keterbatasan
 
-Untuk kebutuhan demo dan komunikasi ke juri, hasil sekarang tidak hanya berhenti pada tiga kelas model (`Low`, `Medium`, `High`). Sistem sekarang juga memiliki lapisan presentasi 4-level yang lebih selaras dengan workflow audit:
+Keterbatasan utama LPSE-X saat ini harus dibaca secara terbuka.
 
-- **Aman** → sinyal model rendah
-- **Perlu Pantauan** → butuh monitoring atau review manual
-- **Risiko Tinggi** → triase model kuat, tetapi belum ada bukti resmi final
-- **Risiko Kritis** → ada bukti resmi terhubung, misalnya `confirmed_fraud`, `sanctioned_supplier`, atau irregularity resmi yang cukup kuat
+1. Benchmark utama masih menggunakan **heuristic risk labels**.
+2. Audit ablation menunjukkan circularity risk yang masih kuat.
+3. Coverage beberapa field sumber masih lemah.
+4. Bukti manual review dan official evidence sudah berguna, tetapi belum setara dengan ground truth komprehensif untuk seluruh populasi data.
+5. Sistem ini adalah **alat prioritisasi audit**, bukan pengganti investigator manusia.
 
-Dengan desain ini, LPSE-X lebih jujur dan lebih defensible di depan juri: model tidak otomatis mengklaim fraud, dan status kritis hanya muncul bila ada evidence lane yang mendukung.
+## 4.11 Kesimpulan Bab
 
-## 4.16 Demo Packaging dan Casebook
+Secara keseluruhan, hasil LPSE-X cukup kuat untuk Tahap 2 karena memenuhi tiga hal yang paling penting bagi Track C:
 
-Artefak `proposal/judge_casebook.md` merangkum tiga komponen yang penting untuk demo:
+1. **prediksi yang kuat terhadap benchmark yang digunakan**,
+2. **explainability yang nyata dan human-readable**,
+3. **kejujuran ilmiah terhadap batasan sistem**.
 
-1. definisi skala rating 4-level,
-2. daftar kasus dengan official evidence yang sudah linked ke procurement rows,
-3. top review/demo rows lengkap dengan business rating, faktor SHAP utama, dan narasi investigator-facing,
-4. archetype demo yang membedakan critical case, review-needed case, dan model-only triage case.
-
-Artefak tambahan `proposal/official_evidence_showcase.md` memperlihatkan output model pada kasus official evidence yang benar-benar linked. Pada snapshot sekarang, ada **3 kasus linked** yang ditopang oleh **4 supporting evidence rows**, dengan **1 kasus** yang sudah dikonfirmasi oleh **dua sumber resmi berbeda**. Dari tiga kasus itu, **2 kasus** diprediksi langsung sebagai High Risk, sedangkan **1 kasus** hanya diprediksi Medium Risk dan perlu dikoreksi oleh evidence lane menjadi Risiko Kritis.
-
-Casebook ini meningkatkan kualitas presentasi karena juri tidak hanya melihat angka evaluasi, tetapi juga melihat bagaimana sistem dipakai sebagai alat triase investigatif yang realistis. Ini membantu menjembatani gap antara model tabular, explanation output, dan cerita demo yang lebih mudah dipahami.
-
-## 4.17 Kesimpulan Bab
-
-Secara keseluruhan, LPSE-X berhasil menunjukkan bahwa pipeline explainable AI berbasis XGBoost + SHAP tetap bekerja pada data riil multi-tahun yang lebih noisy dan tidak lengkap. Dibanding benchmark riil satu tahun, hasil sekarang lebih stabil; dibanding benchmark sintetis, hasil sekarang jauh lebih kredibel.
-
-Kesimpulan praktisnya: LPSE-X sudah layak diposisikan sebagai **prototype explainable procurement-risk screening** yang berjalan offline dan patuh constraint. Bukti sekarang sudah lebih luas karena mencakup kalibrasi review yang lebih besar, operational review metrics, dan external validation lintas tahun, tetapi sistem ini tetap belum boleh diklaim sebagai fraud detection operasional final sampai tersedia reviewed labels yang benar-benar diisi manusia.
+Itulah alasan proposal ini memosisikan LPSE-X sebagai solusi yang **siap dinilai, siap didemokan, dan patuh constraint**, sambil tetap jujur bahwa pekerjaan lanjutan terbesar berada pada penguatan label, validasi lapangan, dan pengurangan circularity risk.

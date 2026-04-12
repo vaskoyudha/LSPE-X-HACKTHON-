@@ -2,233 +2,155 @@
 
 ## 2.1 Gambaran Umum Pipeline
 
-LPSE-X dibangun sebagai pipeline offline untuk mendeteksi risiko anomali pengadaan dari data OCDS. Alur kerja utama terdiri dari lima tahap: akuisisi dan perapihan data, pemisahan temporal untuk mencegah kebocoran data, rekayasa fitur split-aware, pelabelan heuristik berbasis red flag, serta pemodelan dan explainability berbasis XGBoost + SHAP.
+LPSE-X dibangun sebagai pipeline offline untuk mengubah data pengadaan publik menjadi **skor risiko yang dapat dijelaskan**. Alur kerjanya terdiri atas enam tahap inti:
 
-Pipeline ini mengikuti constraint kompetisi Track C: seluruh inferensi berjalan lokal, pemisahan train/test dilakukan sebelum feature engineering, dan seluruh output penjelasan dapat dijalankan tanpa ketergantungan cloud API.
+1. ingest dan pembersihan data OCDS;
+2. pemisahan `train_data` dan `test_data` pada level raw data;
+3. rekayasa fitur yang split-aware;
+4. pembentukan heuristic risk labels;
+5. pelatihan model XGBoost dan kalibrasi probabilitas;
+6. generasi explanation berbasis SHAP dan narasi Bahasa Indonesia.
 
-## 2.2 Sumber dan Kualitas Data
+Diagram implementasi Phase 2 yang sudah tersedia di repo memberi gambaran urutan pembangunan sistem.
 
-Sumber data kerja proyek ini berasal dari publikasi resmi Indonesia pada `https://data.open-contracting.org/en/publication/101`, dengan metadata lokal tersimpan di `data/processed/source_manifest.json`. Untuk menjaga repo tetap runnable selama Phase 2, benchmark saat ini memakai **slice data riil tahun 2021-2023** yang kemudian diflatten menjadi `data/processed/ocds_flat.parquet`.
+![Rencana implementasi dan integrasi LPSE-X Tahap 2](figures/phase2-plan.png)
 
-Setelah pembersihan tanggal tidak valid, benchmark ini berisi:
+> **Placeholder visual untuk PDF final:** tambahkan diagram arsitektur end-to-end yang lebih ringkas untuk juri dengan alur *raw procurement data → split → feature engineering → XGBoost scoring → SHAP factors → human-readable explanation → reviewer action*.
 
-- 465.184 baris usable
-- 618 buyer unik
-- 60.976 supplier unik
-- train split: 372.150 baris
-- test split: 93.034 baris
+## 2.2 Sumber Data dan Kualitas
 
-Ringkasan kualitas berada di `data/processed/quality_report.md`, sedangkan provenance ringkas berada di `data/processed/data_provenance.json`.
+Pipeline bekerja di atas artefak lokal yang dibangun dari publikasi data OCDS Indonesia. Provenance utamanya tersimpan pada `data/processed/data_provenance.json`, sedangkan metadata split ada di `data/processed/split_metadata.json`.
 
-Temuan penting dari quality report dan inspeksi lapangan:
+Ringkasan benchmark saat ini:
 
-- `award_value_amount` tersedia luas dan dapat dipakai untuk evaluasi nilai award
-- `tender.value.amount` sering kosong pada sumber asli, sehingga pipeline memakai fallback `tender.minValue.amount`
-- `tender.description` sering kosong pada sumber asli, sehingga pipeline memakai fallback judul tender untuk menjaga sinyal teks minimum
-- `tender_numberOfTenderers` dan `contracts` sangat jarang tersedia, sehingga sebagian fitur kompetisi/kontrak tetap lemah atau kosong
-- `tender_procurementMethod` kosong pada benchmark ini, sehingga flag direct procurement tidak memberikan sinyal pada slice saat ini
+- total baris usable: **465.184**
+- buyer unik: **618**
+- supplier unik: **60.976**
+- train rows: **372.150**
+- test rows: **93.034**
+- rentang train: **2015-07-09 s.d. 2023-03-10 07:27:51 UTC**
+- rentang test: **2023-03-10 07:38:45 s.d. 2023-12-20 23:00:00 UTC**
 
-Dengan demikian, benchmark riil multi-tahun ini jauh lebih kredibel daripada benchmark sintetis sebelumnya dan juga lebih stabil daripada benchmark riil satu tahun.
+Temuan kualitas data yang paling penting untuk dibaca juri adalah sebagai berikut.
+
+1. `award_value_amount` relatif kuat sehingga tetap berguna untuk sinyal nilai.
+2. Beberapa field seperti `tender.value.amount` dan `tender.description` memerlukan fallback karena coverage tidak konsisten.
+3. Coverage `tender_numberOfTenderers`, `contracts`, dan `procurementMethod` masih lemah pada slice ini.
+4. Karena kualitas field tidak merata, proposal ini lebih jujur bila memposisikan sistem sebagai **prototype risk screening** daripada solusi operasional nasional yang matang.
 
 ## 2.3 Strategi Split Data dan Anti-Leakage
 
-Sesuai hard rule kompetisi, pemisahan train/test dilakukan pada level **raw split** sebelum feature engineering. Implementasi berada di `src/split.py` dan menghasilkan:
+Constraint terpenting pada Track C adalah bukti bahwa **tidak ada data leakage** antara train dan test. Karena itu, LPSE-X menerapkan aturan berikut.
 
-- `train_data/raw.parquet`
-- `test_data/raw.parquet`
-- `data/processed/split_metadata.json`
+1. `src/split.py` memisahkan raw data terlebih dahulu menjadi `train_data/raw.parquet` dan `test_data/raw.parquet`.
+2. Feature engineering dilakukan **setelah** pemisahan tersebut, bukan sebelumnya.
+3. Di dalam train split, data masih dipecah lagi menjadi `train_fit`, `val_hpo`, dan `val_calibration` untuk menjaga disiplin eksperimen.
+4. `test_data/` tidak dipakai untuk hyperparameter optimization, threshold tuning, ataupun temperature scaling.
+5. Fitur historis dibangun dengan prinsip expanding-window, sehingga hanya memakai histori masa lalu.
 
-Hasil split final pada benchmark riil saat ini:
+Konsekuensi desain ini adalah setiap angka evaluasi di Bab 4 berasal dari pemisahan yang defensible terhadap kebocoran data.
 
-- Train: 372.150 baris (2015-07-09 s.d. 2023-03-10 07:27:51)
-- Test: 93.034 baris (2023-03-10 07:38:45 s.d. 2023-12-20 23:00:00)
+> **Placeholder visual untuk PDF final:** sisipkan diagram anti-leakage / data lineage yang menunjukkan bahwa folder `train_data` dan `test_data` dipisah sebelum preprocessing apa pun.
 
-Di dalam train split, data dipecah lagi menjadi tiga dev split temporal:
+## 2.4 Pelabelan Risiko dan Implikasi Ilmiahnya
 
-- `train_fit`
-- `val_hpo`
-- `val_calibration`
+Karena tidak tersedia label fraud terverifikasi untuk seluruh populasi data, LPSE-X menggunakan **heuristic risk labeling** dengan tiga kelas:
 
-Dengan aturan ini, `test_data/` tidak pernah dipakai untuk HPO, kalibrasi, maupun threshold tuning. Semua fitur temporal pada Tier 2 dibangun dengan expanding-window berbasis histori masa lalu saja.
+- **Low Risk**
+- **Medium Risk**
+- **High Risk**
 
-## 2.4 Rekayasa Fitur
+Distribusi label pada artefak saat ini adalah:
 
-Sistem menggunakan **30 feature families** yang dibagi menjadi dua kelompok:
+| Split | Low | Medium | High |
+| --- | ---: | ---: | ---: |
+| Train | 124.351 | 223.427 | 24.372 |
+| Test | 26.358 | 58.425 | 8.251 |
 
-### Tier 1: Fitur langsung dari field pengadaan
+Label ini dibentuk dari kombinasi red flag yang relevan untuk pengadaan, misalnya sinyal peserta tunggal, deviasi harga, timing pengadaan, dan pola hubungan buyer–supplier. Secara metodologis, ini berarti model belajar **mendekati struktur sinyal risiko** yang didefinisikan oleh aturan tersebut. Karena itu, performa tinggi wajib dibaca bersama audit circularity; model ini tidak boleh diklaim sebagai estimator sempurna atas fraud yang telah dibuktikan secara hukum.
 
-Contoh fitur Tier 1:
+## 2.5 Rekayasa Fitur
 
-- log nilai tender (dengan fallback dari `minValue.amount`)
-- log nilai award
-- rasio deviasi harga
-- durasi tender
-- jumlah peserta tender
-- indikator single bidder
-- panjang judul dan deskripsi
-- encoding metode pengadaan
-- indikator Q4 dan Desember
-- rasio kontrak terhadap award
+Manifest fitur pada `data/processed/feature_manifest.json` menunjukkan bahwa model akhir memakai **34 fitur**. Fitur-fitur ini dibagi ke dalam dua lapisan besar.
 
-### Tier 2: Fitur historis dan agregat temporal
+### Tier 1 — Fitur langsung dari paket pengadaan
 
-Contoh fitur Tier 2:
+Contoh sinyal yang digunakan:
 
-- rata-rata historis nilai buyer
-- deviasi z-score nilai buyer
-- jumlah kemenangan historis supplier
-- frekuensi buyer-supplier berulang
-- jumlah tender historis buyer
-- jumlah unique buyer per supplier
-- laju pertumbuhan nilai buyer
-- kapasitas supplier terhadap histori award
+- nilai tender dan nilai award (dengan fallback yang terdokumentasi),
+- deviasi harga,
+- durasi dan timing tender,
+- panjang judul/deskripsi,
+- jumlah item,
+- indikator musiman seperti Q4 dan Desember.
 
-Semua fitur diserialisasi ke:
+### Tier 2 — Fitur historis dan relasional
 
-- `train_data/features.parquet`
-- `test_data/features.parquet`
-- `data/processed/feature_manifest.json`
+Contoh sinyal yang digunakan:
 
-## 2.5 Pelabelan Heuristik Risiko
+- rata-rata historis nilai buyer,
+- frekuensi kemenangan supplier,
+- pengulangan pasangan buyer–supplier,
+- z-score nilai tender relatif terhadap histori buyer,
+- intensitas aktivitas buyer atau supplier pada jendela waktu tertentu.
 
-Karena tidak tersedia label fraud terverifikasi pada skala kompetisi, proyek ini menggunakan weak-labeling berbasis red flag untuk mengklasifikasikan risiko menjadi tiga kelas:
+Seluruh artefak fiturnya dimaterialisasi ke `train_data/features.parquet` dan `test_data/features.parquet` agar proses training maupun audit dapat diulang tanpa langkah tersembunyi.
 
-- 0 = Rendah
-- 1 = Sedang
-- 2 = Tinggi
+## 2.6 Pemodelan dan Alasan Pemilihan Model
 
-Indikator utama yang dipakai meliputi:
+Model utama yang dipakai adalah **XGBoost multiclass** dengan objective `multi:softprob`. Pemilihan ini disengaja karena XGBoost memenuhi kebutuhan Track C secara lebih natural dibanding model yang lebih opaque:
 
-- peserta tunggal
-- jendela tender pendek
-- deviasi harga terhadap nilai referensi
-- supplier menang berulang pada buyer yang sama
-- jumlah bidder rendah
-- sinyal nilai tinggi dan timing akhir tahun
+1. cocok untuk data tabular terstruktur,
+2. efisien pada CPU-only,
+3. mudah dihubungkan ke SHAP untuk explainability global maupun lokal,
+4. bisa diekspor ke artefak ringan untuk demo lokal.
 
-Distribusi label pada train split (`train_data/labels.parquet`) setelah migrasi ke benchmark riil multi-tahun:
+Artefak model yang saat ini tersedia juga kecil dan praktis untuk submission:
 
-- Low: 154.848
-- Medium: 213.640
-- High: 3.662
+- `models/xgb_model.ubj` ≈ **1,1 MB**
+- `models/xgb_model.onnx` ≈ **423 KB**
 
-Pelabelan ini tetap bersifat **indikator risiko**, bukan pembuktian fraud. Pada benchmark riil multi-tahun, distribusi kelas menjadi lebih stabil daripada benchmark satu tahun, tetapi label tetap tidak sama dengan fraud ground truth.
+Ukuran ini mendukung narasi bahwa solusi dapat dibawa dan dijalankan secara offline tanpa kebutuhan infrastruktur berat.
 
-## 2.6 Pemodelan
+## 2.7 Kalibrasi Probabilitas dan Explainability
 
-Model inti yang dipakai adalah **XGBoost multi-class** dengan objective `multi:softprob`. XGBoost dipilih karena:
+LPSE-X tidak berhenti pada skor mentah. Pipeline juga melapisi model dengan:
 
-1. kuat untuk data tabular,
-2. efisien di CPU,
-3. kompatibel dengan SHAP,
-4. dapat diekspor ke format yang mendukung inferensi offline.
+1. **temperature scaling** untuk melunakkan probabilitas,
+2. **SHAP** untuk faktor pendorong prediksi,
+3. **narasi Bahasa Indonesia** agar output bisa dibaca auditor.
 
-Pada benchmark riil 2021-2023, pipeline retraining memakai parameter terbaik yang tersimpan di `models/best_params.json`.
+Parameter kalibrasi saat ini tersimpan di `models/calibration.json` dengan ringkasan:
 
-## 2.7 Kalibrasi dan Clean Labels
+- temperature: **7,697482**
+- calibration samples: **287**
+- method: **temperature scaling**
 
-Kalibrasi probabilitas dilakukan dengan temperature scaling menggunakan subset `val_calibration` yang telah melalui clean-label review. Protokol review disimpan pada `data/processed/clean_labels_protocol.md`, sementara iterasi review yang lebih besar saat ini tersedia di `data/processed/clean_labels_300.csv`.
+Pada level output, fungsi `explain_single(...)` dirancang untuk memenuhi kebutuhan Track C: setiap prediksi dapat diterjemahkan menjadi minimal tiga faktor teratas, lengkap dengan arah pengaruhnya, lalu dirender ke penjelasan Bahasa Indonesia yang bisa dipakai dalam notebook inference maupun casebook demo.
 
-Konfigurasi kalibrasi akhir (`models/calibration.json`) pada benchmark riil multi-tahun mengikuti artefak yang tersimpan di repo dan tetap dipakai sebagai pelunak probabilitas untuk inferensi. Iterasi terbaru menggunakan **287 reviewed rows** yang valid untuk temperature scaling.
+## 2.8 Artefak Submission dan Reproducibility
 
-## 2.8 Explainable AI
+Struktur submission yang disiapkan untuk juri mengikuti constraint umum kompetisi.
 
-Komponen explainability berada di `src/explain.py` dan `src/narrative.py`.
+| Artefak | Peran |
+| --- | --- |
+| `training.ipynb` | menunjukkan pelatihan model dan log yang terlihat |
+| `inference.ipynb` | menunjukkan alur inferensi yang bersih dan siap demo |
+| `train_data/` | artefak data latih hasil split raw |
+| `test_data/` | artefak data uji yang terpisah |
+| `models/xgb_model.ubj` / `models/xgb_model.onnx` | model final untuk deployment lokal |
+| `requirements.txt` | dependency agar eksperimen dapat dijalankan ulang |
+| `proposal/figures/` | visual evaluasi dan bukti presentasi |
 
-Pipeline penjelasan terdiri dari:
+Dengan desain ini, juri tidak perlu menebak alur kerja proyek: semua komponen utama tersedia sebagai artefak lokal yang eksplisit.
 
-1. prediksi probabilitas multi-kelas,
-2. ekstraksi faktor SHAP teratas,
-3. narasi Bahasa Indonesia yang dapat dibaca auditor,
-4. saran counterfactual berbasis SHAP.
+## 2.9 Filosofi Evaluasi
 
-Output `explain_single(...)` menjaga kontrak yang konsisten untuk kebutuhan proposal, notebook, dan jalur inferensi.
+Agar hasil mudah dibaca secara profesional, evaluasi pada proposal ini dibagi menjadi empat lapis:
 
-## 2.9 Artefak dan Reproduksibilitas
+1. **headline benchmark** pada test split heuristik,
+2. **calibration dan confusion analysis** untuk membaca trade-off operasional,
+3. **robustness / proxy-reduced validation** untuk mengukur circularity risk,
+4. **manual review, external validation, dan official evidence lane** untuk memperkaya bukti di luar sekadar angka terhadap weak labels.
 
-Artefak utama yang digunakan oleh metodologi ini adalah:
-
-- `train_data/*.parquet`
-- `test_data/*.parquet`
-- `models/metrics.json`
-- `models/calibration.json`
-- `models/imputation_values.json`
-- `models/benchmark_comparison.json`
-- `proposal/figures/*.png`
-- `training.ipynb`
-- `inference.ipynb`
-
-Dengan struktur tersebut, seluruh pipeline dapat dijalankan ulang pada lingkungan CPU lokal dengan dependency yang dipin pada `requirements.txt`.
-
-## 2.10 Audit Circularity dan Robustness
-
-Untuk mengukur seberapa besar performa model didorong oleh fitur yang sangat dekat dengan aturan pelabelan, dilakukan audit robustness pada tiga kelompok fitur yang diringkas pada `models/robustness.json` dan `proposal/figures/robustness_ablation.png`:
-
-- **baseline_all_features (30 fitur)** → Macro-F1 0,9833
-- **proxy_core_removed (19 fitur)** → Macro-F1 0,5215
-- **proxy_broad_removed (13 fitur)** → Macro-F1 0,5204
-
-Hasil ini menunjukkan bahwa ketergantungan pada fitur proksi langsung tetap kuat, bahkan setelah benchmark diperluas menjadi multi-tahun dan dead feature slots dibersihkan. Jadi, migrasi ke data riil multi-tahun memperbaiki kredibilitas eksternal dan kualitas feature space, tetapi tidak menghapus circularity risk.
-
-## 2.11 Perbandingan Benchmark Sintetis vs Riil
-
-Artefak `models/benchmark_comparison.json` membandingkan benchmark sintetis sebelumnya dengan benchmark riil multi-tahun saat ini.
-
-Ringkasan utama:
-
-- Macro-F1 sintetis: 0,9950
-- Macro-F1 riil 2021-2023: 0,9833
-- Delta: -0,0117
-
-Kesimpulan metodologisnya jelas: benchmark sintetis tetap terlalu optimistis, tetapi benchmark riil multi-tahun yang sudah di-hardening kini mendekati performa sintetis tanpa kehilangan validitas eksternal. Ini memperkuat posisi Phase 2 jauh lebih kuat daripada benchmark riil satu tahun maupun pipeline pra-hardening.
-
-## 2.12 Review Benchmark, Operational Metrics, dan External Validation
-
-Untuk menyiapkan transisi dari heuristic benchmarking menuju evaluasi yang lebih kuat, repo kini menyediakan tiga lapisan tambahan:
-
-1. **review benchmark** pada `data/processed/review_benchmark_500.csv` yang kini sudah memiliki ringkasan manual review terimpor pada `data/processed/manual_review_summary.csv`,
-2. **operational review metrics** pada `models/operational_metrics.json` untuk mengukur kualitas ranking pada budget review terbatas,
-3. **external validation** pada `models/external_validation.json` untuk mengevaluasi generalisasi dengan skema holdout-year 2019-2023.
-
-Ringkasan awal:
-
-- reviewed calibration rows: **287**
-- manual review summary rows: **500**
-- reviewed-subset Macro-F1: **0,9679**
-- reviewed High Risk F1: **0,9603**
-- explanation agreement: **95,8%**
-- explanation clarity mean: **3,48 / 5**
-- explanation actionability mean: **4,03 / 5**
-- Precision@50/100/250/500/1000: **1,00**
-- mean Macro-F1 external validation: **0,9151**
-- mean High Risk F1 external validation: **0,8972**
-
-Artefak ini belum mengubah target utama benchmark yang masih heuristik, tetapi mereka memperluas bukti menuju:
-- validasi operasional,
-- validasi lintas-waktu,
-- validasi manual tingkat ringkasan,
-- dan kesiapan untuk penyimpanan row-level reviewed labels yang lebih lengkap.
-
-## 2.13 Jalur Import Row-Level Reviewed Labels
-
-Repo kini menyediakan jalur eksplisit untuk mengimpor reviewed labels tingkat baris melalui:
-
-- `scripts/import_reviewed_row_level.py`
-- path standar hasil impor: `data/processed/review_benchmark_500_reviewed.csv`
-
-Setelah file row-level tersebut tersedia, `scripts/run_diagnostics.py` akan memprioritaskan bukti row-level di atas summary import. Dengan demikian, transisi dari summary-level evidence ke reviewed benchmark yang lebih kuat dapat dilakukan tanpa mengubah arsitektur pipeline.
-
-## 2.14 Track Validasi Proxy-Reduced
-
-Untuk menegaskan sisi ilmiah evaluasi, repo sekarang juga menyimpan satu track validasi yang lebih ketat:
-
-- `models/proxy_reduced_validation.json`
-- `proposal/figures/proxy_reduced_validation.png`
-
-Track ini menggunakan hasil `proxy_core_removed`, yaitu evaluasi setelah fitur-fitur yang paling dekat dengan aturan labeling dihapus. Hasil saat ini:
-
-- Macro-F1 full model: **0,9833**
-- Macro-F1 proxy-reduced: **0,5215**
-- Delta: **-0,4618**
-
-Maknanya jelas: model operasional sangat kuat, tetapi sebagian besar kekuatan tersebut masih datang dari sinyal yang dekat dengan heuristic rules.
+Dengan demikian, Bab 4 tidak hanya menampilkan performa yang tinggi, tetapi juga memberikan konteks mengapa performa tersebut perlu dibaca dengan hati-hati.
