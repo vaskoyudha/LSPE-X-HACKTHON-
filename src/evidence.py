@@ -7,6 +7,7 @@ provenance-rich label records that can later be linked back to procurement rows.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pandas as pd
@@ -25,6 +26,7 @@ VALID_SOURCE_TYPES = {
     "sanction_list",
     "audit_report",
     "case_press_release",
+    "ppid_activity_report",
     "procurement_portal",
     "company_registry",
     "complaint_system",
@@ -61,7 +63,7 @@ def _clean_date(value: Any) -> str | None:
 
 
 
-def _clean_float(value: Any) -> float | None:
+def _clean_score(value: Any) -> float | None:
     if value is None or value == "":
         return None
     try:
@@ -69,6 +71,55 @@ def _clean_float(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return min(1.0, max(0.0, numeric))
+
+
+def _normalize_numeric_text(value: Any) -> str | None:
+    text = _clean_text(value)
+    if text is None:
+        return None
+
+    cleaned = re.sub(r"[^0-9,.-]+", "", text)
+    if not cleaned:
+        return None
+
+    negative = cleaned.startswith("-")
+    cleaned = cleaned.lstrip("-")
+    if not cleaned:
+        return None
+
+    if "," in cleaned and "." in cleaned:
+        if cleaned.rfind(",") > cleaned.rfind("."):
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+        else:
+            cleaned = cleaned.replace(",", "")
+    elif cleaned.count(".") > 1:
+        cleaned = cleaned.replace(".", "")
+    elif cleaned.count(",") > 1:
+        cleaned = cleaned.replace(",", "")
+    elif "," in cleaned:
+        whole, fractional = cleaned.split(",", 1)
+        if fractional.isdigit() and len(fractional) in {1, 2}:
+            cleaned = f"{whole}.{fractional}"
+        elif fractional.isdigit() and len(fractional) == 3:
+            cleaned = f"{whole}{fractional}"
+        else:
+            cleaned = cleaned.replace(",", "")
+    elif "." in cleaned:
+        whole, fractional = cleaned.split(".", 1)
+        if fractional.isdigit() and len(fractional) == 3:
+            cleaned = f"{whole}{fractional}"
+
+    return f"-{cleaned}" if negative else cleaned
+
+
+def _clean_numeric(value: Any) -> float | None:
+    normalized = _normalize_numeric_text(value)
+    if normalized is None:
+        return None
+    try:
+        return float(normalized)
+    except (TypeError, ValueError):
+        return None
 
 
 
@@ -111,8 +162,17 @@ def normalize_evidence_record(record: dict[str, Any]) -> dict[str, Any]:
         "supplier_id": _clean_text(record.get("supplier_id")),
         "buyer_name": _clean_text(record.get("buyer_name")),
         "buyer_id": _clean_text(record.get("buyer_id")),
+        "package_name": _clean_text(record.get("package_name")),
+        "package_id": _clean_text(record.get("package_id")),
+        "package_value_amount": _clean_numeric(record.get("package_value_amount")),
+        "package_year": _clean_text(record.get("package_year")),
+        "procurement_category": _clean_text(record.get("procurement_category")),
+        "sanction_end_date": _clean_date(record.get("sanction_end_date")),
         "matched_ocid": _clean_text(record.get("matched_ocid") or record.get("ocid")),
-        "match_confidence": _clean_float(record.get("match_confidence")),
+        "match_confidence": _clean_score(record.get("match_confidence")),
+        "raw_file_path": _clean_text(record.get("raw_file_path")),
+        "access_date": _clean_date(record.get("access_date")),
+        "imported_at": _clean_text(record.get("imported_at")),
         "provenance_note": _clean_text(record.get("provenance_note")),
     }
 
@@ -138,7 +198,10 @@ def evidence_to_label_record(
         "source_record_id": evidence["source_record_id"],
         "source_url": evidence["source_url"],
         "decision_date": evidence["decision_date"],
-        "confidence_score": _clean_float(confidence_score),
+        "confidence_score": _clean_score(confidence_score),
         "reviewer_needed": bool(reviewer_needed),
+        "supplier_name": evidence.get("supplier_name"),
+        "buyer_name": evidence.get("buyer_name"),
+        "package_name": evidence.get("package_name"),
         "provenance_note": evidence.get("provenance_note"),
     }

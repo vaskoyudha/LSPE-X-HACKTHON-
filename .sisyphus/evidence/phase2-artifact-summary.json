@@ -1,8 +1,0 @@
-{
-  "flat_parquet_exists": true,
-  "quality_report_exists": true,
-  "jsonl_snapshot_exists": true,
-  "ubj_exists": true,
-  "onnx_exists": true,
-  "onnx_mean_abs_diff_head32": 1.2696879991835885e-08
-}

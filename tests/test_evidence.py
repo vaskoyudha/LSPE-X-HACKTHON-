@@ -70,6 +70,20 @@ class TestEvidenceNormalization:
         assert label["reviewer_needed"] is True
         assert "Linked by buyer" in label["provenance_note"]
 
+    def test_normalize_evidence_record_parses_localized_numeric_strings(self):
+        normalized = normalize_evidence_record(
+            {
+                "source_record_id": "ev-localized-numeric",
+                "source_name": "lkpp-inaproc",
+                "source_type": "sanction_list",
+                "label_family": "sanctioned_supplier",
+                "case_stage": "administrative_sanction",
+                "package_value_amount": "9.999.012.000",
+            }
+        )
+
+        assert normalized["package_value_amount"] == pytest.approx(9999012000.0)
+
 
 @pytest.mark.p1
 def test_valid_label_families_include_fraud_and_review_lanes():

@@ -33,11 +33,72 @@ from src.model import (
     load_test_artifacts,
     predict_with_thresholds,
 )
-from src.narrative import render_explanation_narrative
+from src.narrative import derive_business_rating, render_explanation_narrative
 from src.split import load_raw_split
 
 OUTPUT_PATH = PROCESSED_DIR / "review_benchmark_500.csv"
+EVIDENCE_LABEL_PATH = PROCESSED_DIR / "evidence" / "linked_label_records.parquet"
 LABEL_TEXT = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
+
+
+def _load_linked_evidence_by_ocid(path: Path = EVIDENCE_LABEL_PATH) -> dict[str, list[dict[str, object]]]:
+    if not path.exists():
+        return {}
+    evidence_df = pd.read_parquet(path)
+    if "ocid" not in evidence_df.columns or evidence_df.empty:
+        return {}
+
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for ocid, group in evidence_df.dropna(subset=["ocid"]).groupby("ocid", sort=False):
+        grouped[str(ocid)] = group.to_dict(orient="records")
+    return grouped
+
+
+def _summarize_evidence_records(evidence_records: list[dict[str, object]]) -> tuple[str, str, bool]:
+    if not evidence_records:
+        return "", "", False
+
+    families = sorted(
+        {str(record.get("label_family", "")).strip() for record in evidence_records if record.get("label_family")}
+    )
+    sources = sorted(
+        {str(record.get("source_name", "")).strip() for record in evidence_records if record.get("source_name")}
+    )
+    has_official_evidence = any(not bool(record.get("reviewer_needed", False)) for record in evidence_records)
+    return "|".join(families), "|".join(sources), has_official_evidence
+
+
+
+def _prioritize_evidence_rows(
+    raw: pd.DataFrame,
+    evidence_by_ocid: dict[str, list[dict[str, object]]],
+    *,
+    limit: int,
+) -> tuple[list[int], list[str]]:
+    if limit <= 0 or raw.empty or not evidence_by_ocid:
+        return [], []
+
+    official_indices: list[int] = []
+    review_indices: list[int] = []
+    seen: set[int] = set()
+
+    for idx, ocid in enumerate(raw.get("ocid", pd.Series([], dtype=object)).astype(str).tolist()):
+        evidence_records = evidence_by_ocid.get(ocid, [])
+        if not evidence_records:
+            continue
+        has_official = any(not bool(record.get("reviewer_needed", False)) for record in evidence_records)
+        if has_official and idx not in seen:
+            official_indices.append(idx)
+            seen.add(idx)
+        elif idx not in seen:
+            review_indices.append(idx)
+            seen.add(idx)
+
+    selected = (official_indices + review_indices)[:limit]
+    reasons = ["official_evidence_linked"] * min(len(official_indices), len(selected))
+    reasons.extend(["evidence_needs_review"] * (len(selected) - len(reasons)))
+    return selected, reasons
+
 
 
 def _entropy(probs: np.ndarray) -> np.ndarray:
@@ -179,14 +240,34 @@ def main(n_rows: int = 500) -> None:
         probs = apply_temperature(probs, calibration["temperature"])
     preds = predict_with_thresholds(probs, thresholds)
     heuristic_labels = labels.to_numpy(dtype=int)
+    evidence_by_ocid = _load_linked_evidence_by_ocid()
 
-    selected_idx, reasons = _select_review_rows(
+    priority_evidence_limit = min(
+        len(features),
+        min(25, max(5, int(round(min(n_rows, len(features)) * 0.10)))),
+    )
+    priority_selected, priority_reasons = _prioritize_evidence_rows(
+        raw,
+        evidence_by_ocid,
+        limit=priority_evidence_limit,
+    )
+
+    base_selected, base_reasons = _select_review_rows(
         probs,
         preds,
         heuristic_labels,
         thresholds,
         min(n_rows, len(features)),
     )
+    selected_idx: list[int] = list(priority_selected)
+    reasons: list[str] = list(priority_reasons)
+    for idx, reason in zip(base_selected.tolist(), base_reasons):
+        if len(selected_idx) >= min(n_rows, len(features)):
+            break
+        if idx not in selected_idx:
+            selected_idx.append(int(idx))
+            reasons.append(reason)
+
     priority_scores = _review_priority_score(probs, preds, heuristic_labels, thresholds)
     threshold_margins = _nearest_threshold_margin(probs, thresholds)
 
@@ -202,13 +283,22 @@ def main(n_rows: int = 500) -> None:
             feature_names,
             model=xai_model,
             explainer=explainer,
+            calibration=calibration,
             top_k=3,
         )
-        narrative = render_explanation_narrative(explanation)
+        ocid = str(raw.iloc[idx].get("ocid", "") or "")
+        evidence_records = evidence_by_ocid.get(ocid, [])
+        business_rating = derive_business_rating(explanation, evidence_records=evidence_records)
+        narrative = render_explanation_narrative(
+            explanation,
+            evidence_records=evidence_records,
+            business_rating=business_rating,
+        )
         factor_summary = " | ".join(
             f"{factor['feature']}={factor['shap_value']:.4f}"
             for factor in explanation["factors"]
         )
+        evidence_families, evidence_sources, has_official_evidence = _summarize_evidence_records(evidence_records)
 
         rows.append(
             {
@@ -223,7 +313,7 @@ def main(n_rows: int = 500) -> None:
                 "low_risk_threshold": round(float(thresholds["low_risk"]), 6),
                 "high_risk_margin": round(float(probs[idx, 2] - thresholds["high_risk"]), 6),
                 "low_risk_margin": round(float(probs[idx, 0] - thresholds["low_risk"]), 6),
-                "ocid": raw.iloc[idx].get("ocid", ""),
+                "ocid": ocid,
                 "tender_title": raw.iloc[idx].get("tender_title", ""),
                 "tender_datePublished": raw.iloc[idx].get("tender_datePublished", ""),
                 "buyer_name": raw.iloc[idx].get("buyer_name", ""),
@@ -238,6 +328,12 @@ def main(n_rows: int = 500) -> None:
                 "prob_medium": round(float(probs[idx, 1]), 6),
                 "prob_high": round(float(probs[idx, 2]), 6),
                 "prediction_entropy": round(float(_entropy(probs[idx:idx + 1])[0]), 6),
+                "business_rating_label": business_rating["rating_label"],
+                "business_rating_source": business_rating["rating_source"],
+                "business_rating_reason": business_rating["rating_reason"],
+                "evidence_label_families": evidence_families,
+                "evidence_sources": evidence_sources,
+                "has_official_evidence": bool(has_official_evidence),
                 "top_factors": factor_summary,
                 "narrative_id": narrative,
                 "reviewed_label": "",

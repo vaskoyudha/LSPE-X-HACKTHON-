@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
 from scripts.generate_review_benchmark import (
+    _load_linked_evidence_by_ocid,
     _nearest_threshold_margin,
+    _prioritize_evidence_rows,
     _review_priority_score,
     _select_review_rows,
+    _summarize_evidence_records,
 )
 
 
@@ -70,3 +74,99 @@ def test_select_review_rows_includes_disagreement_and_boundary_cases() -> None:
     assert any(reason == "model_heuristic_disagreement" for reason in reasons)
     assert any(reason == "near_decision_threshold" for reason in reasons)
     assert any(reason == "priority_mix" for reason in reasons)
+
+
+
+def test_summarize_evidence_records_compacts_families_and_sources() -> None:
+    families, sources, has_official_evidence = _summarize_evidence_records(
+        [
+            {
+                "label_family": "confirmed_fraud",
+                "source_name": "kpk_procurement_case",
+                "reviewer_needed": False,
+            },
+            {
+                "label_family": "sanctioned_supplier",
+                "source_name": "lkpp_inaproc_blacklist",
+                "reviewer_needed": True,
+            },
+        ]
+    )
+
+    assert families == "confirmed_fraud|sanctioned_supplier"
+    assert sources == "kpk_procurement_case|lkpp_inaproc_blacklist"
+    assert has_official_evidence is True
+
+
+
+def test_prioritize_evidence_rows_places_official_cases_first() -> None:
+    raw = pd.DataFrame(
+        {
+            "ocid": ["ocds-a", "ocds-b", "ocds-c", "ocds-d"],
+        }
+    )
+    evidence_by_ocid = {
+        "ocds-b": [
+            {
+                "label_family": "confirmed_fraud",
+                "source_name": "kpk_procurement_case",
+                "reviewer_needed": False,
+            }
+        ],
+        "ocds-c": [
+            {
+                "label_family": "sanctioned_supplier",
+                "source_name": "lkpp_inaproc_blacklist",
+                "reviewer_needed": True,
+            }
+        ],
+        "ocds-d": [
+            {
+                "label_family": "confirmed_irregularity",
+                "source_name": "bpk",
+                "reviewer_needed": False,
+            }
+        ],
+    }
+
+    selected, reasons = _prioritize_evidence_rows(raw, evidence_by_ocid, limit=3)
+
+    assert selected == [1, 3, 2]
+    assert reasons == [
+        "official_evidence_linked",
+        "official_evidence_linked",
+        "evidence_needs_review",
+    ]
+
+
+
+def test_load_linked_evidence_by_ocid_groups_rows_from_parquet(tmp_path) -> None:
+    evidence_path = tmp_path / "linked_label_records.parquet"
+    pd.DataFrame(
+        [
+            {
+                "ocid": "ocds-1",
+                "label_family": "confirmed_fraud",
+                "source_name": "kpk_procurement_case",
+                "reviewer_needed": False,
+            },
+            {
+                "ocid": "ocds-1",
+                "label_family": "sanctioned_supplier",
+                "source_name": "lkpp_inaproc_blacklist",
+                "reviewer_needed": True,
+            },
+            {
+                "ocid": "ocds-2",
+                "label_family": "reviewed_risk",
+                "source_name": "manual_review",
+                "reviewer_needed": True,
+            },
+        ]
+    ).to_parquet(evidence_path, index=False)
+
+    grouped = _load_linked_evidence_by_ocid(evidence_path)
+
+    assert sorted(grouped.keys()) == ["ocds-1", "ocds-2"]
+    assert len(grouped["ocds-1"]) == 2
+    assert grouped["ocds-2"][0]["label_family"] == "reviewed_risk"

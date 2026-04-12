@@ -1,0 +1,25 @@
+﻿ocid,source_partition,tender_title,tender_datePublished,buyer_name,supplier_name,tender_value_amount,award_value_amount,evidence_label_families,evidence_sources,evidence_case_stages,evidence_confidence_score,evidence_record_count,evidence_source_count,predicted_label_name,predicted_probability,prob_low,prob_medium,prob_high,business_rating_label,business_rating_source,business_rating_reason,top_factors,narrative_id
+ocds-20h3g7-3317469,train,Pengadaan Peralatan Pendeteksi Korban Reruntuhan,2023-01-09 00:00:00+00:00,Badan Nasional Pencarian dan Pertolongan,PT INTERTEKNO GRAFIKASEJATI,9999738030.0,9997104000.0,confirmed_fraud,"kpk_ppid_report, kpk_procurement_case",final_outcome,1.0,2,2,Medium Risk,0.5857667326927185,0.14661797881126404,0.5857667326927185,0.26761531829833984,Risiko Kritis,official_evidence,"Dinaikkan ke Risiko Kritis karena ada bukti resmi terhubung (confirmed_fraud) dari sumber kpk_ppid_report, kpk_procurement_case.",f_tender_value_log=-1.4122 | f_is_q4=0.9832 | f_buyer_supplier_repeat_count=0.8988,"Peringkat investigatif paket ini adalah **Risiko Kritis**.
+Dinaikkan ke Risiko Kritis karena ada bukti resmi terhubung (confirmed_fraud) dari sumber kpk_ppid_report, kpk_procurement_case.
+Model mengklasifikasikan paket ini sebagai **Medium Risk** dengan probabilitas 58.58%.
+Catatan penting: rating kritis didukung bukti resmi terhubung, tetapi kecocokan entitas dan konteks kasus tetap harus diverifikasi investigator.
+Faktor yang paling memengaruhi prediksi adalah:
+- Nilai tender bernilai 23.0258 dan menurunkan skor risiko dengan kontribusi SHAP sekitar 1.4122.
+- Waktu publikasi pada kuartal iv bernilai 0 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 0.9832.
+- Frekuensi hubungan buyer-supplier berulang bernilai 0 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 0.8988."
+ocds-20h3g7-3282469,train,Pengadaan Public Safety Diving Equipment,2022-12-23 00:00:00+00:00,Badan Nasional Pencarian dan Pertolongan,PT. KINDAH ABADI UTAMA,17499969180.0,17447468400.0,confirmed_fraud,kpk_procurement_case,final_outcome,1.0,1,1,High Risk,0.8662589192390442,0.06261081248521805,0.07113028317689896,0.8662589192390442,Risiko Kritis,official_evidence,Dinaikkan ke Risiko Kritis karena ada bukti resmi terhubung (confirmed_fraud) dari sumber kpk_procurement_case.,f_tender_value_log=3.4595 | f_buyer_supplier_repeat_count=3.2338 | f_is_q4=3.2271,"Peringkat investigatif paket ini adalah **Risiko Kritis**.
+Dinaikkan ke Risiko Kritis karena ada bukti resmi terhubung (confirmed_fraud) dari sumber kpk_procurement_case.
+Model mengklasifikasikan paket ini sebagai **High Risk** dengan probabilitas 86.63%.
+Catatan penting: rating kritis didukung bukti resmi terhubung, tetapi kecocokan entitas dan konteks kasus tetap harus diverifikasi investigator.
+Faktor yang paling memengaruhi prediksi adalah:
+- Nilai tender bernilai 23.5855 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 3.4595.
+- Frekuensi hubungan buyer-supplier berulang bernilai 3 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 3.2338.
+- Waktu publikasi pada kuartal iv bernilai 1 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 3.2271."
+ocds-20h3g7-3372469,train,Pengadaan ROV untuk KN SAR Ganesha (Multiyears 2023-2024),2023-03-01 00:00:00+00:00,Badan Nasional Pencarian dan Pertolongan,PT. KINDAH ABADI UTAMA,89996922102.0,89959950000.0,confirmed_fraud,kpk_procurement_case,final_outcome,1.0,1,1,High Risk,0.8418862819671631,0.07295144349336624,0.08516228199005127,0.8418862819671631,Risiko Kritis,official_evidence,Dinaikkan ke Risiko Kritis karena ada bukti resmi terhubung (confirmed_fraud) dari sumber kpk_procurement_case.,f_tender_value_log=4.3621 | f_tender_value_zscore_buyer=4.2313 | f_buyer_supplier_repeat_count=3.1992,"Peringkat investigatif paket ini adalah **Risiko Kritis**.
+Dinaikkan ke Risiko Kritis karena ada bukti resmi terhubung (confirmed_fraud) dari sumber kpk_procurement_case.
+Model mengklasifikasikan paket ini sebagai **High Risk** dengan probabilitas 84.19%.
+Catatan penting: rating kritis didukung bukti resmi terhubung, tetapi kecocokan entitas dan konteks kasus tetap harus diverifikasi investigator.
+Faktor yang paling memengaruhi prediksi adalah:
+- Nilai tender bernilai 25.223 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 4.3621.
+- F tender value zscore buyer bernilai 12.4994 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 4.2313.
+- Frekuensi hubungan buyer-supplier berulang bernilai 4 dan meningkatkan skor risiko dengan kontribusi SHAP sekitar 3.1992."

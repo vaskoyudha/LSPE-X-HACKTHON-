@@ -15,6 +15,9 @@ models/*.pkl
 # Keep source proposal chapters versioned; ignore only the generated final export.
 proposal/proposal-final.pdf
 
+# Ignore scratch outputs from evidence import/linking smoke checks.
+data/processed/evidence/_tmp_*/
+
 .env
 .DS_Store
 .agents/
