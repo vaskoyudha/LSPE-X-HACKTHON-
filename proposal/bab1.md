@@ -2,7 +2,7 @@
 
 ## 1.1 Latar Belakang
 
-Pengadaan barang dan jasa pemerintah adalah domain dengan nilai transaksi besar, kompleksitas proses tinggi, dan konsekuensi publik yang langsung terasa. Pada praktiknya, auditor dan pengawas tidak kekurangan data; yang kurang adalah **alat triase yang mampu menyaring ribuan paket secara konsisten, cepat, dan dapat dijelaskan**. Tanpa alat bantu yang explainable, pengawasan cenderung kembali pada pemeriksaan manual yang mahal, lambat, dan sulit diprioritaskan.
+Pengadaan barang dan jasa pemerintah adalah domain dengan nilai transaksi besar, kompleksitas proses tinggi, dan konsekuensi publik yang langsung terasa. Dalam praktiknya, tantangan utama bukan sekadar ketersediaan data, tetapi ketiadaan **mekanisme triase yang mampu menyaring ribuan paket secara konsisten, cepat, dan dapat dijelaskan**. Tanpa alat bantu yang explainable, pengawasan cenderung kembali pada pemeriksaan manual yang mahal, lambat, dan sulit diprioritaskan.
 
 LPSE-X dikembangkan untuk menjawab kebutuhan tersebut pada subtema **Smart Governance & Public Service**. Fokus kami bukan membangun mesin keputusan hukum, melainkan **sistem penyaringan risiko pengadaan** yang dapat membantu auditor menentukan paket mana yang layak ditelaah lebih dulu. Posisi ini penting karena pada konteks publik, akurasi yang tinggi saja belum cukup; alasan di balik skor juga harus dapat dipahami dan dipertanggungjawabkan.
 
@@ -25,8 +25,6 @@ LPSE-X diposisikan sebagai **explainable procurement-risk screening system** den
 2. **Patuh Track C** — setiap prediksi disertai alasan, arah pengaruh, dan bukti bahwa pipeline tidak melanggar aturan anti-leakage serta offline total.
 3. **Siap didemokan** — model diekspor ke artefak ringan (`.ubj` dan `.onnx`) dan dilengkapi notebook training serta inference.
 4. **Jujur secara ilmiah** — metrik dilaporkan terhadap label heuristik risiko, bukan diklaim sebagai tingkat keberhasilan mendeteksi korupsi yang sudah terverifikasi.
-
-> **Catatan visual untuk PDF final:** letakkan diagram arsitektur end-to-end LPSE-X pada akhir subbab ini untuk membantu juri memahami alur data → model → explanation → reviewer action.
 
 ## 1.4 Tujuan
 

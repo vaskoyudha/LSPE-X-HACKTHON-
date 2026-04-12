@@ -11,11 +11,7 @@ LPSE-X dibangun sebagai pipeline offline untuk mengubah data pengadaan publik me
 5. pelatihan model XGBoost dan kalibrasi probabilitas;
 6. generasi explanation berbasis SHAP dan narasi Bahasa Indonesia.
 
-Diagram implementasi Phase 2 yang sudah tersedia di repo memberi gambaran urutan pembangunan sistem.
-
-![Rencana implementasi dan integrasi LPSE-X Tahap 2](figures/phase2-plan.png)
-
-Untuk kebutuhan juri, alur inti end-to-end diringkas lagi pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca lebih cepat.
+Untuk kebutuhan juri, metodologi inti LPSE-X diringkas pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca dengan cepat dan jelas.
 
 ![Arsitektur end-to-end LPSE-X](figures/pipeline-architecture.png)
 
@@ -107,6 +103,8 @@ Model utama yang dipakai adalah **XGBoost multiclass** dengan objective `multi:s
 3. mudah dihubungkan ke SHAP untuk explainability global maupun lokal,
 4. bisa diekspor ke artefak ringan untuk demo lokal.
 
+Dibanding pendekatan deep learning murni, XGBoost memberi trade-off yang lebih rasional untuk fase seleksi ini: performanya kuat pada data tabular, biaya komputasinya rendah, dan jalur interpretasinya jauh lebih mudah dijelaskan kepada juri maupun calon pengguna institusional. Dibanding rule-only system, model ini juga memberi fleksibilitas lebih baik untuk menangkap kombinasi sinyal risiko yang tidak selalu terlihat dari satu aturan tunggal.
+
 Artefak model yang saat ini tersedia juga kecil dan praktis untuk submission:
 
 - `models/xgb_model.ubj` ≈ **1,1 MB**
@@ -155,4 +153,4 @@ Agar hasil mudah dibaca secara profesional, evaluasi pada proposal ini dibagi me
 3. **robustness / proxy-reduced validation** untuk mengukur circularity risk,
 4. **manual review, external validation, dan official evidence lane** untuk memperkaya bukti di luar sekadar angka terhadap weak labels.
 
-Dengan demikian, Bab 4 tidak hanya menampilkan performa yang tinggi, tetapi juga memberikan konteks mengapa performa tersebut perlu dibaca dengan hati-hati.
+Dengan demikian, evaluasi pada proposal ini tidak berhenti pada klaim “akurasi tinggi”, tetapi menunjukkan **apa yang benar-benar dibuktikan oleh setiap lapisan pengujian**. Pendekatan ini membuat metodologi LPSE-X lebih kuat secara kompetitif karena tidak hanya menonjolkan angka, tetapi juga kedewasaan desain evaluasi.

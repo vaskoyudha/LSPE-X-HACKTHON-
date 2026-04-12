@@ -116,11 +116,7 @@ LPSE-X dibangun sebagai pipeline offline untuk mengubah data pengadaan publik me
 5. pelatihan model XGBoost dan kalibrasi probabilitas;
 6. generasi explanation berbasis SHAP dan narasi Bahasa Indonesia.
 
-Diagram implementasi Phase 2 yang sudah tersedia di repo memberi gambaran urutan pembangunan sistem.
-
-![Rencana implementasi dan integrasi LPSE-X Tahap 2](figures/phase2-plan.png)
-
-Untuk kebutuhan juri, alur inti end-to-end diringkas lagi pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca lebih cepat.
+Untuk kebutuhan juri, metodologi inti LPSE-X diringkas pada diagram berikut agar hubungan antara data, model, dan keluaran explainability dapat dibaca dengan cepat dan jelas.
 
 ![Arsitektur end-to-end LPSE-X](figures/pipeline-architecture.png)
 
