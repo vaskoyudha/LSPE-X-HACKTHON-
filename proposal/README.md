@@ -21,4 +21,10 @@ Folder ini menyimpan sumber proposal Tahap 2 untuk LPSE-X.
 
 ## Ekspor
 
-Setelah isi final disetujui, `proposal-final.md` dapat diekspor ke PDF atau DOCX menggunakan tool yang tersedia di mesin lokal. PDF tetap menjadi artefak submission utama.
+Setelah isi final disetujui, `proposal-final.md` dapat diekspor ke PDF menggunakan script repo berikut agar styling dan penamaannya konsisten:
+
+```bash
+python3 scripts/export_proposal_pdf.py
+```
+
+PDF tetap menjadi artefak submission utama. Bila dibutuhkan, DOCX dapat dibuat kemudian sebagai artefak pendamping tanpa mengubah markdown sumber.

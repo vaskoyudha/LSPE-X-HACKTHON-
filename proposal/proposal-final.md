@@ -353,6 +353,12 @@ Selain constraint Track C, panitia juga mensyaratkan struktur artefak yang jelas
 | file model final | model siap dipakai secara lokal |
 | `requirements.txt` | reproduksibilitas environment |
 
+Di lane submission resmi, kami juga mengunci tiga aturan tambahan agar paket tidak menimbulkan ambiguitas saat dinilai.
+
+1. **Single-model submission** — hanya satu model utama yang dikirim, yaitu XGBoost multiclass yang diekspor ke `model_risk.ubj` dan `model_risk.onnx`; tidak ada ensemble terpisah atau model cloud pendamping pada paket final.
+2. **Penamaan resmi panitia** — folder/repo final dikunci ke `BismillahFirstTry-Phase2_Tahap2_FindIT2026`, sedangkan proposal PDF final dikunci ke `Proposal_BismillahFirstTry-Phase2_Tahap2_FindIT2026.pdf`.
+3. **Bundle judge-safe** — isi folder dibatasi pada proposal, notebook, model, data split, source code inti, dan figures yang benar-benar dipakai juri.
+
 Pendekatan ini sengaja dibuat judge-safe: yang ditampilkan adalah artefak yang benar-benar dibutuhkan untuk evaluasi, bukan seluruh histori eksperimen internal.
 
 ## 3.4 Pengendalian Risiko Teknis
