@@ -72,4 +72,4 @@ Agar tidak terjadi overclaim, proposal ini menetapkan batasan berikut.
 - **Bab 1 — Pendahuluan**: konteks masalah, posisi solusi, tujuan, manfaat, dan batasan ilmiah.
 - **Bab 2 — Metodologi**: sumber data, split anti-leakage, fitur, model, explainability, dan artefak reproduksibilitas.
 - **Bab 3 — Kepatuhan dan Implementasi**: pembuktian langsung terhadap setiap constraint Track C dan kesiapan paket submission.
-- **Bab 4 — Hasil dan Pembahasan**: metrik, visual evaluasi, interpretasi operasional, evidence lane, serta keterbatasan sistem.
+- **Bab 4 — Rancangan Sistem & Bisnis (Integrasi Phase 3 & Analisis Dampak)**: rancangan arsitektur target, alur operasional, model adopsi, KPI implementasi, analisis dampak, dan mitigasi risiko.
