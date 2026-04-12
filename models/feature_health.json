@@ -208,5 +208,33 @@
     "constant": false,
     "non_null_count": 140400,
     "unique_non_null": 139309
+  },
+  "f_buyer_unique_suppliers_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 3817
+  },
+  "f_supplier_unique_buyers_count": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 73
+  },
+  "f_pair_share_of_buyer_history": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 19917
+  },
+  "f_pair_share_of_supplier_history": {
+    "missing_pct": 0.0,
+    "all_nan": false,
+    "constant": false,
+    "non_null_count": 372150,
+    "unique_non_null": 1144
   }
 }

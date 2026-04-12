@@ -1,4 +1,10 @@
 {
   "high_risk": 0.5,
-  "low_risk": 0.5
+  "low_risk": 0.5,
+  "tuning_metadata": {
+    "source": "reviewed_val_calibration",
+    "n_rows": 287,
+    "calibrated": true,
+    "review_confidence": "high_or_medium"
+  }
 }

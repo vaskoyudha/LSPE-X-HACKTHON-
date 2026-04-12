@@ -72,7 +72,7 @@ class XGBoostContributionExplainer:
  
  
 def load_model(model_path: Path = MODEL_PATH):
-    """Load the XGBoost model from its .ubj checkpoint."""
+    """Load the native XGBoost Booster from its .ubj checkpoint."""
     import xgboost as xgb
  
     if not model_path.exists():
@@ -80,7 +80,7 @@ def load_model(model_path: Path = MODEL_PATH):
             f"XGBoost model not found at {model_path}. "
             "Complete Task 13 (training) first."
         )
-    model = xgb.XGBClassifier()
+    model = xgb.Booster()
     model.load_model(str(model_path))
     return model
  

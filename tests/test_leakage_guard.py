@@ -159,8 +159,8 @@ class TestFeatureColumnParity:
             f"manifest={feature_manifest['feature_count']}"
         )
 
-    def test_exactly_30_features(self, train_features):
-        assert len(train_features.columns) == 30
+    def test_exactly_34_features(self, train_features):
+        assert len(train_features.columns) == 34
 
     def test_all_numeric(self, train_features, test_features):
         for name, feats in [("train", train_features), ("test", test_features)]:

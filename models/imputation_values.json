@@ -28,5 +28,9 @@
   "f_supplier_capacity_ratio": 0.6141651066122762,
   "f_buyer_hist_avg_award": 1627272450.7019196,
   "f_buyer_hist_award_std": 3221225808.6935883,
-  "f_supplier_hist_avg_award": 748587282.5816667
+  "f_supplier_hist_avg_award": 748587282.5816667,
+  "f_buyer_unique_suppliers_count": 118.0,
+  "f_supplier_unique_buyers_count": 0.0,
+  "f_pair_share_of_buyer_history": 0.0,
+  "f_pair_share_of_supplier_history": 0.0
 }

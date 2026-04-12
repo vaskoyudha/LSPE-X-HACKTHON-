@@ -1,5 +1,5 @@
 {
-  "feature_count": 30,
+  "feature_count": 34,
   "feature_names": [
     "f_tender_value_log",
     "f_award_value_log",
@@ -30,7 +30,11 @@
     "f_supplier_capacity_ratio",
     "f_buyer_hist_avg_award",
     "f_buyer_hist_award_std",
-    "f_supplier_hist_avg_award"
+    "f_supplier_hist_avg_award",
+    "f_buyer_unique_suppliers_count",
+    "f_supplier_unique_buyers_count",
+    "f_pair_share_of_buyer_history",
+    "f_pair_share_of_supplier_history"
   ],
   "train_rows": 372150,
   "test_rows": 93034,
@@ -41,9 +45,9 @@
       "high_risk": 24372
     },
     "test": {
-      "low_risk": 34806,
-      "medium_risk": 52427,
-      "high_risk": 5801
+      "low_risk": 26358,
+      "medium_risk": 58425,
+      "high_risk": 8251
     }
   }
 }

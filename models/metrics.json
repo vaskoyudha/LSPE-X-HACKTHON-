@@ -7,62 +7,62 @@
   "final_test": {
     "partition": "test_uncalibrated",
     "label_type": "heuristic_risk_labels",
-    "accuracy": 0.99,
-    "macro_f1": 0.9833,
-    "weighted_f1": 0.99,
+    "accuracy": 0.9899,
+    "macro_f1": 0.983,
+    "weighted_f1": 0.9898,
     "per_class_f1": {
-      "Low Risk": 0.9921,
-      "Medium Risk": 0.9911,
-      "High Risk": 0.9668
+      "Low Risk": 0.9932,
+      "Medium Risk": 0.992,
+      "High Risk": 0.9639
     },
-    "log_loss": 0.0582,
+    "log_loss": 0.0553,
     "confusion_matrix": [
       [
-        34801,
-        5,
+        26354,
+        4,
         0
       ],
       [
-        549,
-        51844,
-        34
+        357,
+        58015,
+        53
       ],
       [
         0,
-        341,
-        5460
+        525,
+        7726
       ]
     ],
     "classification_report": {
       "Low Risk": {
-        "precision": 0.9844695898161244,
-        "recall": 0.9998563466069068,
-        "f1-score": 0.9921033126175951,
-        "support": 34806.0
+        "precision": 0.9866347197783685,
+        "recall": 0.9998482434175583,
+        "f1-score": 0.9931975352842526,
+        "support": 26358.0
       },
       "Medium Risk": {
-        "precision": 0.9933703774669477,
-        "recall": 0.9888797756880996,
-        "f1-score": 0.991119990058977,
-        "support": 52427.0
+        "precision": 0.9909640612189122,
+        "recall": 0.9929824561403509,
+        "f1-score": 0.9919722319588951,
+        "support": 58425.0
       },
       "High Risk": {
-        "precision": 0.9938114306516199,
-        "recall": 0.9412170315462851,
-        "f1-score": 0.9667994687915007,
-        "support": 5801.0
+        "precision": 0.9931867849337961,
+        "recall": 0.9363713489274027,
+        "f1-score": 0.9639426076107299,
+        "support": 8251.0
       },
-      "accuracy": 0.9900144033364147,
+      "accuracy": 0.9899069157512307,
       "macro avg": {
-        "precision": 0.9905504659782306,
-        "recall": 0.9766510512804305,
-        "f1-score": 0.9833409238226909,
+        "precision": 0.9902618553103588,
+        "recall": 0.9764006828284373,
+        "f1-score": 0.9830374582846259,
         "support": 93034.0
       },
       "weighted avg": {
-        "precision": 0.9900679045489794,
-        "recall": 0.9900144033364147,
-        "f1-score": 0.9899714011678472,
+        "precision": 0.9899346194200177,
+        "recall": 0.9899069157512307,
+        "f1-score": 0.9898334882152429,
         "support": 93034.0
       }
     },
@@ -71,62 +71,62 @@
   "final_test_thresholded": {
     "partition": "test_thresholded",
     "label_type": "heuristic_risk_labels",
-    "accuracy": 0.99,
-    "macro_f1": 0.9833,
-    "weighted_f1": 0.99,
+    "accuracy": 0.9899,
+    "macro_f1": 0.983,
+    "weighted_f1": 0.9898,
     "per_class_f1": {
-      "Low Risk": 0.9921,
-      "Medium Risk": 0.9911,
-      "High Risk": 0.9668
+      "Low Risk": 0.9932,
+      "Medium Risk": 0.992,
+      "High Risk": 0.9639
     },
-    "log_loss": 0.0582,
+    "log_loss": 0.0553,
     "confusion_matrix": [
       [
-        34801,
-        5,
+        26354,
+        4,
         0
       ],
       [
-        549,
-        51844,
-        34
+        357,
+        58015,
+        53
       ],
       [
         0,
-        341,
-        5460
+        525,
+        7726
       ]
     ],
     "classification_report": {
       "Low Risk": {
-        "precision": 0.9844695898161244,
-        "recall": 0.9998563466069068,
-        "f1-score": 0.9921033126175951,
-        "support": 34806.0
+        "precision": 0.9866347197783685,
+        "recall": 0.9998482434175583,
+        "f1-score": 0.9931975352842526,
+        "support": 26358.0
       },
       "Medium Risk": {
-        "precision": 0.9933703774669477,
-        "recall": 0.9888797756880996,
-        "f1-score": 0.991119990058977,
-        "support": 52427.0
+        "precision": 0.9909640612189122,
+        "recall": 0.9929824561403509,
+        "f1-score": 0.9919722319588951,
+        "support": 58425.0
       },
       "High Risk": {
-        "precision": 0.9938114306516199,
-        "recall": 0.9412170315462851,
-        "f1-score": 0.9667994687915007,
-        "support": 5801.0
+        "precision": 0.9931867849337961,
+        "recall": 0.9363713489274027,
+        "f1-score": 0.9639426076107299,
+        "support": 8251.0
       },
-      "accuracy": 0.9900144033364147,
+      "accuracy": 0.9899069157512307,
       "macro avg": {
-        "precision": 0.9905504659782306,
-        "recall": 0.9766510512804305,
-        "f1-score": 0.9833409238226909,
+        "precision": 0.9902618553103588,
+        "recall": 0.9764006828284373,
+        "f1-score": 0.9830374582846259,
         "support": 93034.0
       },
       "weighted avg": {
-        "precision": 0.9900679045489794,
-        "recall": 0.9900144033364147,
-        "f1-score": 0.9899714011678472,
+        "precision": 0.9899346194200177,
+        "recall": 0.9899069157512307,
+        "f1-score": 0.9898334882152429,
         "support": 93034.0
       }
     },
@@ -138,7 +138,7 @@
   },
   "calibration": {
     "enabled": true,
-    "temperature": 7.836317,
+    "temperature": 7.697482,
     "n_calibration_samples": 287,
     "n_high_confidence": 273,
     "method": "temperature_scaling"
@@ -146,15 +146,84 @@
   "final_test_calibrated": {
     "partition": "test_calibrated",
     "label_type": "heuristic_risk_labels",
-    "accuracy": 0.99,
-    "macro_f1": 0.9833,
-    "weighted_f1": 0.99,
+    "accuracy": 0.9899,
+    "macro_f1": 0.983,
+    "weighted_f1": 0.9898,
     "per_class_f1": {
-      "Low Risk": 0.9921,
-      "Medium Risk": 0.9911,
-      "High Risk": 0.9668
+      "Low Risk": 0.9932,
+      "Medium Risk": 0.992,
+      "High Risk": 0.9639
     },
     "n_samples": 93034,
-    "temperature": 7.836317
+    "temperature": 7.697482
+  },
+  "final_test_calibrated_thresholded": {
+    "partition": "test_calibrated_thresholded",
+    "label_type": "heuristic_risk_labels",
+    "accuracy": 0.9899,
+    "macro_f1": 0.983,
+    "weighted_f1": 0.9898,
+    "per_class_f1": {
+      "Low Risk": 0.9932,
+      "Medium Risk": 0.992,
+      "High Risk": 0.9639
+    },
+    "log_loss": 0.3714,
+    "confusion_matrix": [
+      [
+        26354,
+        4,
+        0
+      ],
+      [
+        357,
+        58015,
+        53
+      ],
+      [
+        0,
+        525,
+        7726
+      ]
+    ],
+    "classification_report": {
+      "Low Risk": {
+        "precision": 0.9866347197783685,
+        "recall": 0.9998482434175583,
+        "f1-score": 0.9931975352842526,
+        "support": 26358.0
+      },
+      "Medium Risk": {
+        "precision": 0.9909640612189122,
+        "recall": 0.9929824561403509,
+        "f1-score": 0.9919722319588951,
+        "support": 58425.0
+      },
+      "High Risk": {
+        "precision": 0.9931867849337961,
+        "recall": 0.9363713489274027,
+        "f1-score": 0.9639426076107299,
+        "support": 8251.0
+      },
+      "accuracy": 0.9899069157512307,
+      "macro avg": {
+        "precision": 0.9902618553103588,
+        "recall": 0.9764006828284373,
+        "f1-score": 0.9830374582846259,
+        "support": 93034.0
+      },
+      "weighted avg": {
+        "precision": 0.9899346194200177,
+        "recall": 0.9899069157512307,
+        "f1-score": 0.9898334882152429,
+        "support": 93034.0
+      }
+    },
+    "n_samples": 93034,
+    "decision_thresholds": {
+      "high_risk": 0.5,
+      "low_risk": 0.5
+    },
+    "temperature": 7.697482
   }
 }
